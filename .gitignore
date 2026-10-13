@@ -107,3 +107,8 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Fichiers temporaires des bots (review / release)
+review-summary.json
+review.md
+notes.md
