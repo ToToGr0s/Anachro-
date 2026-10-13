@@ -1,0 +1,88 @@
+# Review de code par Claude sur chaque PR, à chaque push.
+# Le bot COMMENTE seulement : il n'approuve jamais et ne merge jamais.
+# Le merge vers main / develop exige l'approbation de Théo (CODEOWNERS + protection de branche).
+name: Review Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true   # un nouveau push annule la review en cours de l'ancien
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Récupérer le code (sans les fichiers LFS, pour ne pas consommer le quota)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: false
+
+      - name: Review par Claude
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            DÉPÔT : ${{ github.repository }}
+            PR : #${{ github.event.pull_request.number }} — "${{ github.event.pull_request.title }}"
+            AUTEUR : ${{ github.event.pull_request.user.login }}
+            BRANCHE : ${{ github.head_ref }} → ${{ github.base_ref }}
+            COMMIT : ${{ github.event.pull_request.head.sha }}
+
+            Tu es le relecteur de code de l'équipe. Lis d'abord CLAUDE.md à la racine : ce sont les règles du projet.
+            Récupère le diff avec `gh pr diff ${{ github.event.pull_request.number }}` et ouvre les fichiers concernés pour le contexte.
+
+            Règles absolues :
+            - Tu ne valides rien. Tu n'approuves jamais, tu ne demandes jamais de changements formels, tu ne merges jamais. Tu commentes.
+            - Concentre-toi sur le C#. Pour les .unity / .prefab / .asset, signale seulement les risques (gros fichiers hors LFS, .meta manquants, scène partagée modifiée).
+            - Sois concret, critique et bref. Pas de compliments vagues. Chaque problème : fichier + ligne + pourquoi + correction proposée.
+            - Écris en français, avec des phrases simples.
+
+            1) Poste UN commentaire sur la PR avec `gh pr comment ${{ github.event.pull_request.number }} --body-file review.md`, au format exact :
+
+            ## 🤖 Review Claude — commit `<7 premiers caractères du commit>`
+            **Verdict (avis, pas une validation) :** ✅ Prête pour la relecture de Théo | ⚠️ À corriger avant relecture | ⛔ Bloquante
+            **En une phrase :** <résumé>
+
+            ### ✅ Ce qui va bien
+            ### ❌ Problèmes
+            (classés : 🔴 bloquant, 🟠 important, 🟡 mineur — `fichier:ligne` — explication — correction)
+            ### 🧩 Ce qui manque
+            (ce que la PR devrait contenir et ne contient pas : validation serveur, gestion d'erreur, cas limites, test réseau à faire, .meta, description de PR, lien vers la tâche…)
+            ### 📈 Axes d'amélioration
+            ### 📏 Respect des règles du projet
+            (nommage, règles réseau, règles de code, Git — uniquement les écarts constatés)
+            ### 🧪 À tester à la main
+            (2 à 5 vérifications concrètes à faire dans Unity / en réseau)
+
+            Pour les problèmes précis, tu peux aussi ajouter des commentaires sur les lignes avec l'outil de commentaire en ligne.
+
+            2) Écris le fichier `review-summary.json` à la racine (il sert au résumé Discord), exactement :
+            {"verdict":"pret|corriger|bloquant","resume":"une phrase","bloquants":0,"importants":0,"mineurs":0,"points":["3 points max, très courts"]}
+          claude_args: |
+            --allowedTools "Read,Glob,Grep,Write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),mcp__github_inline_comment__create_inline_comment"
+
+      - name: Résumé dans Discord (#review)
+        if: always()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_REVIEW }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          OUTCOME: ${{ steps.claude.outcome }}
+        run: python3 .github/scripts/discord_review.py
