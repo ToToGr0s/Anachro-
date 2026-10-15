@@ -1,19 +1,23 @@
 using FishNet.Managing;
+using FishNet.Transporting.Multipass;
+using FishNet.Transporting.Tugboat;
 using UnityEngine;
 
 namespace Anachronism.Network
 {
     /// <summary>
-    /// Boutons Hôte / Client / Stop pour tester en local (Tugboat) en attendant le lobby Steam (T08).
+    /// Boutons de test : Hôte / Client en local (Tugboat) et lobby Steam (SteamLobby).
     /// Pilote ServerManager / ClientManager en direct : toléré pour un outil de dev, pas pour l'UI du jeu.
     /// </summary>
-    // TODO (Théo) : supprimer quand le lobby Steam (T08) remplace ce HUD.
+    // TODO (Théo) : supprimer quand le menu de lobby (Olivier, UI/Lobby) remplace ce HUD.
     [RequireComponent(typeof(NetworkManager))]
     public sealed class DevConnectionHud : MonoBehaviour
     {
         [SerializeField] private string _address = "localhost";
 
         private NetworkManager _networkManager;
+        private Multipass _multipass;
+        private SteamLobby _steamLobby;
 
         private void Awake()
         {
@@ -27,6 +31,8 @@ namespace Anachronism.Network
             }
 
             _networkManager = GetComponent<NetworkManager>();
+            _multipass = GetComponent<Multipass>();
+            _steamLobby = GetComponent<SteamLobby>();
         }
 
         private void OnGUI()
@@ -34,37 +40,65 @@ namespace Anachronism.Network
             bool isServerStarted = _networkManager.ServerManager.Started;
             bool isClientStarted = _networkManager.ClientManager.Started;
 
-            GUILayout.BeginArea(new Rect(10f, 10f, 220f, 140f), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(10f, 10f, 240f, 200f), GUI.skin.box);
 
             if (!isServerStarted && !isClientStarted)
-            {
-                _address = GUILayout.TextField(_address);
-
-                if (GUILayout.Button("Hôte"))
-                    StartHost();
-
-                if (GUILayout.Button("Client") && !string.IsNullOrWhiteSpace(_address))
-                    _networkManager.ClientManager.StartConnection(_address.Trim());
-            }
+                DrawOffline();
             else
-            {
-                GUILayout.Label(isServerStarted ? "Hôte" : "Client");
-
-                if (GUILayout.Button("Stop"))
-                    Stop(isServerStarted, isClientStarted);
-            }
+                DrawConnected(isServerStarted, isClientStarted);
 
             GUILayout.EndArea();
         }
 
-        private void StartHost()
+        private void DrawOffline()
         {
+            GUILayout.Label("Local (Tugboat)");
+            _address = GUILayout.TextField(_address);
+
+            if (GUILayout.Button("Hôte local"))
+                StartLocalHost();
+
+            if (GUILayout.Button("Client local") && !string.IsNullOrWhiteSpace(_address))
+                StartLocalClient(_address.Trim());
+
+            GUILayout.Label("Steam");
+
+            if (_steamLobby == null || !_steamLobby.IsSteamReady)
+                GUILayout.Label("Steam non lancé");
+            else if (GUILayout.Button("Héberger un lobby"))
+                _steamLobby.HostLobby();
+        }
+
+        private void DrawConnected(bool isServerStarted, bool isClientStarted)
+        {
+            GUILayout.Label(isServerStarted ? "Hôte" : "Client");
+
+            if (_steamLobby != null && _steamLobby.IsInLobby && GUILayout.Button("Inviter des amis"))
+                _steamLobby.InviteFriends();
+
+            if (GUILayout.Button("Stop"))
+                Stop(isServerStarted, isClientStarted);
+        }
+
+        private void StartLocalHost()
+        {
+            // Le serveur écoute sur tous les transports ; le client local passe par Tugboat.
+            _multipass.SetClientTransport<Tugboat>();
             _networkManager.ServerManager.StartConnection();
             _networkManager.ClientManager.StartConnection();
         }
 
+        private void StartLocalClient(string address)
+        {
+            _multipass.SetClientTransport<Tugboat>();
+            _networkManager.ClientManager.StartConnection(address);
+        }
+
         private void Stop(bool isServerStarted, bool isClientStarted)
         {
+            if (_steamLobby != null)
+                _steamLobby.LeaveLobby();
+
             if (isClientStarted)
                 _networkManager.ClientManager.StopConnection();
 
