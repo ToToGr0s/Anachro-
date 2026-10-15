@@ -1,5 +1,6 @@
 using Anachronism.Core;
 using Anachronism.Network;
+using Anachronism.UI;
 using System.Collections.Generic;
 using System.Linq;
 using FishNet.Component.Scenes;
@@ -15,6 +16,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 
 namespace Anachronism.Editor
 {
@@ -32,6 +34,10 @@ namespace Anachronism.Editor
         private const string DefaultPrefabObjectsPath = "Assets/DefaultPrefabObjects.asset";
         private const string MatchPresetsPath = "Assets/_Project/Data/MatchPresets/MatchPresets_Default.asset";
         private const string MatchManagerName = "MatchManager";
+        private const string UiName = "UI";
+        private const string LobbyMenuPath = "Assets/_Project/Prefabs/UI/Lobby/LobbyMenu.uxml";
+        private const string PanelSettingsPath = "Assets/_Project/Prefabs/UI/AnachroPanelSettings.asset";
+        private const string RuntimeThemePath = "Assets/_Project/Prefabs/UI/AnachroRuntimeTheme.tss";
         private const string NetworkManagerName = "NetworkManager";
         private const string SpawnPointsName = "SpawnPoints";
         private const string GroundName = "Ground";
@@ -99,6 +105,7 @@ namespace Anachronism.Editor
             DestroyRoot(scene, SpawnPointsName);
             DestroyRoot(scene, GroundName);
             DestroyRoot(scene, ServicesName);
+            DestroyRoot(scene, UiName);
 
             GameObject managerObject = new GameObject(NetworkManagerName);
             NetworkManager networkManager = managerObject.AddComponent<NetworkManager>();
@@ -149,6 +156,7 @@ namespace Anachronism.Editor
             managerObject.AddComponent<DevConnectionHud>();
 
             new GameObject(ServicesName).AddComponent<SteamService>();
+            CreateLobbyMenu();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -222,6 +230,32 @@ namespace Anachronism.Editor
             Camera camera = Camera.main;
             if (camera != null)
                 camera.transform.SetPositionAndRotation(new Vector3(0f, 10f, -10f), Quaternion.Euler(45f, 0f, 0f));
+        }
+
+        private static void CreateLobbyMenu()
+        {
+            GameObject uiObject = new GameObject(UiName);
+            UIDocument document = uiObject.AddComponent<UIDocument>();
+            document.panelSettings = LoadOrCreatePanelSettings();
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(LobbyMenuPath);
+            uiObject.AddComponent<LobbyMenu>();
+        }
+
+        private static PanelSettings LoadOrCreatePanelSettings()
+        {
+            PanelSettings panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+            if (panelSettings != null)
+                return panelSettings;
+
+            panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            // Mise en page pensée en 1920×1080, mise à l'échelle pour les fenêtres de test plus petites.
+            panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+            panelSettings.match = 0.5f;
+            panelSettings.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(RuntimeThemePath);
+            AssetDatabase.CreateAsset(panelSettings, PanelSettingsPath);
+            AssetDatabase.SaveAssets();
+            return AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
         }
 
         private static void SetBuildScenes()

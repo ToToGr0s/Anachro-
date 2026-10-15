@@ -2,6 +2,7 @@ using FishNet.Managing;
 using FishNet.Transporting.Multipass;
 using FishNet.Transporting.Tugboat;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Anachronism.Network
 {
@@ -16,6 +17,8 @@ namespace Anachronism.Network
         [SerializeField] private string _address = "localhost";
 
         private NetworkManager _networkManager;
+        // Caché par défaut : le joueur passe par le menu (LobbyMenu), F1 affiche les outils de test.
+        private bool _isVisible;
         private Multipass _multipass;
         private SteamLobby _steamLobby;
 
@@ -35,8 +38,18 @@ namespace Anachronism.Network
             _steamLobby = GetComponent<SteamLobby>();
         }
 
+        private void Update()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.f1Key.wasPressedThisFrame)
+                _isVisible = !_isVisible;
+        }
+
         private void OnGUI()
         {
+            if (!_isVisible)
+                return;
+
             bool isServerStarted = _networkManager.ServerManager.Started;
             bool isClientStarted = _networkManager.ClientManager.Started;
 
