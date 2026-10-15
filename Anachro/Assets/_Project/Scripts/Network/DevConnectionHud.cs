@@ -112,8 +112,12 @@ namespace Anachronism.Network
                 GUILayout.Label($"Victoire : {match.Winner}");
 
             bool canStart = match.Phase == GamePhase.Lobby || match.Phase == GamePhase.End;
-            if (isServerStarted && canStart && GUILayout.Button("Démarrer la partie") && !match.StartMatch())
-                Debug.LogWarning("[DevConnectionHud] Partie non démarrée : pas assez de joueurs.");
+            if (isServerStarted && canStart && GUILayout.Button("Démarrer la partie"))
+            {
+                MatchStartResult result = match.StartMatch();
+                if (result != MatchStartResult.Started)
+                    Debug.LogWarning($"[DevConnectionHud] Partie non démarrée : {result}.");
+            }
         }
 
         private void StartLocalHost()
