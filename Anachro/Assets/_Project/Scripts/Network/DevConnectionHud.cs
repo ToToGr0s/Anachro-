@@ -5,7 +5,9 @@ namespace Anachronism.Network
 {
     /// <summary>
     /// Boutons Hôte / Client / Stop pour tester en local (Tugboat) en attendant le lobby Steam (T08).
+    /// Pilote ServerManager / ClientManager en direct : toléré pour un outil de dev, pas pour l'UI du jeu.
     /// </summary>
+    // TODO (Théo) : supprimer quand le lobby Steam (T08) remplace ce HUD.
     [RequireComponent(typeof(NetworkManager))]
     public sealed class DevConnectionHud : MonoBehaviour
     {
@@ -18,6 +20,8 @@ namespace Anachronism.Network
             // Outil de dev : absent des builds de release, sans dépendre d'un #if qui changerait la sérialisation.
             if (!Debug.isDebugBuild)
             {
+                // Destroy est différé : enabled = false coupe OnGUI dès maintenant.
+                enabled = false;
                 Destroy(this);
                 return;
             }
@@ -39,8 +43,8 @@ namespace Anachronism.Network
                 if (GUILayout.Button("Hôte"))
                     StartHost();
 
-                if (GUILayout.Button("Client"))
-                    _networkManager.ClientManager.StartConnection(_address);
+                if (GUILayout.Button("Client") && !string.IsNullOrWhiteSpace(_address))
+                    _networkManager.ClientManager.StartConnection(_address.Trim());
             }
             else
             {
@@ -64,6 +68,7 @@ namespace Anachronism.Network
             if (isClientStarted)
                 _networkManager.ClientManager.StopConnection();
 
+            // true : prévient les clients pour qu'ils se déconnectent proprement au lieu d'attendre le timeout.
             if (isServerStarted)
                 _networkManager.ServerManager.StopConnection(true);
         }

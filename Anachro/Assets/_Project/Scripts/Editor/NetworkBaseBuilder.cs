@@ -25,14 +25,27 @@ namespace Anachronism.Editor
         private const string NetworkManagerName = "NetworkManager";
         private const string SpawnPointsName = "SpawnPoints";
         private const string GroundName = "Ground";
-        private const int SpawnPointCount = 8;
+        // Le client local de l'hôte compte comme une connexion Tugboat : 8 = hôte + 7 joueurs.
+        private const int MaxPlayers = 8;
+        private const int SpawnPointCount = MaxPlayers;
         private const float SpawnRadius = 4f;
 
         [MenuItem("Anachro/Setup/Construire la base réseau (T02)")]
         public static void Build()
         {
+            // Le builder ouvre Boot en mode Single : on laisse sauvegarder la scène en cours avant.
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
+            DefaultPrefabObjects prefabObjects = AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(DefaultPrefabObjectsPath);
+            if (prefabObjects == null)
+            {
+                Debug.LogError($"[NetworkBaseBuilder] {DefaultPrefabObjectsPath} introuvable : FishNet le recrée à la réimport du projet (Assets > Reimport All).");
+                return;
+            }
+
             NetworkObject playerPrefab = BuildPlayerPrefab();
-            DefaultPrefabObjects prefabObjects = RegisterPrefab(playerPrefab);
+            RegisterPrefab(prefabObjects, playerPrefab);
             BuildScene(playerPrefab, prefabObjects);
             AssetDatabase.SaveAssets();
             Debug.Log("[NetworkBaseBuilder] Base réseau construite.");
@@ -52,12 +65,10 @@ namespace Anachronism.Editor
             return prefab.GetComponent<NetworkObject>();
         }
 
-        private static DefaultPrefabObjects RegisterPrefab(NetworkObject playerPrefab)
+        private static void RegisterPrefab(DefaultPrefabObjects prefabObjects, NetworkObject playerPrefab)
         {
-            DefaultPrefabObjects prefabObjects = AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(DefaultPrefabObjectsPath);
             prefabObjects.AddObject(playerPrefab, true);
             EditorUtility.SetDirty(prefabObjects);
-            return prefabObjects;
         }
 
         private static void BuildScene(NetworkObject playerPrefab, DefaultPrefabObjects prefabObjects)
@@ -78,6 +89,10 @@ namespace Anachronism.Editor
             networkManager.SpawnablePrefabs = prefabObjects;
 
             Tugboat tugboat = managerObject.AddComponent<Tugboat>();
+            // SetMaximumClients touche le socket serveur, absent hors Play Mode : on passe par le champ sérialisé.
+            SerializedObject tugboatSettings = new SerializedObject(tugboat);
+            tugboatSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
+            tugboatSettings.ApplyModifiedPropertiesWithoutUndo();
             TransportManager transportManager = managerObject.GetComponent<TransportManager>();
             if (transportManager == null)
                 transportManager = managerObject.AddComponent<TransportManager>();
