@@ -1,0 +1,19 @@
+{
+    "name": "Anachronism.Editor",
+    "rootNamespace": "Anachronism.Editor",
+    "references": [
+        "Anachronism.Runtime",
+        "FishNet.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
