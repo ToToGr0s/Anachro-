@@ -26,6 +26,8 @@ namespace Anachronism.Network
         private Callback<GameLobbyJoinRequested_t> _joinRequested;
         private Callback<LobbyEnter_t> _lobbyEntered;
         private CSteamID _lobbyId = CSteamID.Nil;
+        // IsInLobby reste faux tant que Steam n'a pas répondu : sans ce verrou, un double clic crée deux lobbies.
+        private bool _isCreatingLobby;
 
         public bool IsSteamReady => SteamService.Instance != null && SteamService.Instance.IsInitialized;
         public bool IsInLobby => _lobbyId != CSteamID.Nil;
@@ -46,6 +48,7 @@ namespace Anachronism.Network
             _joinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnJoinRequested);
             _lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
             _networkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
+            _networkManager.ServerManager.OnServerConnectionState += OnServerConnectionState;
 
             TryJoinFromCommandLine();
         }
@@ -53,7 +56,10 @@ namespace Anachronism.Network
         private void OnDestroy()
         {
             if (_networkManager != null)
+            {
                 _networkManager.ClientManager.OnClientConnectionState -= OnClientConnectionState;
+                _networkManager.ServerManager.OnServerConnectionState -= OnServerConnectionState;
+            }
 
             LeaveLobby();
             _lobbyCreated?.Dispose();
@@ -63,9 +69,10 @@ namespace Anachronism.Network
 
         public void HostLobby()
         {
-            if (!IsSteamReady || IsInLobby || !_networkManager.IsOffline)
+            if (!IsSteamReady || IsInLobby || _isCreatingLobby || !_networkManager.IsOffline)
                 return;
 
+            _isCreatingLobby = true;
             SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, _maxPlayers);
         }
 
@@ -78,15 +85,16 @@ namespace Anachronism.Network
         public void LeaveLobby()
         {
             // À la fermeture, SteamService peut avoir déjà coupé l'API : l'appeler planterait.
-            if (!IsInLobby || !IsSteamReady)
-                return;
+            if (IsInLobby && IsSteamReady)
+                SteamMatchmaking.LeaveLobby(_lobbyId);
 
-            SteamMatchmaking.LeaveLobby(_lobbyId);
             _lobbyId = CSteamID.Nil;
         }
 
         private void OnLobbyCreated(LobbyCreated_t callback)
         {
+            _isCreatingLobby = false;
+
             if (callback.m_eResult != EResult.k_EResultOK)
             {
                 Debug.LogError($"[SteamLobby] Création du lobby refusée : {callback.m_eResult}.");
@@ -95,19 +103,20 @@ namespace Anachronism.Network
 
             _lobbyId = new CSteamID(callback.m_ulSteamIDLobby);
 
-            // Le client de l'hôte passe aussi par FishySteamworks : il détecte le serveur local et ne sort pas sur le réseau.
+            // Steam seulement : Tugboat ouvert permettrait d'entrer par l'IP sans passer par le lobby.
+            if (!_multipass.StartServer<FishySteamworks.FishySteamworks>())
+            {
+                Debug.LogError("[SteamLobby] Le serveur Steam n'a pas démarré, lobby fermé.");
+                LeaveLobby();
+                return;
+            }
+
+            // Sans adresse : FishySteamworks voit le serveur local et connecte l'hôte sans passer par le réseau.
             _multipass.SetClientTransport<FishySteamworks.FishySteamworks>();
-            _networkManager.ServerManager.StartConnection();
             _networkManager.ClientManager.StartConnection();
         }
 
-        private void OnJoinRequested(GameLobbyJoinRequested_t callback)
-        {
-            if (!_networkManager.IsOffline)
-                return;
-
-            SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
-        }
+        private void OnJoinRequested(GameLobbyJoinRequested_t callback) => JoinLobby(callback.m_steamIDLobby);
 
         private void OnLobbyEntered(LobbyEnter_t callback)
         {
@@ -126,6 +135,13 @@ namespace Anachronism.Network
             if (hostId == SteamUser.GetSteamID())
                 return;
 
+            // Déjà en partie (ou entrée arrivée en retard) : on ne relance pas une connexion par-dessus.
+            if (!_networkManager.IsOffline || hostId == CSteamID.Nil)
+            {
+                SteamMatchmaking.LeaveLobby(lobbyId);
+                return;
+            }
+
             _lobbyId = lobbyId;
             _multipass.SetClientTransport<FishySteamworks.FishySteamworks>();
             _networkManager.ClientManager.StartConnection(hostId.m_SteamID.ToString());
@@ -138,7 +154,22 @@ namespace Anachronism.Network
                 LeaveLobby();
         }
 
-        private static void TryJoinFromCommandLine()
+        private void OnServerConnectionState(ServerConnectionStateArgs args)
+        {
+            // Serveur arrêté seul : le lobby resterait ouvert et joignable vers un hôte qui ne répond plus.
+            if (args.ConnectionState == LocalConnectionState.Stopped)
+                LeaveLobby();
+        }
+
+        private void JoinLobby(CSteamID lobbyId)
+        {
+            if (!_networkManager.IsOffline || IsInLobby || _isCreatingLobby)
+                return;
+
+            SteamMatchmaking.JoinLobby(lobbyId);
+        }
+
+        private void TryJoinFromCommandLine()
         {
             string[] arguments = Environment.GetCommandLineArgs();
 
@@ -146,7 +177,7 @@ namespace Anachronism.Network
             {
                 if (arguments[i] == ConnectLobbyArgument && ulong.TryParse(arguments[i + 1], out ulong lobbyId))
                 {
-                    SteamMatchmaking.JoinLobby(new CSteamID(lobbyId));
+                    JoinLobby(new CSteamID(lobbyId));
                     return;
                 }
             }

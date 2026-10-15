@@ -40,13 +40,16 @@ namespace Anachronism.Network
             bool isServerStarted = _networkManager.ServerManager.Started;
             bool isClientStarted = _networkManager.ClientManager.Started;
 
-            GUILayout.BeginArea(new Rect(10f, 10f, 240f, 200f), GUI.skin.box);
+            // Zone large et fond ajusté au contenu : les deux sections ne sont jamais coupées.
+            GUILayout.BeginArea(new Rect(10f, 10f, 260f, Screen.height - 20f));
+            GUILayout.BeginVertical(GUI.skin.box);
 
             if (!isServerStarted && !isClientStarted)
                 DrawOffline();
             else
                 DrawConnected(isServerStarted, isClientStarted);
 
+            GUILayout.EndVertical();
             GUILayout.EndArea();
         }
 
@@ -82,9 +85,11 @@ namespace Anachronism.Network
 
         private void StartLocalHost()
         {
-            // Le serveur écoute sur tous les transports ; le client local passe par Tugboat.
+            // Tugboat seul : une partie locale n'a pas à être joignable par Steam.
+            if (!_multipass.StartServer<Tugboat>())
+                return;
+
             _multipass.SetClientTransport<Tugboat>();
-            _networkManager.ServerManager.StartConnection();
             _networkManager.ClientManager.StartConnection();
         }
 
