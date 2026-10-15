@@ -162,8 +162,8 @@ namespace Anachronism.Editor
             ground.name = GroundName;
             ground.transform.localScale = new Vector3(3f, 1f, 3f);
 
-            Transform[] spawns = CreateSpawnPoints();
-            MapSpawnPoints mapSpawnPoints = spawns[0].parent.gameObject.AddComponent<MapSpawnPoints>();
+            Transform spawnRoot = CreateSpawnPoints(out Transform[] spawns);
+            MapSpawnPoints mapSpawnPoints = spawnRoot.gameObject.AddComponent<MapSpawnPoints>();
             SerializedObject spawnSettings = new SerializedObject(mapSpawnPoints);
             SerializedProperty spawnArray = spawnSettings.FindProperty("_spawns");
             spawnArray.arraySize = spawns.Length;
@@ -186,10 +186,10 @@ namespace Anachronism.Editor
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 
-        private static Transform[] CreateSpawnPoints()
+        private static Transform CreateSpawnPoints(out Transform[] spawns)
         {
             Transform root = new GameObject(SpawnPointsName).transform;
-            Transform[] spawns = new Transform[SpawnPointCount];
+            spawns = new Transform[SpawnPointCount];
 
             for (int i = 0; i < SpawnPointCount; i++)
             {
@@ -202,7 +202,7 @@ namespace Anachronism.Editor
                 spawns[i] = spawn;
             }
 
-            return spawns;
+            return root;
         }
 
         private static void DestroyRoot(Scene scene, string objectName)
