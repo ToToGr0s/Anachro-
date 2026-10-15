@@ -3,7 +3,8 @@
     "rootNamespace": "Anachronism.Editor",
     "references": [
         "Anachronism.Runtime",
-        "FishNet.Runtime"
+        "FishNet.Runtime",
+        "FishySteamworks"
     ],
     "includePlatforms": [
         "Editor"

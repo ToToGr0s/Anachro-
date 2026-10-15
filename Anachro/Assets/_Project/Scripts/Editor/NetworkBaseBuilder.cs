@@ -1,3 +1,4 @@
+using Anachronism.Core;
 using Anachronism.Network;
 using FishNet.Component.Spawning;
 using FishNet.Component.Transforming;
@@ -5,6 +6,7 @@ using FishNet.Managing;
 using FishNet.Managing.Object;
 using FishNet.Managing.Transporting;
 using FishNet.Object;
+using FishNet.Transporting.Multipass;
 using FishNet.Transporting.Tugboat;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -14,7 +16,7 @@ using UnityEngine.SceneManagement;
 namespace Anachronism.Editor
 {
     /// <summary>
-    /// Construit la base réseau de T02 : prefab joueur, NetworkManager + Tugboat + spawn dans Boot.
+    /// Construit la base réseau dans Boot : prefab joueur, NetworkManager + Multipass (Tugboat + Steam), spawn, lobby Steam.
     /// Rejouable : remplace ce qu'il a créé au lieu de dupliquer, et garde le GUID du prefab.
     /// </summary>
     public static class NetworkBaseBuilder
@@ -25,12 +27,13 @@ namespace Anachronism.Editor
         private const string NetworkManagerName = "NetworkManager";
         private const string SpawnPointsName = "SpawnPoints";
         private const string GroundName = "Ground";
+        private const string ServicesName = "Services";
         // Le client local de l'hôte compte comme une connexion Tugboat : 8 = hôte + 7 joueurs.
         private const int MaxPlayers = 8;
         private const int SpawnPointCount = MaxPlayers;
         private const float SpawnRadius = 4f;
 
-        [MenuItem("Anachro/Setup/Construire la base réseau (T02)")]
+        [MenuItem("Anachro/Setup/Construire la base réseau")]
         public static void Build()
         {
             // Le builder ouvre Boot en mode Single : on laisse sauvegarder la scène en cours avant.
@@ -77,6 +80,7 @@ namespace Anachronism.Editor
             DestroyRoot(scene, NetworkManagerName);
             DestroyRoot(scene, SpawnPointsName);
             DestroyRoot(scene, GroundName);
+            DestroyRoot(scene, ServicesName);
 
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = GroundName;
@@ -88,21 +92,43 @@ namespace Anachronism.Editor
             NetworkManager networkManager = managerObject.AddComponent<NetworkManager>();
             networkManager.SpawnablePrefabs = prefabObjects;
 
+            // Multipass : le serveur écoute en local (Tugboat) et sur Steam (FishySteamworks) en même temps,
+            // le client choisit son transport au moment de se connecter.
             Tugboat tugboat = managerObject.AddComponent<Tugboat>();
-            // SetMaximumClients touche le socket serveur, absent hors Play Mode : on passe par le champ sérialisé.
+            FishySteamworks.FishySteamworks steamTransport = managerObject.AddComponent<FishySteamworks.FishySteamworks>();
+            Multipass multipass = managerObject.AddComponent<Multipass>();
+
+            // Les setters runtime touchent des sockets absents hors Play Mode : on passe par les champs sérialisés.
             SerializedObject tugboatSettings = new SerializedObject(tugboat);
             tugboatSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
             tugboatSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            SerializedObject steamSettings = new SerializedObject(steamTransport);
+            steamSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
+            // P2P : on se connecte au SteamID de l'hôte via le relais Steam, pas à une IP.
+            steamSettings.FindProperty("_peerToPeer").boolValue = true;
+            steamSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            SerializedObject multipassSettings = new SerializedObject(multipass);
+            SerializedProperty transports = multipassSettings.FindProperty("_transports");
+            transports.arraySize = 2;
+            transports.GetArrayElementAtIndex(0).objectReferenceValue = tugboat;
+            transports.GetArrayElementAtIndex(1).objectReferenceValue = steamTransport;
+            multipassSettings.ApplyModifiedPropertiesWithoutUndo();
+
             TransportManager transportManager = managerObject.GetComponent<TransportManager>();
             if (transportManager == null)
                 transportManager = managerObject.AddComponent<TransportManager>();
-            transportManager.Transport = tugboat;
+            transportManager.Transport = multipass;
 
             PlayerSpawner spawner = managerObject.AddComponent<PlayerSpawner>();
             spawner.SetPlayerPrefab(playerPrefab);
             spawner.Spawns = spawns;
 
+            managerObject.AddComponent<SteamLobby>();
             managerObject.AddComponent<DevConnectionHud>();
+
+            new GameObject(ServicesName).AddComponent<SteamService>();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
