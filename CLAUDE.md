@@ -39,7 +39,7 @@ Jeu Unity 3D, multijoueur en ligne (4 à 8 joueurs), FishNet v4 + Steam (FishySt
 9. Vocal de proximité sans indicateur de parole au-dessus des têtes.
 
 ## Git
-- Branches : `main` (buildable), `develop` (intégration), `feature/prenom-sujet`, `fix/sujet`.
+- Branches : `main` (buildable, releases), `Dev` (intégration, part de `main`), `Feat-<sujet>` / `Fix-<sujet>` créées depuis `Dev`, PR vers `Dev`.
 - Titre de PR = `type: sujet` (feat, fix, perf, refactor, ld, art, docs, chore). Merge en « Squash and merge ».
 - Toujours committer les `.meta`. Binaires (fbx, png, wav…) en Git LFS. Scènes partagées : prévenir + `git lfs lock`.
 

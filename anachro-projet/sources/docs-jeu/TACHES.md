@@ -1,6 +1,6 @@
 # Tâches
 
-Format : `[ ] ID — tâche (semaine cible)`. Une tâche se coche quand elle est **mergée sur `develop` et testée en réseau**, pas seulement en solo.
+Format : `[ ] ID — tâche (semaine cible)`. Une tâche se coche quand elle est **mergée sur `Dev` et testée en réseau**, pas seulement en solo.
 
 ---
 

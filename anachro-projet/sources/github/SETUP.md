@@ -23,7 +23,7 @@ Garde les 4 adresses sous la main (dans un bloc-notes, pas dans un message Disco
    git add .
    git commit -m "chore: configuration du dépôt"
    git push origin main
-   git checkout -b develop && git push -u origin develop
+   git checkout -b Dev && git push -u origin Dev
    ```
 
 ---
@@ -56,11 +56,11 @@ GitHub → **Settings → Webhooks → Add webhook** :
 
 ---
 
-## 6. Protéger `main` et `develop` (Théo valide tout) — DÉJÀ FAIT
+## 6. Protéger `main` et `Dev` (Théo valide tout) — DÉJÀ FAIT
 
-Ruleset `protection` (main + develop) : PR obligatoire (1 approbation), **seul l'admin (Théo) peut mettre à jour ces branches, uniquement via une PR**, suppression et force-push bloqués. Squash merge uniquement, message = titre de la PR. Actions ne peut pas approuver de PR.
+Ruleset `protection` (main + Dev) : PR obligatoire (1 approbation), **seul l'admin (Théo) peut mettre à jour ces branches, uniquement via une PR**, suppression et force-push bloqués. Squash merge uniquement, message = titre de la PR. Actions ne peut pas approuver de PR.
 
-⚠️ **Sur un dépôt privé gratuit, GitHub n'applique pas les rulesets.** Pour les activer : passe ton compte en GitHub Pro, gratuit pour les étudiants via **education.github.com → Student Developer Pack** (vérification avec l'adresse de l'école). Le ruleset existant s'active tout seul ensuite. En attendant, c'est la discipline de l'équipe qui protège main/develop.
+⚠️ **Sur un dépôt privé gratuit, GitHub n'applique pas les rulesets.** Pour les activer : passe ton compte en GitHub Pro, gratuit pour les étudiants via **education.github.com → Student Developer Pack** (vérification avec l'adresse de l'école). Le ruleset existant s'active tout seul ensuite. En attendant, c'est la discipline de l'équipe qui protège main/Dev.
 
 ---
 
@@ -78,15 +78,15 @@ Ruleset `protection` (main + develop) : PR obligatoire (1 approbation), **seul l
 
 ## 8. Règles pour l'équipe (à leur envoyer)
 
-- Une branche par sujet : `feature/prenom-sujet` → PR vers `develop`.
+- Une branche par sujet : `Feat-<sujet>` ou `Fix-<sujet>`, créée depuis `Dev` → PR vers `Dev`.
 - **Titre de PR = `type: sujet`** : `feat:` (nouveau), `fix:` (correction), `perf:`, `refactor:`, `ld:`, `art:`, `docs:`, `chore:`.
 - Le bot commente chaque push : lisez sa review, corrigez, poussez. **Il ne valide rien** : c'est Théo qui approuve et merge.
-- Une fois `develop` stable → PR `develop` → `main` : à chaque merge sur `main`, une version `v0.x.y` est créée avec son changelog et annoncée dans `#releases`.
+- Une fois `Dev` stable → PR `Dev` → `main` : à chaque merge sur `main`, une version `v0.x.y` est créée avec son changelog et annoncée dans `#releases`.
 
 ---
 
 ## Premier test (5 min)
 
-1. Crée une branche `feature/theo-test`, modifie un `.cs` (même bidon), ouvre une PR vers `develop` avec le titre `chore: test du bot`.
+1. Crée une branche `Feat-test` depuis `Dev`, modifie un `.cs` (même bidon), ouvre une PR vers `Dev` avec le titre `chore: test du bot`.
 2. Attends 2 à 5 min : un commentaire « 🤖 Review Claude » apparaît sur la PR et un résumé dans `#review`.
 3. Si rien : onglet **Actions** du dépôt → ouvre l'exécution en échec et envoie-moi le message d'erreur.

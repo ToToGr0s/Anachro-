@@ -1,6 +1,6 @@
 # Review de code par Claude sur chaque PR, à chaque push.
 # Le bot COMMENTE seulement : il n'approuve jamais et ne merge jamais.
-# Le merge vers main / develop exige l'approbation de Théo (CODEOWNERS + protection de branche).
+# Le merge vers main / Dev exige l'approbation de Théo (CODEOWNERS + protection de branche).
 name: Review Claude
 
 on:

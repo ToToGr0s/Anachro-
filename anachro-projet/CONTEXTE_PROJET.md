@@ -43,13 +43,13 @@ Party game Unity 3D low poly, 4 à 8 joueurs en ligne, l'hôte fait serveur, sor
 - Pour modifier le site : demander à Claude, puis coller le nouveau `worker.js` dans Cloudflare (Edit code → Ctrl+A → coller → Deploy).
 
 **GitHub** — ToToGr0s/Anachro- (privé)
-- Branches `main` (buildable) et `develop` (intégration) ; travail sur `feature/prenom-sujet`, PR vers `develop`.
+- Branches `main` (buildable) et `Dev` (intégration, part de `main`) ; travail sur `Feat-<sujet>` / `Fix-<sujet>` créées depuis `Dev`, PR vers `Dev`.
 - Titre de PR = `type: sujet` (feat, fix, perf, refactor, ld, art, docs, chore). Squash merge uniquement.
 - **Review Claude** sur chaque push de PR : commentaire en français (verdict, problèmes 🔴🟠🟡 avec ligne et correction, ce qui manque, à tester) + résumé dans #review. Elle n'approuve jamais : Théo approuve et merge.
 - **Release auto** à chaque merge sur `main` : tag `v0.x.y` + changelog + annonce dans #releases (feat → 0.X.0, sinon 0.x.Y, rien si seulement chore/docs).
 - Règles du code lues par la review : `CLAUDE.md` à la racine du dépôt.
 - Secrets : `CLAUDE_CODE_OAUTH_TOKEN` (abonnement de Théo, expire en octobre 2027), `DISCORD_WEBHOOK_REVIEW`, `DISCORD_WEBHOOK_RELEASES`.
-- Ruleset « protection » sur main/develop (seul l'admin merge, via PR) : **ne s'applique qu'avec GitHub Pro** (gratuit via le GitHub Student Developer Pack).
+- Ruleset « protection » sur main/Dev (seul l'admin merge, via PR) : **ne s'applique qu'avec GitHub Pro** (gratuit via le GitHub Student Developer Pack).
 
 **Discord** — salons #planning (récap lundi 8h45, bilan vendredi 16h30, alertes jalons J-3/J-1, tâche bloquée avec mention), #git (PR et pushes), #review, #releases.
 

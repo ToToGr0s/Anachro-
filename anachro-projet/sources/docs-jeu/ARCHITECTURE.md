@@ -69,7 +69,7 @@ Accessibilité **toujours explicite** (`private`, `public`…). Pas de champ pub
 ## Git
 
 - **Setup** : `.gitignore` Unity officiel, Asset Serialization = Force Text, Visible Meta Files, **Git LFS** (`*.fbx *.blend *.png *.psd *.tga *.wav *.ogg *.mp3 *.ttf`), `.gitattributes` avec `merge=unityyamlmerge` pour `*.unity *.prefab *.asset *.mat *.anim *.controller`.
-- **Branches** : `main` (toujours buildable, releases), `develop` (intégration), `feature/<prenom>-<sujet>`, `fix/<sujet>`. Des PR petites, relues par un autre dev.
+- **Branches** : `main` (toujours buildable, releases), `Dev` (intégration, part de `main`), `Feat-<sujet>` / `Fix-<sujet>` créées depuis `Dev`, PR vers `Dev`. Des PR petites, relues par un autre dev.
 - **Commits** : `type: sujet` (`feat: pose des objets`, `fix: désync PNJ`, `ld: greybox zone marché`).
 - **Scènes** : chacun travaille dans son `Sandbox_<Prenom>`. La scène de la map appartient à Théo, les autres ajoutent des **prefabs**. Faites un `git lfs lock` avant de toucher une scène partagée.
 - **Toujours committer les `.meta`**. Ne jamais déplacer ou renommer un asset hors de Unity.
