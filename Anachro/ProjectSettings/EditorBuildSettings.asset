@@ -8,5 +8,11 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Boot.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/_Project/Scenes/MainMenu.unity
+    guid: 20c7b37e65b0b58408de1b909d1b4980
+  - enabled: 1
+    path: Assets/_Project/Scenes/Maps/Map_Greybox.unity
+    guid: 73addce5bf26de1418ef87e503410276
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
