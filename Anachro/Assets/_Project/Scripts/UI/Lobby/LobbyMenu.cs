@@ -44,8 +44,6 @@ namespace Anachronism.UI
         private Label _matchRole;
         private Label _statusLabel;
 
-        // Entre la demande Steam et l'entrée dans le lobby, ni le lobby ni la connexion n'existent encore.
-        private bool _isJoining;
         private bool _isLeaving;
         private MenuScreen _currentScreen = (MenuScreen)(-1);
         // Dernières valeurs affichées : on ne reconstruit les textes que quand elles changent (pas d'allocation par frame).
@@ -88,10 +86,23 @@ namespace Anachronism.UI
             root.Q<Button>("copy-button").clicked += OnCopyClicked;
             root.Q<Button>("leave-button").clicked += OnLeaveClicked;
             root.Q<Button>("cancel-button").clicked += OnLeaveClicked;
-            root.Q<Button>("quit-button").clicked += Application.Quit;
+            root.Q<Button>("quit-button").clicked += OnQuitClicked;
             _codeField.RegisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
 
             _currentScreen = (MenuScreen)(-1);
+        }
+
+        private void OnDisable()
+        {
+            VisualElement root = _document.rootVisualElement;
+            _createButton.clicked -= OnCreateClicked;
+            _joinButton.clicked -= OnJoinClicked;
+            _startButton.clicked -= OnStartClicked;
+            root.Q<Button>("copy-button").clicked -= OnCopyClicked;
+            root.Q<Button>("leave-button").clicked -= OnLeaveClicked;
+            root.Q<Button>("cancel-button").clicked -= OnLeaveClicked;
+            root.Q<Button>("quit-button").clicked -= OnQuitClicked;
+            _codeField.UnregisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
         }
 
         private void Start()
@@ -146,7 +157,7 @@ namespace Anachronism.UI
                 return isPlaying ? MenuScreen.Match : MenuScreen.Lobby;
             }
 
-            bool isConnecting = _isJoining || _steamLobby.IsBusy || _networkManager.ClientManager.Started;
+            bool isConnecting = _steamLobby.IsBusy || _networkManager.ClientManager.Started;
             return isConnecting ? MenuScreen.Connecting : MenuScreen.Home;
         }
 
@@ -166,7 +177,7 @@ namespace Anachronism.UI
                 bool isHost = _networkManager.IsServerStarted;
                 SetVisible(_startButton, isHost);
                 SetVisible(_waitingLabel, !isHost);
-                _lobbyCode.text = _steamLobby.IsInLobby ? LobbyCode.Format(_steamLobby.Code) : "Local";
+                _lobbyCode.text = LobbyCode.Format(_steamLobby.Code);
                 SetStatus(string.Empty);
             }
         }
@@ -181,7 +192,7 @@ namespace Anachronism.UI
 
         private void RefreshLobby()
         {
-            int players = _steamLobby.IsInLobby ? _steamLobby.MemberCount : _networkManager.ServerManager.Clients.Count;
+            int players = _steamLobby.MemberCount;
             if (players != _shownPlayers)
             {
                 _shownPlayers = players;
@@ -225,7 +236,7 @@ namespace Anachronism.UI
         private void OnJoinClicked()
         {
             SetStatus(string.Empty);
-            _isJoining = _steamLobby.JoinByCode(_codeField.value);
+            _steamLobby.JoinByCode(_codeField.value);
         }
 
         private void OnCodeFieldKeyDown(KeyDownEvent keyEvent)
@@ -236,9 +247,18 @@ namespace Anachronism.UI
 
         private void OnStartClicked()
         {
+            // StartMatch est réservé au serveur : le bouton n'est montré qu'à l'hôte, on revérifie quand même.
             MatchManager match = MatchManager.Instance;
-            if (match != null && !match.StartMatch())
-                SetStatus("Pas assez de joueurs pour lancer la partie.");
+            if (match == null || !_networkManager.IsServerStarted)
+                return;
+
+            SetStatus(match.StartMatch() switch
+            {
+                MatchStartResult.NotEnoughPlayers => "Pas assez de joueurs pour lancer la partie.",
+                MatchStartResult.PlayersLoading => "Un joueur charge encore la map, réessaie dans un instant.",
+                MatchStartResult.InvalidSettings => "Réglages de partie invalides (voir la console).",
+                _ => string.Empty
+            });
         }
 
         private void OnCopyClicked() => GUIUtility.systemCopyBuffer = _steamLobby.Code;
@@ -246,21 +266,14 @@ namespace Anachronism.UI
         private void OnLeaveClicked()
         {
             _isLeaving = true;
-            _isJoining = false;
             _steamLobby.LeaveGame();
         }
 
-        private void OnLobbyFailed(string message)
-        {
-            _isJoining = false;
-            SetStatus(message);
-        }
+        private void OnQuitClicked() => Application.Quit();
 
-        private void OnLobbyChanged()
-        {
-            // Lobby rejoint (la connexion réseau prend le relais) ou quitté.
-            _isJoining = false;
-        }
+        private void OnLobbyFailed(string message) => SetStatus(message);
+
+        private void OnLobbyChanged() => _shownPlayers = -1;
 
         private void OnClientConnectionState(ClientConnectionStateArgs args)
         {

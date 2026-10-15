@@ -10,8 +10,6 @@ using FishNet.Managing;
 using FishNet.Managing.Object;
 using FishNet.Managing.Transporting;
 using FishNet.Object;
-using FishNet.Transporting.Multipass;
-using FishNet.Transporting.Tugboat;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -21,7 +19,7 @@ using UnityEngine.UIElements;
 namespace Anachronism.Editor
 {
     /// <summary>
-    /// Construit la base réseau : prefab joueur, NetworkManager de Boot (Multipass Tugboat + Steam, spawn, lobby Steam,
+    /// Construit la base réseau : prefab joueur, NetworkManager de Boot (transport Steam, spawn, lobby Steam,
     /// enchaînement Boot → MainMenu → map) et Build Settings. Rejouable : Boot est reconstruit, le GUID du prefab est gardé,
     /// MainMenu et la map ne sont créés que s'ils n'existent pas (on n'écrase jamais le travail de LD ou d'UI).
     /// </summary>
@@ -42,7 +40,7 @@ namespace Anachronism.Editor
         private const string SpawnPointsName = "SpawnPoints";
         private const string GroundName = "Ground";
         private const string ServicesName = "Services";
-        // Le client local de l'hôte compte comme une connexion Tugboat : 8 = hôte + 7 joueurs.
+        // Limite de connexions du transport Steam : 8 = hôte + 7 joueurs.
         private const int MaxPlayers = 8;
         private const int SpawnPointCount = MaxPlayers;
         private const float SpawnRadius = 4f;
@@ -111,34 +109,20 @@ namespace Anachronism.Editor
             NetworkManager networkManager = managerObject.AddComponent<NetworkManager>();
             networkManager.SpawnablePrefabs = prefabObjects;
 
-            // Multipass : le serveur écoute en local (Tugboat) et sur Steam (FishySteamworks) en même temps,
-            // le client choisit son transport au moment de se connecter.
-            Tugboat tugboat = managerObject.AddComponent<Tugboat>();
+            // Steam seulement : on rejoint une partie par son code (lobby Steam), jamais par une IP.
             FishySteamworks.FishySteamworks steamTransport = managerObject.AddComponent<FishySteamworks.FishySteamworks>();
-            Multipass multipass = managerObject.AddComponent<Multipass>();
 
             // Les setters runtime touchent des sockets absents hors Play Mode : on passe par les champs sérialisés.
-            SerializedObject tugboatSettings = new SerializedObject(tugboat);
-            tugboatSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
-            tugboatSettings.ApplyModifiedPropertiesWithoutUndo();
-
             SerializedObject steamSettings = new SerializedObject(steamTransport);
             steamSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
             // P2P : on se connecte au SteamID de l'hôte via le relais Steam, pas à une IP.
             steamSettings.FindProperty("_peerToPeer").boolValue = true;
             steamSettings.ApplyModifiedPropertiesWithoutUndo();
 
-            SerializedObject multipassSettings = new SerializedObject(multipass);
-            SerializedProperty transports = multipassSettings.FindProperty("_transports");
-            transports.arraySize = 2;
-            transports.GetArrayElementAtIndex(0).objectReferenceValue = tugboat;
-            transports.GetArrayElementAtIndex(1).objectReferenceValue = steamTransport;
-            multipassSettings.ApplyModifiedPropertiesWithoutUndo();
-
             TransportManager transportManager = managerObject.GetComponent<TransportManager>();
             if (transportManager == null)
                 transportManager = managerObject.AddComponent<TransportManager>();
-            transportManager.Transport = multipass;
+            transportManager.Transport = steamTransport;
 
             // Points d'apparition fournis par la map à son chargement (MapSpawnPoints).
             PlayerSpawner spawner = managerObject.AddComponent<PlayerSpawner>();
@@ -153,7 +137,6 @@ namespace Anachronism.Editor
             defaultSceneSettings.ApplyModifiedPropertiesWithoutUndo();
 
             managerObject.AddComponent<SteamLobby>();
-            managerObject.AddComponent<DevConnectionHud>();
 
             new GameObject(ServicesName).AddComponent<SteamService>();
             CreateLobbyMenu();
