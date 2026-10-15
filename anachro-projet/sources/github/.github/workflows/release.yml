@@ -1,0 +1,29 @@
+# Versioning automatique à chaque merge sur main :
+# calcule la version (feat → 0.X.0, fix/autre → 0.x.Y), crée le tag + la GitHub Release
+# avec le changelog, et l'annonce dans le salon Discord #releases.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: false
+
+      - name: Version, tag, release et annonce Discord
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_RELEASES }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: python3 .github/scripts/release.py

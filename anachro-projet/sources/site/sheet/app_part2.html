@@ -1,0 +1,510 @@
+</div>
+<div id="sprint" hidden></div>
+<div id="editor" hidden></div>
+
+<script>
+const ST = {todo:"À faire", doing:"En cours", done:"Fait", blocked:"Bloqué"};
+const PEOPLE = {theo:"Théo", celian:"Célian", olivier:"Olivier", art1:"Hugo", art2:"JB", tous:"Équipe"};
+const COLS = [
+  {k:"theo", who:["theo"]}, {k:"celian", who:["celian"]}, {k:"olivier", who:["olivier"]},
+  {k:"art", label:"Artistes", who:["art1","art2"]}, {k:"tous", label:"Équipe (hors code)", who:["tous"]},
+];
+const CATS = ["Online","LD","Gameplay","Data","PNJ","Monde","UI","Audio","Outils","Art","Prod","Playtest","Steam","Marketing"];
+const colorOf = who => who && who.startsWith("art") ? "art" : (who || "tous");
+const colLabel = c => c.label || PEOPLE[c.k];
+
+const WEEKS = [
+  {s:"S1", d:"5–9 oct", a:"2026-10-05", b:"2026-10-09"},
+  {s:"S2", d:"12–16 oct", a:"2026-10-12", b:"2026-10-16", phase:"Bloc 1 — fondations"},
+  {s:"S3", d:"19–23 oct", a:"2026-10-19", b:"2026-10-23", m:"Boucle en LAN"},
+  {gap:"26 oct → 27 nov · pas de studio (cours + Quête I1)"},
+  {s:"S4", d:"30 nov–4 déc", a:"2026-11-30", b:"2026-12-04", m:"1re partie en ligne", phase:"Bloc 2 — jeu complet"},
+  {s:"S5", d:"7–11 déc", a:"2026-12-07", b:"2026-12-11"},
+  {s:"S6", d:"14–18 déc", a:"2026-12-14", b:"2026-12-18", m:"Core gelé + page Steam"},
+  {gap:"Vacances + 4–8 jan · pas de studio"},
+  {s:"S7", d:"11–15 jan", a:"2027-01-11", b:"2027-01-15", phase:"Bloc 3 — démo"},
+  {s:"S8", d:"18–22 jan", a:"2027-01-18", b:"2027-01-22"},
+  {s:"S9", d:"25–29 jan", a:"2027-01-25", b:"2027-01-29", m:"Démo Next Fest"},
+  {gap:"1 fév → 5 mars · pas de studio (cours + Quête I2)"},
+  {s:"S10", d:"8–12 mars", a:"2027-03-08", b:"2027-03-12", phase:"Bloc 4 — sortie"},
+  {s:"S11", d:"15–19 mars", a:"2027-03-15", b:"2027-03-19", m:"Release candidate"},
+  {s:"S12", d:"22–26 mars", a:"2027-03-22", b:"2027-03-26", m:"SORTIE"},
+  {gap:"29 mars → 2 avr · pas de studio — surveiller avis et bugs"},
+  {s:"S13", d:"5–9 avr", a:"2027-04-05", b:"2027-04-09", phase:"Studio #2 — MAJ 1.1"},
+  {s:"S14", d:"12–16 avr", a:"2027-04-12", b:"2027-04-16"},
+  {s:"S15", d:"19–23 avr", a:"2027-04-19", b:"2027-04-23", m:"MAJ 1.1"},
+  {gap:"26 avr → 28 mai · pas de studio (cours + Quête I3)"},
+  {s:"S16", d:"31 mai–4 juin", a:"2027-05-31", b:"2027-06-04", phase:"Studio #2 — MAJ 1.2"},
+  {s:"S17", d:"7–11 juin", a:"2027-06-07", b:"2027-06-11"},
+  {s:"S18", d:"14–18 juin", a:"2027-06-14", b:"2027-06-18", m:"MAJ 1.2 + jury"},
+];
+const SW = WEEKS.filter(w=>w.s);
+const MILES = [
+  ["S3","23 oct","Boucle en LAN","Greybox, 3 instances : rôles secrets, PNJ, cache, recherche, tir validé serveur","2026-10-23"],
+  ["S4","4 déc","1re partie en ligne","Via Steam sur PC différents, de bout en bout. Playtest à 4+","2026-12-04"],
+  ["S6","18 déc","Core gelé","Playtest à 8, vocal OK, dégradation OK. Page Steam en ligne","2026-12-18"],
+  ["S9","29 jan","Démo","Map 1 avec l'art, stable à 120 ms / 2 %. Envoyée au Next Fest","2027-01-29"],
+  ["S11","19 mars","Release candidate","Zéro bug bloquant, build en review Steam","2027-03-19"],
+  ["S12","26 mars","Sortie","Jeu en vente sur Steam","2027-03-26"],
+  ["S15","23 avr","MAJ 1.1","Bugs majeurs corrigés + 2-3 demandes des joueurs","2027-04-23"],
+  ["S18","18 juin","MAJ 1.2","Map 2 + nouveaux anachronismes, avant les soldes d'été Steam","2027-06-18"],
+];
+const ALERTS = [
+  ["Il reste 10,5 semaines de studio, pas 20","Jusqu'à fin mars : S2 → S12, environ 315 h par dev. Février : 0 semaine studio, novembre : 1."],
+  ["1 map en mars, la 2e en juin","Sortie avec 1 map bien finie. MAJ 1.1 fin avril (bugs), MAJ 1.2 mi-juin (map 2)."],
+  ["Démo finie le 29 janvier","Le Next Fest est en février et il n'y a aucune semaine studio en février. Vérifier la date limite d'inscription."],
+  ["Steam : s'y prendre tôt","AppID payant (qui paie ?). Page « bientôt disponible » 2 semaines minimum avant la sortie, review du build = plusieurs jours. Page en ligne fin S6."],
+  ["Les trous de 5-6 semaines","Fin de chaque bloc : main buildable + une note sur où on en est. Après la sortie, quelqu'un surveille les avis et les bugs bloquants."],
+  ["Artistes : map 2 en avance","Le kit de la map 2 doit commencer dès que la map 1 est finie, sinon la MAJ 1.2 ne tient pas."],
+];
+const ROLES = [
+  ["theo","theo","Online (FishNet, Steam, vocal, validation serveur, builds) + level design"],
+  ["celian","celian","Joueur & gameplay : contrôleur, pistolet, pose, capture, portail, photos, data"],
+  ["olivier","olivier","PNJ, monde & présentation : foule, dégradation, glitchs, UI, menus, audio"],
+  ["art1","art","Persos & animations : PNJ, skins, anims, PNJ de l'époque 2"],
+  ["art2","art","Décors & props : anachronismes, kits d'époque, habillage, visuels Steam"],
+  ["tous","tous","Hors code : organisation, playtests, page Steam, trailer, réseaux, lancement"],
+];
+
+// ---------- état ----------
+let tasks = new Map(); let me=null, rev=0, editorOpen=false;          // id -> doc
+let loaded = false, db = null, canWrite = false;
+let LINKS = []; const TOG = new Map(); let SPRINT = null; let expandAll = false;
+const $ = (s,r=document) => r.querySelector(s);
+const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; };
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const day = s => new Date(s+"T00:00:00");
+const today = (()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; })();
+const wIdx = s => SW.findIndex(w=>w.s===s);
+const CUR = (()=>{ const w = SW.find(w=> today>=day(w.a) && today<=new Date(day(w.b).getTime()+2*864e5));
+  return w ? {w, live:true} : {w: SW.find(w=>day(w.a)>today) || SW[SW.length-1], live:false}; })();
+const name = who => PEOPLE[who] || who;
+const isLate = t => wIdx(t.wk) < wIdx(CUR.w.s) && t.s!=="done";
+
+function list(){ return [...tasks.values()].sort((a,b)=> (wIdx(a.wk)-wIdx(b.wk)) || ((a.o??0)-(b.o??0)) || a.id.localeCompare(b.id)); }
+function groupsOf(arr){
+  const m = new Map();
+  for(const t of arr){ if(!m.has(t.g)) m.set(t.g,{g:t.g, gt:t.gt, who:t.who, cat:t.cat, wk:t.wk, items:[]}); m.get(t.g).items.push(t); }
+  return [...m.values()];
+}
+
+// ---------- écritures ----------
+async function writeStatus(id, s){
+  const t = tasks.get(id); if(!t || t.s===s) return;
+  t.s = s; scheduleRender();
+  try{ await api("/api/tasks/"+encodeURIComponent(id),{method:"PATCH",body:JSON.stringify({s})}); load(); }catch(e){ if(e.message!=="auth") note("Le statut n'a pas été enregistré : "+e.message); }
+}
+function body(t){ return {g:t.g, gt:t.gt, t:t.t, who:t.who, wk:t.wk, cat:t.cat, s:t.s, o:t.o??0}; }
+
+// ---------- rendu ----------
+let raf = 0;
+function scheduleRender(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(renderAll); }
+
+function subRow(t, showWho){
+  const r = el("div","sub"+(t.s==="done"?" done":""));
+  if(t.updated_by) r.title = "Modifié par "+name(t.updated_by)+" le "+new Date(t.updated_at).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+  const cb = el("input"); cb.type="checkbox"; cb.id="cb-"+t.id+"-"+Math.random().toString(36).slice(2,6);
+  cb.checked = t.s==="done"; cb.disabled = !canWrite; cb.setAttribute("aria-label", t.t);
+  cb.addEventListener("change",()=>writeStatus(t.id, cb.checked?"done":"todo"));
+  const txt = el("label","txt", esc(t.t) + (t.s==="doing"||t.s==="blocked" ? `<span class="badge ${t.s}">${ST[t.s]}</span>`:"") + (showWho?`<span class="who">${esc(name(t.who))}</span>`:""));
+  txt.htmlFor = cb.id;
+  r.append(cb, txt);
+  if(canWrite){ const e = el("button","edit","✎"); e.type="button"; e.title="Modifier"; e.setAttribute("aria-label","Modifier « "+t.t+" »"); e.addEventListener("click",()=>openEditor(t)); r.append(e); }
+  return r;
+}
+function groupCard(g, opts={}){
+  const done = g.items.filter(t=>t.s==="done").length, all = done===g.items.length;
+  const key = (opts.ctx||"c")+"|"+g.g+"|"+g.wk;
+  const open = TOG.has(key) ? TOG.get(key) : !all;
+  const c = el("div","gcard c-"+colorOf(g.who)+(all?" alldone":"")+(open?"":" shut"));
+  c.dataset.g = g.g;
+  const hd = el("header",null,`<span class="tag">${esc(g.cat)}</span><h4>${esc(g.gt)}</h4><span class="cnt">${done}/${g.items.length}${opts.wk?" · "+g.wk:""}</span>`);
+  hd.tabIndex = 0; hd.setAttribute("role","button"); hd.setAttribute("aria-expanded",String(open));
+  const tog = ()=>{ const o = c.classList.toggle("shut"); TOG.set(key,!o); hd.setAttribute("aria-expanded",String(!o)); };
+  hd.addEventListener("click",tog); hd.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tog(); } });
+  c.append(hd);
+  const subs = el("div","subs"); g.items.forEach(t=>subs.append(subRow(t, opts.showWho && (t.who!==g.who)))); c.append(subs);
+  return c;
+}
+function counts(ts){ const k={done:0,doing:0,blocked:0,todo:0}; ts.forEach(t=>k[t.s]=(k[t.s]||0)+1); return k; }
+function miniBar(ts){
+  const n=ts.length||1, k=counts(ts);
+  return `<div class="mbar"><i style="width:${100*k.done/n}%;background:var(--done)"></i><i style="width:${100*k.doing/n}%;background:var(--doing)"></i><i style="width:${100*k.blocked/n}%;background:var(--blocked)"></i></div>`;
+}
+function sprintState(w){ return w===CUR.w ? (CUR.live?"En cours":"Prochain") : day(w.b)<today ? "Passé" : "À venir"; }
+
+function renderNow(){
+  const next = MILES.find(m=>day(m[4])>=today);
+  const days = next ? Math.round((day(next[4])-today)/864e5) : 0;
+  $("#now").innerHTML = `<button type="button" class="pill-box hot clk" id="pill-cur" title="Voir le contenu du sprint"><div class="k">${CUR.live?"Semaine studio en cours":"Prochaine semaine studio"}</div><div class="v">${CUR.w.s} <small>${CUR.w.d} · voir →</small></div></button>`
+   + (next?`<div class="pill-box"><div class="k">Prochain jalon</div><div class="v">${esc(next[2])} <small>${next[1]} · J-${days}</small></div></div>`:"")
+   + (me?`<div class="pill-box"><div class="k">Connecté</div><div class="v">${esc(me.name)} <small>${me.role==="admin"?`<a href="/admin">Admin</a> · `:""}<a href="#" id="logout">Déconnexion</a></small></div></div>`:"");
+  $("#pill-cur").addEventListener("click",()=>openSprint(CUR.w.s));
+  renderLinks();
+  const lo = $("#logout"); if(lo) lo.addEventListener("click",async e=>{ e.preventDefault(); await fetch("/api/logout",{method:"POST"}); location.reload(); });
+}
+
+function renderLinks(){
+  const q = $("#quick"); if(!q) return; q.innerHTML="";
+  LINKS.forEach((l,i)=>{ const a = el("a","qbtn"+(i===0?" main":""),`${i===0?"📘":"🔗"} ${esc(l.label)} <span class="ext">↗</span>`); a.href=l.url; a.target="_blank"; a.rel="noopener noreferrer"; q.append(a); });
+  if(!LINKS.length && me && me.role==="admin"){ const a = el("a","qbtn add","+ Ajouter le lien du GDD"); a.href="/admin#liens"; q.append(a); }
+  if(LINKS.length && me && me.role==="admin"){ const a = el("a","qbtn add","✎"); a.href="/admin#liens"; a.title="Modifier les liens"; a.setAttribute("aria-label","Modifier les liens"); q.append(a); }
+}
+
+function renderProgress(){
+  const box = $("#progress"); box.innerHTML="";
+  const all = list();
+  for(const c of COLS){
+    const ts = all.filter(t=>c.who.includes(t.who)); const n = ts.length||1;
+    const k = {done:0,doing:0,blocked:0}; ts.forEach(t=>{ if(k[t.s]!=null) k[t.s]++; });
+    const late = ts.filter(isLate).length;
+    const p = el("div","prog c-"+c.k);
+    p.innerHTML = `<div class="row"><span class="name"><i class="dot" style="background:var(--c)"></i>${esc(colLabel(c))}</span><span class="pct">${Math.round(100*k.done/n)} %</span></div>
+      <div class="bar"><i style="width:${100*k.done/n}%;background:var(--done)"></i><i style="width:${100*k.doing/n}%;background:var(--doing)"></i><i style="width:${100*k.blocked/n}%;background:var(--blocked)"></i></div>
+      <div class="meta">${k.done}/${ts.length} faites${late?` · <b style="color:var(--blocked)">${late} en retard</b>`:""}${k.blocked?` · ${k.blocked} bloquée${k.blocked>1?"s":""}`:""}</div>`;
+    box.append(p);
+  }
+}
+
+function renderSemaine(){
+  const p = $("#p-semaine"); p.innerHTML="";
+  if(!tasks.size){ p.append(el("div","empty","Aucune tâche pour l'instant. Va dans « Toutes les tâches » et clique sur « + Ajouter une tâche ».")); return; }
+  const w = CUR.w;
+  const nt = el("p","note",`${CUR.live?"Cette semaine":"Prochaine semaine studio"} : <b>${w.s}</b> (${w.d})${w.m?` — jalon en fin de semaine : <b>${esc(w.m)}</b>`:""}. Coche ce qui est fait, tout le monde le voit. Clique sur un groupe pour le replier. `);
+  const sb = el("button","linkbtn","Vue d'ensemble du sprint →"); sb.type="button"; sb.addEventListener("click",()=>openSprint(w.s)); nt.append(sb); p.append(nt);
+  const cols = el("div","cols"); const all = list();
+  for(const c of COLS){
+    const col = el("div","col c-"+c.k);
+    const mine = all.filter(t=>c.who.includes(t.who));
+    const now = mine.filter(t=>t.wk===w.s); const late = mine.filter(isLate);
+    const gs = groupsOf(now);
+    col.append(el("div","colh",`<i class="dot" style="background:var(--c)"></i><h3>${esc(colLabel(c))}</h3><span>${now.filter(t=>t.s==="done").length}/${now.length}</span>`));
+    gs.forEach(g=>col.append(groupCard(g,{showWho:c.who.length>1, ctx:"sem"})));
+    if(!gs.length) col.append(el("div","empty","Rien cette semaine."));
+    if(late.length){
+      const d = el("details","late"); d.append(el("summary",null,`En retard (${late.length})`));
+      groupsOf(late).forEach(g=>d.append(groupCard(g,{wk:true,showWho:c.who.length>1, ctx:"late"})));
+      col.append(d);
+    }
+    cols.append(col);
+  }
+  p.append(cols);
+}
+
+function renderPlanning(){
+  const p = $("#p-planning"); p.innerHTML="";
+  p.append(el("p","note","Une ligne = un sprint (une semaine studio, 30 h/dev). <b>Clique sur un sprint ou sur un bloc pour voir son contenu.</b> Bandes hachurées = pas de studio."));
+  const wrap = el("div","plan"); const g = el("div","pgrid"); const all = list();
+  g.append(el("div","phead","Semaine"));
+  COLS.forEach(c=>g.append(el("div","phead c-"+c.k,`<i class="dot" style="background:var(--c)"></i>${esc(colLabel(c))}`)));
+  for(const w of WEEKS){
+    if(w.gap){ g.append(el("div","gapline",esc(w.gap))); continue; }
+    if(w.phase) g.append(el("div","phase",esc(w.phase)));
+    const past = day(w.b)<today && w!==CUR.w;
+    const lab = el("div","wk"+(w===CUR.w?" cur":"")+(past?" row-past":""));
+    const lb = el("button",null,`<h3>${w.s}</h3><div class="d">${w.d}</div>${w===CUR.w?`<span class="now-tag">${CUR.live?"Maintenant":"Prochaine"}</span><br>`:""}${w.m?`<span class="mile">◆ ${esc(w.m)}</span><br>`:""}<span class="see">Voir →</span>`);
+    lb.type="button"; lb.setAttribute("aria-label",`Voir le sprint ${w.s}`); lb.addEventListener("click",()=>openSprint(w.s));
+    lab.append(lb); g.append(lab);
+    for(const c of COLS){
+      const cell = el("div",past?"row-past":""); const chips = el("div","chips");
+      groupsOf(all.filter(t=>t.wk===w.s && c.who.includes(t.who))).forEach(gr=>{
+        const done = gr.items.filter(t=>t.s==="done").length, bl = gr.items.some(t=>t.s==="blocked");
+        const ch = el("button","chip c-"+colorOf(gr.who)+(done===gr.items.length?" cdone":"")+(bl?" cblocked":""),`<span>${esc(gr.gt)}</span><b>${done}/${gr.items.length}</b>`);
+        ch.type="button"; ch.addEventListener("click",()=>openSprint(w.s, gr.g)); chips.append(ch);
+      });
+      cell.append(chips); g.append(cell);
+    }
+  }
+  wrap.append(g); p.append(wrap);
+}
+
+const F = {who:"all", st:"all", cat:"all", q:""};
+function renderTaches(){
+  const p = $("#p-taches");
+  const hadFocus = document.activeElement && document.activeElement.id==="q";
+  p.innerHTML="";
+  const bar = el("div","toolbar");
+  for(const [k,v] of [["all","Tout le monde"],...COLS.map(c=>[c.k,colLabel(c)])]){
+    const b = el("button","chipbtn"+(k!=="all"?" c-"+k:""),(k!=="all"?`<i class="dot" style="background:var(--c)"></i>`:"")+esc(v));
+    b.type="button"; b.setAttribute("aria-pressed",String(F.who===k)); b.addEventListener("click",()=>{F.who=k; renderTaches();}); bar.append(b);
+  }
+  p.append(bar);
+  const bar2 = el("div","toolbar");
+  const sSt = el("select"); sSt.id="f-st"; sSt.setAttribute("aria-label","Filtrer par statut");
+  [["all","Tous les statuts"],["open","Pas fait"],["late","En retard"],...Object.entries(ST)].forEach(([k,v])=>{const o=el("option",null,v);o.value=k;sSt.append(o);});
+  sSt.value=F.st; sSt.addEventListener("change",()=>{F.st=sSt.value; renderTaches();});
+  const sCat = el("select"); sCat.id="f-cat"; sCat.setAttribute("aria-label","Filtrer par catégorie");
+  [["all","Toutes les catégories"],...CATS.map(c=>[c,c])].forEach(([k,v])=>{const o=el("option",null,v);o.value=k;sCat.append(o);});
+  sCat.value=F.cat; sCat.addEventListener("change",()=>{F.cat=sCat.value; renderTaches();});
+  const q = el("input"); q.type="search"; q.id="q"; q.placeholder="Rechercher une tâche…"; q.value=F.q;
+  q.addEventListener("input",()=>{F.q=q.value; clearTimeout(q._t); q._t=setTimeout(renderTaches,200);});
+  bar2.append(sSt,sCat,q);
+  if(canWrite){ const add = el("button","primary","+ Ajouter une tâche"); add.type="button"; add.addEventListener("click",()=>openEditor(null)); bar2.append(add); }
+  p.append(bar2);
+  if(hadFocus){ q.focus(); q.setSelectionRange(q.value.length,q.value.length); }
+
+  const col = COLS.find(c=>c.k===F.who);
+  const needle = F.q.trim().toLowerCase();
+  const keep = t => (!col || col.who.includes(t.who))
+    && (F.st==="all" || (F.st==="open" ? t.s!=="done" : F.st==="late" ? isLate(t) : t.s===F.st))
+    && (F.cat==="all" || t.cat===F.cat)
+    && (!needle || (t.t+" "+t.gt).toLowerCase().includes(needle));
+  const all = list().filter(keep);
+  const filtering = !!needle || F.st!=="all";
+  const nG = groupsOf(all).length;
+  const info = el("p","note",`${all.length} tâche${all.length>1?"s":""} · ${nG} groupe${nG>1?"s":""}. Clique sur un groupe pour voir ses tâches, sur un sprint pour sa vue d'ensemble. `);
+  const xa = el("button","linkbtn",expandAll?"Tout replier":"Tout déplier"); xa.type="button"; xa.addEventListener("click",()=>{ expandAll=!expandAll; [...TOG.keys()].filter(k=>k.startsWith("list|")).forEach(k=>TOG.delete(k)); renderTaches(); });
+  info.append(xa); p.append(info);
+  if(!all.length){ p.append(el("div","empty", loaded ? "Aucune tâche ne correspond." : "Chargement…")); return; }
+  const section = (w, ts) => {
+    const sec = el("div","spr"+(w&&w===CUR.w?" cur":""));
+    if(w){
+      const full = list().filter(t=>t.wk===w.s), k = counts(full);
+      const h = el("button","sprh",`<span class="sn">${w.s}</span><span class="sd"><b>${w.d}</b> · ${sprintState(w)}${w.m?`<span class="sm">◆ ${esc(w.m)}</span>`:""}</span><span class="mini">${miniBar(full)}<span class="mnum">${k.done}/${full.length}</span></span><span class="go">Voir le sprint →</span>`);
+      h.type="button"; h.addEventListener("click",()=>openSprint(w.s)); sec.append(h);
+    } else sec.append(el("div","sprh",`<span class="sn">—</span><span class="sd"><b>Sans semaine</b></span>`));
+    const gl = el("div","glist");
+    groupsOf(ts).forEach(g=>gl.append(groupRow(g, filtering)));
+    sec.append(gl); return sec;
+  };
+  for(const w of SW){ const ts = all.filter(t=>t.wk===w.s); if(ts.length) p.append(section(w, ts)); }
+  const orphan = all.filter(t=>wIdx(t.wk)<0);
+  if(orphan.length) p.append(section(null, orphan));
+}
+function groupRow(g, filtering){
+  const key = "list|"+g.g+"|"+g.wk;
+  const k = counts(g.items), all = k.done===g.items.length;
+  const open = TOG.has(key) ? TOG.get(key) : (expandAll || filtering);
+  const r = el("div","grow c-"+colorOf(g.who)+(all?" alldone":"")+(open?" open":""));
+  const whos = [...new Set(g.items.map(t=>name(t.who)))].join(", ");
+  const flags = (k.blocked?`<span class="badge blocked">${k.blocked} bloquée${k.blocked>1?"s":""}</span>`:"") + (k.doing?`<span class="badge doing">${k.doing} en cours</span>`:"") + (g.items.some(isLate)?`<span class="badge blocked">En retard</span>`:"");
+  const b = el("button",null,`<span class="stripe"></span><span class="gt"><span>${esc(g.gt)}</span><span class="tag">${esc(g.cat)}</span>${flags}</span><span class="gw">${esc(whos)}</span><span class="mini">${miniBar(g.items)}<span class="mnum">${k.done}/${g.items.length}</span></span><span class="chev">▶</span>`);
+  b.type="button"; b.setAttribute("aria-expanded",String(open));
+  const subs = el("div","subs"); subs.hidden = !open;
+  b.addEventListener("click",()=>{
+    const o = !r.classList.contains("open"); r.classList.toggle("open",o); subs.hidden=!o; b.setAttribute("aria-expanded",String(o)); TOG.set(key,o);
+    if(o && !subs.childElementCount) g.items.forEach(t=>subs.append(subRow(t, t.who!==g.who)));
+  });
+  if(open) g.items.forEach(t=>subs.append(subRow(t, t.who!==g.who)));
+  r.append(b, subs); return r;
+}
+
+function renderJalons(){
+  const p = $("#p-jalons"); p.innerHTML="";
+  const nextIdx = MILES.findIndex(m=>day(m[4])>=today);
+  const box = el("div","miles");
+  MILES.forEach((m,i)=>{
+    const cls = (nextIdx<0||i<nextIdx) ? "past" : i===nextIdx ? "next" : "later";
+    const row = el("div","ms clk"+(cls==="next"?" next":""),`<div class="when">${m[0]}<small>${m[1]}</small></div><div><h3>${esc(m[2])}</h3><p>${esc(m[3])}</p></div><span class="state st-${cls}">${cls==="past"?"Date passée":cls==="next"?"Prochain":"À venir"}</span>`);
+    row.tabIndex=0; row.setAttribute("role","button"); row.title="Voir le contenu du sprint "+m[0];
+    row.addEventListener("click",()=>openSprint(m[0])); row.addEventListener("keydown",e=>{ if(e.key==="Enter"){ openSprint(m[0]); } });
+    box.append(row);
+  });
+  p.append(box);
+}
+
+function renderInfos(){
+  const p = $("#p-infos"); p.innerHTML="";
+  const h1 = el("h2",null,"À lire avant tout"); h1.style.cssText="font-size:24px;margin-bottom:10px"; p.append(h1);
+  const a = el("div","alerts"); ALERTS.forEach(x=>a.append(el("div","alert",`<h3>${esc(x[0])}</h3><p>${esc(x[1])}</p>`))); p.append(a);
+  const h2 = el("h2",null,"Qui fait quoi"); h2.style.cssText="font-size:24px;margin-bottom:10px"; p.append(h2);
+  const r = el("div","roles"); ROLES.forEach(([who,c,txt])=>r.append(el("div","role c-"+c,`<h3>${esc(name(who))}</h3><p>${esc(txt)}</p>`))); p.append(r);
+  if(me && me.role==="admin") p.append(el("p","note","Pour renommer les artistes ou donner les codes d’accès : <a href=\"/admin\">page admin</a>."));
+}
+
+function renderAll(){
+  renderNow(); renderProgress();
+  if(!loaded){ return; }
+  renderSemaine(); renderPlanning(); renderTaches(); renderJalons(); renderInfos();
+  if(SPRINT) renderSprint();
+}
+
+// ---------- fenêtre sprint ----------
+function openSprint(s, focusG){
+  if(wIdx(s)<0) return;
+  SPRINT = {s, focus: focusG||null}; renderSprint(true);
+  try{ history.replaceState(null,"","#sprint-"+s); }catch(e){}
+}
+function closeSprint(){
+  SPRINT=null; const b=$("#sprint"); b.hidden=true; b.innerHTML=""; document.body.style.overflow="";
+  try{ history.replaceState(null,"",location.pathname); }catch(e){}
+}
+function renderSprint(first){
+  const box = $("#sprint"); const old = box.querySelector(".scrim"); const top = old ? old.scrollTop : 0;
+  const w = SW[wIdx(SPRINT.s)]; const i = wIdx(w.s);
+  const ts = list().filter(t=>t.wk===w.s); const k = counts(ts); const n = ts.length||1;
+  const mile = MILES.find(m=>m[0]===w.s);
+  const phase = (()=>{ let ph=""; for(const x of WEEKS){ if(x.phase) ph=x.phase; if(x===w) return ph; } return ph; })();
+  box.hidden=false; box.innerHTML=""; document.body.style.overflow="hidden";
+  const scrim = el("div","scrim"); const sh = el("div","sheet"); sh.setAttribute("role","dialog"); sh.setAttribute("aria-modal","true"); sh.setAttribute("aria-label","Sprint "+w.s);
+  const st = sprintState(w);
+  const hd = el("header");
+  hd.innerHTML = `<div class="sh1"><div><h2>Sprint ${w.s}<small>${w.d}</small></h2><div class="muted" style="margin-top:4px">${esc(phase)} · <span class="st${st==="En cours"||st==="Prochain"?" live":""}">${st}</span></div></div><span class="sp"></span>
+    <div class="navb"><button type="button" class="ghost small" id="sp-prev" ${i<=0?"disabled":""}>← ${i>0?SW[i-1].s:""}</button><button type="button" class="ghost small" id="sp-next" ${i>=SW.length-1?"disabled":""}>${i<SW.length-1?SW[i+1].s:""} →</button><button type="button" class="ghost small" id="sp-close" aria-label="Fermer">✕</button></div></div>
+    ${mile?`<div class="milebox"><b>◆ Jalon de fin de sprint : ${esc(mile[2])}</b><br>${esc(mile[3])}</div>`:""}
+    <div class="stats"><div class="bar"><i style="width:${100*k.done/n}%;background:var(--done)"></i><i style="width:${100*k.doing/n}%;background:var(--doing)"></i><i style="width:${100*k.blocked/n}%;background:var(--blocked)"></i></div>
+      <span><b>${k.done}/${ts.length}</b> faites</span><span><b>${k.doing}</b> en cours</span><span${k.blocked?' style="color:var(--blocked)"':""}><b${k.blocked?' style="color:var(--blocked)"':""}>${k.blocked}</b> bloquée${k.blocked>1?"s":""}</span></div>`;
+  sh.append(hd);
+  const body = el("div","sb");
+  if(!ts.length) body.append(el("div","empty","Aucune tâche prévue sur ce sprint."));
+  for(const c of COLS){
+    const mine = ts.filter(t=>c.who.includes(t.who)); if(!mine.length) continue;
+    const col = el("div","col c-"+c.k);
+    col.append(el("div","colh",`<i class="dot" style="background:var(--c)"></i><h3>${esc(colLabel(c))}</h3><span>${mine.filter(t=>t.s==="done").length}/${mine.length}</span>`));
+    groupsOf(mine).forEach(g=>{ const card = groupCard(g,{showWho:c.who.length>1, ctx:"spr"}); if(SPRINT.focus===g.g){ card.classList.add("hl"); card.classList.remove("shut"); } col.append(card); });
+    body.append(col);
+  }
+  sh.append(body); scrim.append(sh); box.append(scrim);
+  scrim.addEventListener("click",e=>{ if(e.target===scrim) closeSprint(); });
+  $("#sp-close").addEventListener("click",closeSprint);
+  $("#sp-prev").addEventListener("click",()=>{ if(i>0) openSprint(SW[i-1].s); });
+  $("#sp-next").addEventListener("click",()=>{ if(i<SW.length-1) openSprint(SW[i+1].s); });
+  if(first){
+    const f = SPRINT.focus && sh.querySelector(`.gcard.hl`);
+    if(f) setTimeout(()=>f.scrollIntoView({block:"center"}),0); else $("#sp-close").focus();
+  } else scrim.scrollTop = top;
+}
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape" || !SPRINT || editorOpen) return; closeSprint();
+}, true);
+document.addEventListener("keydown",e=>{
+  if(!SPRINT || editorOpen || e.target.closest("input,select,textarea")) return;
+  const i = wIdx(SPRINT.s);
+  if(e.key==="ArrowLeft" && i>0) openSprint(SW[i-1].s);
+  if(e.key==="ArrowRight" && i<SW.length-1) openSprint(SW[i+1].s);
+});
+
+// ---------- éditeur ----------
+function openEditor(t){
+  const isNew = !t;
+  const d = t ? {...t} : {id:null, t:"", g:"", gt:"", who: (COLS.find(c=>c.k===F.who)?.who[0]) || "theo", wk: CUR.w.s, cat:"Gameplay", s:"todo"};
+  const groups = groupsOf(list()).map(g=>[g.g,g.gt,g.wk]);
+  const box = $("#editor"); box.hidden=false; box.innerHTML=""; editorOpen=true;
+  const scrim = el("div","scrim"); const f = el("form","form"); f.setAttribute("role","dialog"); f.setAttribute("aria-modal","true");
+  f.innerHTML = `<h2>${isNew?"Nouvelle tâche":"Modifier la tâche"}</h2>
+    <label>Tâche<input id="e-t" required maxlength="200"></label>
+    <label>Groupe<select id="e-g"></select></label>
+    <label id="e-ngw" hidden>Nom du nouveau groupe<input id="e-ng" maxlength="80"></label>
+    <div class="two"><label>Qui<select id="e-who"></select></label><label>Semaine<select id="e-wk"></select></label></div>
+    <div class="two"><label>Catégorie<select id="e-cat"></select></label><label>Statut<select id="e-s"></select></label></div>
+    <p class="err" id="e-err" hidden></p>
+    <div class="actions">${isNew?"":`<button type="button" class="danger" id="e-del">Supprimer</button>`}<span class="sp"></span><button type="button" class="ghost" id="e-cancel">Annuler</button><button type="submit" class="primary">Enregistrer</button></div>`;
+  scrim.append(f); box.append(scrim);
+  const opt = (sel, pairs, val) => { pairs.forEach(([k,v])=>{const o=el("option",null,esc(v));o.value=k;sel.append(o);}); sel.value=val; };
+  $("#e-t").value = d.t;
+  opt($("#e-g"), [["__new","+ Nouveau groupe…"],...groups.map(([g,gt,wk])=>[g,`${gt} (${wk})`])], d.g || "__new");
+  opt($("#e-who"), Object.keys(PEOPLE).map(k=>[k,PEOPLE[k]]), d.who);
+  opt($("#e-wk"), SW.map(w=>[w.s,`${w.s} — ${w.d}`]), d.wk);
+  opt($("#e-cat"), CATS.map(c=>[c,c]), CATS.includes(d.cat)?d.cat:"Gameplay");
+  opt($("#e-s"), Object.entries(ST), d.s);
+  const syncG = ()=>{ $("#e-ngw").hidden = $("#e-g").value!=="__new"; };
+  $("#e-g").addEventListener("change",()=>{ syncG(); const gg = groups.find(x=>x[0]===$("#e-g").value); if(gg && isNew){ const any=[...tasks.values()].find(x=>x.g===gg[0]); if(any){ $("#e-who").value=any.who; $("#e-wk").value=any.wk; $("#e-cat").value=CATS.includes(any.cat)?any.cat:"Gameplay"; } } });
+  syncG();
+  const close = ()=>{ box.hidden=true; box.innerHTML=""; editorOpen=false; };
+  $("#e-cancel").addEventListener("click",close);
+  scrim.addEventListener("click",e=>{ if(e.target===scrim) close(); });
+  f.addEventListener("keydown",e=>{ if(e.key==="Escape") close(); });
+  const del = $("#e-del");
+  if(del) del.addEventListener("click",async()=>{
+    if(del.dataset.armed!=="1"){ del.dataset.armed="1"; del.textContent="Confirmer la suppression"; return; }
+    tasks.delete(d.id); close(); scheduleRender();
+    try{ await api("/api/tasks/"+encodeURIComponent(d.id),{method:"DELETE"}); load(); }catch(e){ if(e.message!=="auth") note("La suppression a échoué : "+e.message); }
+  });
+  f.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const title = $("#e-t").value.trim(); const gsel = $("#e-g").value; const ng = $("#e-ng").value.trim();
+    const err = $("#e-err");
+    if(!title){ err.textContent="Donne un nom à la tâche."; err.hidden=false; return; }
+    if(gsel==="__new" && !ng){ err.textContent="Donne un nom au nouveau groupe, ou choisis un groupe existant."; err.hidden=false; return; }
+    let g = gsel, gt;
+    if(gsel==="__new"){ g = "N"+Date.now().toString(36); gt = ng; }
+    else gt = (groups.find(x=>x[0]===gsel)||[])[1] || d.gt;
+    const sameG = [...tasks.values()].filter(x=>x.g===g);
+    const o = (!isNew && d.g===g) ? d.o : (sameG.length ? Math.max(...sameG.map(x=>x.o||0))+1 : 900000 + Date.now()%100000);
+    const doc = {g, gt, t:title, who:$("#e-who").value, wk:$("#e-wk").value, cat:$("#e-cat").value, s:$("#e-s").value, o};
+    if(!isNew){ tasks.set(d.id,{...d,...doc}); }
+    close(); scheduleRender();
+    try{
+      if(isNew) await api("/api/tasks",{method:"POST",body:JSON.stringify(doc)});
+      else await api("/api/tasks/"+encodeURIComponent(d.id),{method:"PATCH",body:JSON.stringify(doc)});
+      load();
+    }catch(e2){ if(e2.message!=="auth") note("La tâche n'a pas été enregistrée : "+e2.message); }
+  });
+  $("#e-t").focus();
+}
+
+// ---------- onglets ----------
+const TABS = ["semaine","planning","taches","jalons","infos","regles"];
+function show(tab){
+  if(!TABS.includes(tab)) tab="semaine";
+  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected", String(b.dataset.tab===tab)));
+  document.querySelectorAll("[data-panel]").forEach(s=>s.hidden = s.dataset.panel!==tab);
+  try{ localStorage.setItem("anachro-tab",tab); }catch(e){}
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.tab)));
+function note(msg){ const n=$("#dbnote"); n.textContent=msg; n.hidden=false; }
+
+renderNow(); renderProgress(); renderJalons();
+let start = (location.hash||"").slice(1); if(!start){ try{ start = localStorage.getItem("anachro-tab")||""; }catch(e){} }
+show(start);
+
+// ---------- serveur (Cloudflare Worker) ----------
+
+async function api(path, opts={}){
+  const r = await fetch(path,{credentials:"same-origin",headers:{"content-type":"application/json"},...opts});
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(r.status===401 && path!=="/api/login"){ showLogin(); throw new Error("auth"); }
+  if(!r.ok) throw new Error(j.error||("Erreur "+r.status));
+  return j;
+}
+async function load(){
+  const j = await api("/api/tasks"+(rev?"?since="+rev:""));
+  if(j.unchanged) return;
+  rev=j.rev; me=j.me; loaded=true;
+  canWrite = !!me && me.role !== "viewer";
+  if(me && me.role==="viewer") note("Mode spectateur : tu peux tout consulter, mais rien modifier.");
+  (j.people||[]).forEach(p=>{ if(p.role!=="viewer") PEOPLE[p.id]=p.name; });
+  tasks = new Map(j.tasks.map(t=>[t.id,{...t, s: ST[t.s]?t.s:"todo"}]));
+  LINKS = Array.isArray(j.links) ? j.links : [];
+  const hs = (location.hash.match(/^#sprint-(S\d+)$/)||[])[1];
+  if(hs && !SPRINT && !load.didHash){ load.didHash=true; openSprint(hs); }
+  scheduleRender();
+}
+setInterval(()=>{ if(!document.hidden && me && !editorOpen) load().catch(()=>{}); }, 8000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && me) load().catch(()=>{}); });
+
+let loginOpen=false;
+async function showLogin(){
+  if(loginOpen) return; loginOpen=true;
+  let st={setup:false,people:[]}; try{ st = await (await fetch("/api/state")).json(); }catch(e){}
+  const box = $("#editor"); box.hidden=false; box.innerHTML=""; editorOpen=true;
+  const scrim = el("div","scrim"); const f = el("form","form");
+  if(st.setup){
+    f.innerHTML = `<h2>Première configuration</h2><p class="note" style="margin:0">Crée le mot de passe admin de Théo (6 caractères minimum). Tu donneras ensuite un code à chacun depuis la page admin.</p>
+      <label>Mot de passe admin<input id="l-pin" type="password" autocomplete="new-password" minlength="6" required></label><p class="err" id="l-err" hidden></p>
+      <div class="actions"><span class="sp"></span><button class="primary" type="submit">Créer</button></div>`;
+  } else {
+    f.innerHTML = `<h2>Connexion</h2><label>Qui es-tu ?<select id="l-user"></select></label>
+      <label>Code<input id="l-pin" type="password" autocomplete="current-password" required></label><p class="err" id="l-err" hidden></p>
+      <div class="actions"><span class="sp"></span><button class="primary" type="submit">Se connecter</button></div>`;
+  }
+  scrim.append(f); box.append(scrim);
+  if(!st.setup){
+    const sel=$("#l-user"); st.people.forEach(p=>{const o=el("option",null,esc(p.name)); o.value=p.id; sel.append(o);});
+    try{ const last=localStorage.getItem("anachro-user"); if(last) sel.value=last; }catch(e){}
+  }
+  $("#l-pin").focus();
+  f.addEventListener("submit",async e=>{
+    e.preventDefault(); const er=$("#l-err"); er.hidden=true;
+    try{
+      if(st.setup) await api("/api/setup",{method:"POST",body:JSON.stringify({pin:$("#l-pin").value})});
+      else {
+        await api("/api/login",{method:"POST",body:JSON.stringify({user:$("#l-user").value,pin:$("#l-pin").value})});
+        try{ localStorage.setItem("anachro-user",$("#l-user").value); }catch(e){}
+      }
+      box.hidden=true; box.innerHTML=""; editorOpen=false; loginOpen=false; rev=0; await load();
+    }catch(x){ er.textContent=x.message; er.hidden=false; }
+  });
+}
+load().catch(e=>{ if(e.message!=="auth") $("#p-semaine").innerHTML=`<div class="empty">Impossible de charger les tâches : ${esc(e.message)}</div>`; });
+</script>

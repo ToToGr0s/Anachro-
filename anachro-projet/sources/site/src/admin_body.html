@@ -1,0 +1,80 @@
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Anachro — Admin</h1>
+      <div class="sub">Qui a fait quoi, quand. Annuler une modification, gérer les accès.</div>
+    </div>
+    <div class="now"><div class="pill-box"><div class="k">Navigation</div><div class="v"><small><a href="/">← Retour au planning</a></small></div></div></div>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections admin">
+    <button role="tab" data-tab="activite" aria-selected="true">Activité</button>
+    <button role="tab" data-tab="personnes">Par personne</button>
+    <button role="tab" data-tab="comptes">Comptes &amp; codes</button>
+    <button role="tab" data-tab="liens">Liens (GDD…)</button>
+    <button role="tab" data-tab="discord">Discord</button>
+  </nav>
+  <div id="dbnote" class="banner" hidden></div>
+
+  <section data-panel="activite">
+    <div class="toolbar">
+      <select id="f-user" aria-label="Personne"><option value="">Tout le monde</option></select>
+      <select id="f-action" aria-label="Type d'action">
+        <option value="">Toutes les actions</option>
+        <option value="status">Statut changé</option>
+        <option value="edit">Tâche modifiée</option>
+        <option value="create">Tâche ajoutée</option>
+        <option value="delete">Tâche supprimée</option>
+        <option value="revert">Annulation</option>
+        <option value="login">Connexion</option>
+        <option value="account">Compte modifié</option>
+        <option value="links">Liens modifiés</option>
+      </select>
+      <select id="f-when" aria-label="Période">
+        <option value="today">Aujourd'hui</option>
+        <option value="7" selected>7 derniers jours</option>
+        <option value="30">30 derniers jours</option>
+        <option value="all">Tout</option>
+      </select>
+      <button class="ghost" type="button" id="refresh">Actualiser</button>
+    </div>
+    <div class="tlog" id="log"></div>
+    <div style="margin-top:12px"><button class="ghost" type="button" id="more" hidden>Voir plus ancien</button></div>
+  </section>
+
+  <section data-panel="personnes" hidden>
+    <p class="note">Sur les 7 derniers jours. « Cochées » = tâches passées à Fait.</p>
+    <div class="people" id="people"></div>
+  </section>
+
+  <section data-panel="liens" hidden>
+    <p class="note">Ces liens s'affichent en boutons en haut du planning, pour tout le monde (spectateurs compris). GDD, PDF, Google Doc, Figma, Drive… n'importe quelle adresse <code>https://</code>. Pour un PDF : mets-le sur Google Drive (partage « Tous les utilisateurs disposant du lien ») et colle le lien ici.</p>
+    <form class="tlist dform" id="lform">
+      <div id="l-rows"></div>
+      <div class="urow"><span></span><div class="ub" style="grid-column:2/-1;justify-content:flex-start">
+        <button class="ghost small" type="button" id="l-add">+ Ajouter un lien</button>
+        <button class="primary small" type="submit">Enregistrer</button>
+      </div></div>
+    </form>
+  </section>
+
+  <section data-panel="discord" hidden>
+    <p class="note">Le bot poste dans un salon Discord : récap le lundi à 8h45 et bilan le vendredi à 16h30 (semaines studio), alertes J-3 / J-1 avant les jalons, et alerte immédiate quand une tâche passe en « Bloqué ».</p>
+    <form class="tlist dform" id="dform">
+      <div class="urow"><span></span><label class="nm wide">Webhook du salon #planning<input id="d-url" placeholder="https://discord.com/api/webhooks/…" autocomplete="off"></label></div>
+      <div id="d-ids"></div>
+      <div class="urow"><span></span><div class="ub" style="grid-column:2/-1;justify-content:flex-start">
+        <button class="primary small" type="submit">Enregistrer</button>
+        <button class="ghost small" type="button" data-job="test">Envoyer un test</button>
+        <button class="ghost small" type="button" data-job="recap">Envoyer le récap maintenant</button>
+        <button class="ghost small" type="button" data-job="review">Envoyer le bilan maintenant</button>
+      </div></div>
+    </form>
+    <p class="note" style="margin-top:12px">Identifiant Discord : dans Discord, Paramètres → Avancés → active le Mode développeur, puis clic droit sur la personne → « Copier l'identifiant de l'utilisateur ». Sans identifiant, le prénom est écrit sans mention.</p>
+  </section>
+
+  <section data-panel="comptes" hidden>
+    <p class="note">Chaque personne se connecte avec son nom + son code. Génère un code et envoie-le-lui en privé : il ne sera plus affiché ensuite.</p>
+    <div class="tlist" id="users"></div>
+  </section>
+</div>
