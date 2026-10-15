@@ -9,14 +9,14 @@ namespace Anachronism.Network
     [Serializable]
     public struct MatchSettings
     {
-        [SerializeField] private byte _villainCount;
-        [SerializeField] private byte _objectsPerVillain;
-        [SerializeField] private float _briefingDuration;
-        [SerializeField] private float _hidingDuration;
+        [SerializeField, Min(1)] private byte _villainCount;
+        [SerializeField, Min(1)] private byte _objectsPerVillain;
+        [SerializeField, Min(0f)] private float _briefingDuration;
+        [SerializeField, Min(1f)] private float _hidingDuration;
         // Durée de base pour que la dégradation atteigne 100 %, hors pénalités.
-        [SerializeField] private float _degradationDuration;
+        [SerializeField, Min(1f)] private float _degradationDuration;
         // Part de dégradation ajoutée par un tir sur un innocent ou un objet d'époque (T06).
-        [SerializeField] private float _wrongShotPenalty;
+        [SerializeField, Range(0f, 1f)] private float _wrongShotPenalty;
 
         public MatchSettings(byte villainCount, byte objectsPerVillain, float briefingDuration, float hidingDuration,
                              float degradationDuration, float wrongShotPenalty)
@@ -35,6 +35,20 @@ namespace Anachronism.Network
         public float HidingDuration => _hidingDuration;
         public float DegradationDuration => _degradationDuration;
         public float WrongShotPenalty => _wrongShotPenalty;
+
+        /// <summary>
+        /// [Min] ne protège que l'inspecteur : les réglages peuvent aussi venir du code ou de l'hôte (T09).
+        /// Une durée de dégradation nulle ferait gagner les méchants dès la phase de recherche.
+        /// </summary>
+        public bool IsValid(out string error)
+        {
+            error = _villainCount < 1 ? "au moins un méchant"
+                : _hidingDuration <= 0f ? "durée de cache nulle"
+                : _degradationDuration <= 0f ? "durée de dégradation nulle"
+                : _briefingDuration < 0f ? "durée de briefing négative"
+                : string.Empty;
+            return error.Length == 0;
+        }
 
         public MatchSettings WithVillainCount(byte villainCount)
         {
