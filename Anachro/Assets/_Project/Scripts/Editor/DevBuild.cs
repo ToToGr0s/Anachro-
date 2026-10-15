@@ -8,6 +8,8 @@ namespace Anachronism.Editor
 {
     /// <summary>
     /// Build Windows Development pour tester le multi hors éditeur (HUD de dev inclus, logs détaillés).
+    /// Fenêtré et redimensionnable pour lancer plusieurs instances côte à côte ; le réglage plein écran du
+    /// projet (release) est rétabli après le build. Taille au lancement : -screen-width 960 -screen-height 540.
     /// Utilisable depuis le menu ou en ligne de commande : -executeMethod Anachronism.Editor.DevBuild.BuildWindows
     /// </summary>
     public static class DevBuild
@@ -15,6 +17,8 @@ namespace Anachronism.Editor
         // Dossier ignoré par Git (/Builds/ dans .gitignore).
         private const string OutputPath = "Builds/Dev/Anachro.exe";
         private const string SteamAppIdFile = "steam_appid.txt";
+        private const int WindowWidth = 1280;
+        private const int WindowHeight = 720;
 
         [MenuItem("Anachro/Build/Windows (Development)")]
         public static void BuildWindows()
@@ -27,8 +31,7 @@ namespace Anachronism.Editor
                 options = BuildOptions.Development
             };
 
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            BuildSummary summary = report.summary;
+            BuildSummary summary = BuildWindowed(options);
 
             // Hors lancement par Steam, Steamworks lit l'AppID (480 en dev) dans ce fichier à côté de l'exe.
             // Seulement en build de dev : un build release est lancé par Steam avec le vrai AppID (T13).
@@ -39,6 +42,33 @@ namespace Anachronism.Editor
             // En batchmode, un code de sortie non nul signale l'échec au script appelant.
             if (Application.isBatchMode && summary.result != BuildResult.Succeeded)
                 EditorApplication.Exit(1);
+        }
+
+        private static BuildSummary BuildWindowed(BuildPlayerOptions options)
+        {
+            FullScreenMode fullScreenMode = PlayerSettings.fullScreenMode;
+            bool isNativeResolution = PlayerSettings.defaultIsNativeResolution;
+            int width = PlayerSettings.defaultScreenWidth;
+            int height = PlayerSettings.defaultScreenHeight;
+            bool isResizable = PlayerSettings.resizableWindow;
+
+            try
+            {
+                PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+                PlayerSettings.defaultIsNativeResolution = false;
+                PlayerSettings.defaultScreenWidth = WindowWidth;
+                PlayerSettings.defaultScreenHeight = WindowHeight;
+                PlayerSettings.resizableWindow = true;
+                return BuildPipeline.BuildPlayer(options).summary;
+            }
+            finally
+            {
+                PlayerSettings.fullScreenMode = fullScreenMode;
+                PlayerSettings.defaultIsNativeResolution = isNativeResolution;
+                PlayerSettings.defaultScreenWidth = width;
+                PlayerSettings.defaultScreenHeight = height;
+                PlayerSettings.resizableWindow = isResizable;
+            }
         }
     }
 }
