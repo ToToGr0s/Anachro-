@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.PlayerControllerSettings
   _height: 1.8
   _radius: 0.4
-  _walkSpeed: 2
+  _walkSpeed: 5
   _jumpSpeed: 5
   _sprintMultiplier: 1.25
   _gravity: -9.81

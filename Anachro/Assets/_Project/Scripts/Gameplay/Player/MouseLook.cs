@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -13,6 +14,7 @@ namespace Anachronism.Gameplay
 
         private Camera _camera;
         private CharacterMovement _movement;
+        private Renderer[] _bodyRenderers; // corps du joueur (hors camera): cache a sa propre vue
         private float _pitch;
         private float _yaw;
 
@@ -30,6 +32,40 @@ namespace Anachronism.Gameplay
             // Plan proche plus petit que le rayon du joueur: sinon, colle a un mur, ses coins passent derriere et on voit a travers.
             _camera.nearClipPlane = _settings.NearClipPlane;
             _movement = _playerBody.GetComponent<CharacterMovement>();
+
+            // Les renderers sous la camera (future arme en main, GDD 2.3) restent visibles: c'est la vue du joueur.
+            var bodyRenderers = new List<Renderer>();
+            foreach (Renderer bodyRenderer in _playerBody.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!bodyRenderer.transform.IsChildOf(transform))
+                    bodyRenderers.Add(bodyRenderer);
+            }
+            _bodyRenderers = bodyRenderers.ToArray();
+        }
+
+        // Le corps (et donc son ombre) ne doit pas etre visible depuis la camera du joueur lui-meme : en regardant vers le bas,
+        // l'ombre de la capsule remplit l'ecran. Actif seulement tant que ce script l'est : un autre joueur
+        // (controleur desactive) garde son corps visible.
+        // TODO (Theo) : une fois en reseau, n'activer ce script que pour l'owner (IsOwner).
+        private void OnEnable()
+        {
+            SetBodyVisible(false);
+        }
+
+        private void OnDisable()
+        {
+            SetBodyVisible(true);
+        }
+
+        private void SetBodyVisible(bool isVisible)
+        {
+            if (_bodyRenderers == null) return;
+
+            foreach (Renderer bodyRenderer in _bodyRenderers)
+            {
+                if (bodyRenderer != null)
+                    bodyRenderer.enabled = isVisible;
+            }
         }
 
         private void Start()
