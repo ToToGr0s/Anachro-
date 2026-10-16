@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 6546940612628858704}
   - component: {fileID: 765951197041507023}
   - component: {fileID: 3969182938739963823}
+  - component: {fileID: 6251699012230740055}
   m_Layer: 0
   m_Name: Player_Base
   m_TagString: Untagged
@@ -219,3 +220,20 @@ MonoBehaviour:
     X: 0
     Y: 0
     Z: 0
+--- !u!114 &6251699012230740055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 622806563057723990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd3a21ddbf4f87d4992f3e2a0e1948ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Network.DevPlayerMover
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 765951197041507023}
+  _networkObjectCache: {fileID: 0}
+  _speed: 5
+  _ownerColor: {r: 0.2, g: 0.6, b: 1, a: 1}
