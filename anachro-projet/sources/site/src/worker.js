@@ -150,7 +150,8 @@ async function syncTasks(req, env) {
   if (!ids.length) return err("Aucune tâche à cocher.");
 
   const pr = Number.isInteger(b.pr) ? b.pr : null;
-  const by = pr ? `github#${pr}` : "github";
+  // Un seul « utilisateur » github (pas un par PR, qui fausserait /api/stats) ; la PR va dans le journal.
+  const by = "github";
 
   // Sous-tâche (T02-5) ou tâche entière (T03 : toutes ses sous-tâches), en une seule lecture.
   const marks = ids.map(() => "?").join(",");
@@ -166,7 +167,7 @@ async function syncTasks(req, env) {
     if (before.s === "done") { already.push(before.id); continue; }
     stmts.push(env.DB.prepare("UPDATE tasks SET s='done', updated_at=?, updated_by=? WHERE id=?").bind(now, by, before.id));
     stmts.push(env.DB.prepare("INSERT INTO log (ts,user,action,task_id,before,after) VALUES (?,?,?,?,?,?)")
-      .bind(now, by, "sync", before.id, JSON.stringify(pick(before)), JSON.stringify({ ...pick(before), s: "done" })));
+      .bind(now, by, "sync", before.id, JSON.stringify(pick(before)), JSON.stringify({ ...pick(before), s: "done", pr })));
     done.push(before.id);
   }
   if (stmts.length) await env.DB.batch(stmts);
@@ -291,7 +292,7 @@ export default {
       m = p.match(/^\/api\/log\/(\d+)\/revert$/);
       if (m && req.method === "POST") {
         const row = await env.DB.prepare("SELECT * FROM log WHERE id=?").bind(Number(m[1])).first();
-        if (!row || !row.task_id || !["create", "edit", "status", "delete", "revert"].includes(row.action)) return err("Rien à annuler pour cette ligne.");
+        if (!row || !row.task_id || !["create", "edit", "status", "delete", "revert", "sync"].includes(row.action)) return err("Rien à annuler pour cette ligne.");
         const cur = await env.DB.prepare("SELECT * FROM tasks WHERE id=?").bind(row.task_id).first();
         const target = row.before ? JSON.parse(row.before) : null;
         if (!target && !cur) return json({ ok: true });

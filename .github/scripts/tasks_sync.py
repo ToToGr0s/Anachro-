@@ -2,7 +2,8 @@
 
 Lancé par .github/workflows/tasks-sync.yml. Lit la description de la PR :
 - section « ## Tâche(s) du planning » : seules les lignes qui COMMENCENT par un identifiant comptent
-  (« T02-5 », « T03, C04-1 », « - L01 ») ; le texte libre (« Aucune », « outil pour P01 ») est ignoré.
+  (« T02-5 », « T03, C04-1 », « - L01 ») ; le texte libre (« Aucune », « outil pour P01 ») et ce qui suit
+  la liste (« T03 (suite de C04) ») sont ignorés.
   Un identifiant de tâche entière (T03) coche toutes ses sous-tâches ;
 - une ligne qui contient « partiel », « reste », « correctif », « préparation » ou « aide » n'est pas cochée ;
 - checklist : il faut au moins une case « - [x] Testé … » cochée et aucune « - [ ] Testé … » vide
@@ -24,9 +25,10 @@ COMMENT = re.compile(r"<!--.*?-->", re.S)
 # Préfixes des tâches du site : Art, Célian, LD, Olivier, Production, Théo (online), Updates.
 TASK_ID = r"[ACLOPTU]\d{2}[a-z]?(?:-\d+)?"
 TASK = re.compile(rf"\b({TASK_ID})\b")
-TASK_LINE = re.compile(rf"^\s*(?:[-*]\s*)?{TASK_ID}\b")
-# Début de mot seulement : « correctifs » compte, « décorrectif » non.
-NOT_DONE = re.compile(r"\b(?:partiel|reste|correctif|pr[ée]paration|aide)", re.I)
+# Liste d'identifiants en tête de ligne (« T03, C04-1 ») : ce qui suit (« (suite de C04) », « voir P01 ») est ignoré.
+TASK_LIST = re.compile(rf"^\s*(?:[-*]\s*)?({TASK_ID}(?:\s*[,+/&]\s*{TASK_ID})*)\b")
+# Mots entiers : « reste » et « aide » comptent, « restera » ou « aidera » non.
+NOT_DONE = re.compile(r"\b(?:partiel(?:le)?s?|reste|correctifs?|pr[ée]paration|aide)\b", re.I)
 CHECKED_TEST = re.compile(r"^\s*[-*]\s*\[[xX]\]\s*Test", re.M)
 UNCHECKED_TEST = re.compile(r"^\s*[-*]\s*\[ \]\s*Test", re.M)
 
@@ -38,10 +40,11 @@ def parse(body):
     ids, skipped = [], []
     if section:
         for line in section.group(1).splitlines():
-            if not TASK_LINE.match(line):
+            head = TASK_LIST.match(line)
+            if not head:
                 continue
             target = skipped if NOT_DONE.search(line) else ids
-            for task_id in TASK.findall(line):
+            for task_id in TASK.findall(head.group(1)):
                 if task_id not in target:
                     target.append(task_id)
 
@@ -82,8 +85,9 @@ def send(site, token, payload):
         with urllib.request.urlopen(request, timeout=20) as response:
             return json.load(response), None
     except urllib.error.HTTPError as error:
-        # Le message du site (jeton invalide, route absente…) aide plus que le code HTTP seul.
-        return None, f"le site a refusé ({error.code}) : `{error.read().decode(errors='replace')[:300]}`"
+        # Le détail du site reste dans le journal de l'Action : le commentaire de PR, visible par tous, n'a que le code.
+        print(f"Réponse du site : {error.read().decode(errors='replace')[:300]}")
+        return None, f"le site a refusé (HTTP {error.code}, détail dans le journal de l'Action)"
     except (urllib.error.URLError, TimeoutError) as error:
         return None, f"site injoignable ({error})"
     except json.JSONDecodeError:
