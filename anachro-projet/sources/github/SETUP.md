@@ -98,6 +98,15 @@ Règles de lecture :
 - Il faut **au moins une case « - [x] Testé … » cochée et aucune vide**, sinon rien n'est coché : la règle de TACHES.md est « mergée sur Dev **et** testée en réseau ».
 - Sans secret configuré, l'Action prévient et ne bloque rien.
 
+**Cocher à la main sans PR** (tâches faites avant la synchro, ou hors code) : pousser un commit vide sur la branche outil `Sync-taches`, avec les tâches dans le message. La branche part de `Dev` et n'est jamais mergée.
+```bash
+git fetch origin && git checkout -B Sync-taches origin/Dev
+```
+```bash
+git commit --allow-empty -m "sync: T01, T03-1, T08-2" && git push -f origin Sync-taches
+```
+Le résultat (cochées, déjà faites, introuvables) s'affiche dans l'onglet **Actions**, job `manual`. Ici, pas de case « Testé » à vérifier : c'est à celui qui pousse de s'en assurer.
+
 ---
 
 ## 8. Règles pour l'équipe (à leur envoyer)
