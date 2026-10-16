@@ -1,5 +1,8 @@
 using Anachronism.Core;
 using Anachronism.Network;
+using System.Collections.Generic;
+using System.Linq;
+using FishNet.Component.Scenes;
 using FishNet.Component.Spawning;
 using FishNet.Component.Transforming;
 using FishNet.Managing;
@@ -16,12 +19,15 @@ using UnityEngine.SceneManagement;
 namespace Anachronism.Editor
 {
     /// <summary>
-    /// Construit la base réseau dans Boot : prefab joueur, NetworkManager + Multipass (Tugboat + Steam), spawn, lobby Steam.
-    /// Rejouable : remplace ce qu'il a créé au lieu de dupliquer, et garde le GUID du prefab.
+    /// Construit la base réseau : prefab joueur, NetworkManager de Boot (Multipass Tugboat + Steam, spawn, lobby Steam,
+    /// enchaînement Boot → MainMenu → map) et Build Settings. Rejouable : Boot est reconstruit, le GUID du prefab est gardé,
+    /// MainMenu et la map ne sont créés que s'ils n'existent pas (on n'écrase jamais le travail de LD ou d'UI).
     /// </summary>
     public static class NetworkBaseBuilder
     {
-        private const string ScenePath = "Assets/_Project/Scenes/Boot.unity";
+        private const string BootScenePath = "Assets/_Project/Scenes/Boot.unity";
+        private const string MainMenuScenePath = "Assets/_Project/Scenes/MainMenu.unity";
+        private const string MapScenePath = "Assets/_Project/Scenes/Maps/Map_Greybox.unity";
         private const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player/Player_Base.prefab";
         private const string DefaultPrefabObjectsPath = "Assets/DefaultPrefabObjects.asset";
         private const string NetworkManagerName = "NetworkManager";
@@ -49,7 +55,10 @@ namespace Anachronism.Editor
 
             NetworkObject playerPrefab = BuildPlayerPrefab();
             RegisterPrefab(prefabObjects, playerPrefab);
-            BuildScene(playerPrefab, prefabObjects);
+            CreateSceneIfMissing(MainMenuScenePath, null);
+            CreateSceneIfMissing(MapScenePath, BuildMapContent);
+            BuildBootScene(playerPrefab, prefabObjects);
+            SetBuildScenes();
             AssetDatabase.SaveAssets();
             Debug.Log("[NetworkBaseBuilder] Base réseau construite.");
         }
@@ -74,19 +83,14 @@ namespace Anachronism.Editor
             EditorUtility.SetDirty(prefabObjects);
         }
 
-        private static void BuildScene(NetworkObject playerPrefab, DefaultPrefabObjects prefabObjects)
+        private static void BuildBootScene(NetworkObject playerPrefab, DefaultPrefabObjects prefabObjects)
         {
-            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
             DestroyRoot(scene, NetworkManagerName);
+            // Sol et points d'apparition vivaient dans Boot avant l'enchaînement de scènes : ils sont dans la map.
             DestroyRoot(scene, SpawnPointsName);
             DestroyRoot(scene, GroundName);
             DestroyRoot(scene, ServicesName);
-
-            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = GroundName;
-            ground.transform.localScale = new Vector3(3f, 1f, 3f);
-
-            Transform[] spawns = CreateSpawnPoints();
 
             GameObject managerObject = new GameObject(NetworkManagerName);
             NetworkManager networkManager = managerObject.AddComponent<NetworkManager>();
@@ -121,9 +125,17 @@ namespace Anachronism.Editor
                 transportManager = managerObject.AddComponent<TransportManager>();
             transportManager.Transport = multipass;
 
+            // Points d'apparition fournis par la map à son chargement (MapSpawnPoints).
             PlayerSpawner spawner = managerObject.AddComponent<PlayerSpawner>();
             spawner.SetPlayerPrefab(playerPrefab);
-            spawner.Spawns = spawns;
+
+            // Boot charge MainMenu au lancement, la map quand le serveur démarre, et revient au menu à la déconnexion.
+            DefaultScene defaultScene = managerObject.AddComponent<DefaultScene>();
+            defaultScene.SetOfflineScene(MainMenuScenePath);
+            defaultScene.SetOnlineScene(MapScenePath);
+            SerializedObject defaultSceneSettings = new SerializedObject(defaultScene);
+            defaultSceneSettings.FindProperty("_startInOffline").boolValue = true;
+            defaultSceneSettings.ApplyModifiedPropertiesWithoutUndo();
 
             managerObject.AddComponent<SteamLobby>();
             managerObject.AddComponent<DevConnectionHud>();
@@ -134,10 +146,50 @@ namespace Anachronism.Editor
             EditorSceneManager.SaveScene(scene);
         }
 
-        private static Transform[] CreateSpawnPoints()
+        private static void CreateSceneIfMissing(string path, System.Action buildContent)
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) != null)
+                return;
+
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            buildContent?.Invoke();
+            EditorSceneManager.SaveScene(scene, path);
+        }
+
+        private static void BuildMapContent()
+        {
+            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = GroundName;
+            ground.transform.localScale = new Vector3(3f, 1f, 3f);
+
+            Transform spawnRoot = CreateSpawnPoints(out Transform[] spawns);
+            MapSpawnPoints mapSpawnPoints = spawnRoot.gameObject.AddComponent<MapSpawnPoints>();
+            SerializedObject spawnSettings = new SerializedObject(mapSpawnPoints);
+            SerializedProperty spawnArray = spawnSettings.FindProperty("_spawns");
+            spawnArray.arraySize = spawns.Length;
+            for (int i = 0; i < spawns.Length; i++)
+                spawnArray.GetArrayElementAtIndex(i).objectReferenceValue = spawns[i];
+            spawnSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            // Vue d'ensemble provisoire pour voir tous les joueurs pendant les tests.
+            Camera camera = Camera.main;
+            if (camera != null)
+                camera.transform.SetPositionAndRotation(new Vector3(0f, 10f, -10f), Quaternion.Euler(45f, 0f, 0f));
+        }
+
+        private static void SetBuildScenes()
+        {
+            // Boot en premier (index 0) ; les autres scènes déjà listées sont gardées après.
+            string[] required = { BootScenePath, MainMenuScenePath, MapScenePath };
+            List<EditorBuildSettingsScene> scenes = required.Select(path => new EditorBuildSettingsScene(path, true)).ToList();
+            scenes.AddRange(EditorBuildSettings.scenes.Where(scene => !required.Contains(scene.path)));
+            EditorBuildSettings.scenes = scenes.ToArray();
+        }
+
+        private static Transform CreateSpawnPoints(out Transform[] spawns)
         {
             Transform root = new GameObject(SpawnPointsName).transform;
-            Transform[] spawns = new Transform[SpawnPointCount];
+            spawns = new Transform[SpawnPointCount];
 
             for (int i = 0; i < SpawnPointCount; i++)
             {
@@ -150,7 +202,7 @@ namespace Anachronism.Editor
                 spawns[i] = spawn;
             }
 
-            return spawns;
+            return root;
         }
 
         private static void DestroyRoot(Scene scene, string objectName)
