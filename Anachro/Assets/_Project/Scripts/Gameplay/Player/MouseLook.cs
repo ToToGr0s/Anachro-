@@ -11,6 +11,8 @@ namespace Anachronism.Gameplay
         [SerializeField] private PlayerControllerSettings _settings;
         [SerializeField] private Transform _playerBody; // parent: rotation horizontale
 
+        private Camera _camera;
+        private CharacterMovement _movement;
         private float _pitch;
         private float _yaw;
 
@@ -23,7 +25,11 @@ namespace Anachronism.Gameplay
                 return;
             }
 
-            GetComponent<Camera>().fieldOfView = _settings.FieldOfView;
+            _camera = GetComponent<Camera>();
+            _camera.fieldOfView = _settings.FieldOfView;
+            // Plan proche plus petit que le rayon du joueur: sinon, colle a un mur, ses coins passent derriere et on voit a travers.
+            _camera.nearClipPlane = _settings.NearClipPlane;
+            _movement = _playerBody.GetComponent<CharacterMovement>();
         }
 
         private void Start()
@@ -63,6 +69,18 @@ namespace Anachronism.Gameplay
             // Gauche/droite: tourne le corps
             _yaw += delta.x;
             _playerBody.rotation = Quaternion.Euler(0f, _yaw, 0f);
+        }
+
+        // Apres CharacterMovement.Update, et hors des sorties anticipees d'Update (pas de souris, curseur libre):
+        // le FOV s'elargit un peu pendant la course, en douceur, pour donner une impression de vitesse.
+        private void LateUpdate()
+        {
+            float target = _settings.FieldOfView;
+            if (_movement != null && _movement.IsSprinting)
+                target += _settings.SprintFovBoost;
+
+            float blend = 1f - Mathf.Exp(-_settings.FovSmoothing * Time.deltaTime);
+            _camera.fieldOfView = Mathf.Lerp(_camera.fieldOfView, target, blend);
         }
     }
 }
