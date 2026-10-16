@@ -25,3 +25,7 @@ MonoBehaviour:
   _fieldOfView: 90
   _maxPitch: 70
   _lookSensitivity: 0.1
+  _cameraBackOffset: 0.1
+  _nearClipPlane: 0.1
+  _sprintFovBoost: 6
+  _fovSmoothing: 8

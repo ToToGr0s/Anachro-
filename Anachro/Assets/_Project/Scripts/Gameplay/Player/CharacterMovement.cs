@@ -26,10 +26,12 @@ namespace Anachronism.Gameplay
         private Vector3 _movementInput;
         private bool _jumpRequested;
         private bool _isSprinting;
+        private bool _isRunning; // course demandee ET en mouvement (sert aux effets de camera)
         private float _verticalVelocity;
         private bool _isGrounded;
 
         public bool IsGrounded => _isGrounded;
+        public bool IsSprinting => _isRunning;
 
         private float Radius => _capsule.radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.z);
         private float Height => Mathf.Max(_capsule.height * transform.lossyScale.y, Radius * 2f);
@@ -53,9 +55,10 @@ namespace Anachronism.Gameplay
             Camera cam = GetComponentInChildren<Camera>();
             if (cam != null)
             {
-                // La capsule est centree sur le pivot: la camera est a CameraHeight depuis les pieds
+                // La capsule est centree sur le pivot: la camera est a CameraHeight depuis les pieds,
+                // et legerement en retrait (CameraBackOffset) pour ne pas voir a travers un mur contre lequel on se colle.
                 _cameraTransform = cam.transform;
-                _cameraBaseLocalPosition = new Vector3(0f, _settings.CameraHeight - _settings.Height * 0.5f, 0f);
+                _cameraBaseLocalPosition = new Vector3(0f, _settings.CameraHeight - _settings.Height * 0.5f, -_settings.CameraBackOffset);
                 _cameraTransform.localPosition = _cameraBaseLocalPosition;
             }
         }
@@ -81,6 +84,7 @@ namespace Anachronism.Gameplay
         private void OnDisable()
         {
             _isSprinting = false;
+            _isRunning = false;
         }
 
         // ---------- Geometrie de la capsule et requetes ----------
@@ -263,6 +267,7 @@ namespace Anachronism.Gameplay
             // 1) Deplacement horizontal (relatif a l'orientation du joueur, la souris tourne le corps)
             Vector3 input = Vector3.ClampMagnitude(new Vector3(_movementInput.x, 0f, _movementInput.z), 1f);
             Vector3 direction = transform.right * input.x + transform.forward * input.z;
+            _isRunning = _isSprinting && direction.sqrMagnitude > 0.0001f;
             if (direction.sqrMagnitude > 0.0001f)
             {
                 float currentSpeed = _isSprinting ? _settings.WalkSpeed * _settings.SprintMultiplier : _settings.WalkSpeed;
