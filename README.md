@@ -52,7 +52,8 @@ Le jeu passe **uniquement par Steam** : il faut **un PC par joueur**, chacun ave
 |---|---|---|
 | `Assets/_Project/Scripts/Network` | Réseau, lobby Steam, MatchManager | Théo |
 | `Assets/_Project/Scripts/Gameplay` | Joueur, arme, pose, portail | Célian |
-| `Assets/_Project/Scripts/{Npc,World,UI}` | PNJ, dégradation, interface | Olivier |
+| `Assets/_Project/Scripts/{Npc,World}`, `UI/Hud`, `UI/Lobby` | PNJ, dégradation, HUD, menu et lobby | Olivier |
+| `Assets/_Project/Scripts/UI/Menus` | Menus secondaires (pause, options, fin, crédits) | Hanaé |
 | `Assets/_Project/Art`, `Audio` | Modèles, textures, sons | Hugo, JB, Olivier |
 | `Assets/ThirdParty` | FishNet, FishySteamworks : **ne jamais modifier** (voir son README) | — |
 

@@ -4,9 +4,9 @@
 
 <script>
 const ST = {todo:"À faire", doing:"En cours", done:"Fait", blocked:"Bloqué"};
-const PEOPLE = {theo:"Théo", celian:"Célian", olivier:"Olivier", art1:"Hugo", art2:"JB", tous:"Équipe"};
+const PEOPLE = {theo:"Théo", celian:"Célian", olivier:"Olivier", hanae:"Hanaé", art1:"Hugo", art2:"JB", tous:"Équipe"};
 const COLS = [
-  {k:"theo", who:["theo"]}, {k:"celian", who:["celian"]}, {k:"olivier", who:["olivier"]},
+  {k:"theo", who:["theo"]}, {k:"celian", who:["celian"]}, {k:"olivier", who:["olivier"]}, {k:"hanae", who:["hanae"]},
   {k:"art", label:"Artistes", who:["art1","art2"]}, {k:"tous", label:"Équipe (hors code)", who:["tous"]},
 ];
 const CATS = ["Online","LD","Gameplay","Data","PNJ","Monde","UI","Audio","Outils","Art","Prod","Playtest","Steam","Marketing"];
@@ -60,7 +60,8 @@ const ALERTS = [
 const ROLES = [
   ["theo","theo","Online (FishNet, Steam, vocal, validation serveur, builds) + level design"],
   ["celian","celian","Joueur & gameplay : contrôleur, pistolet, pose, capture, portail, photos, data"],
-  ["olivier","olivier","PNJ, monde & présentation : foule, dégradation, glitchs, UI, menus, audio"],
+  ["olivier","olivier","PNJ, monde & présentation : foule, dégradation, glitchs, HUD, menu & lobby, audio"],
+  ["hanae","hanae","UI : menus secondaires (pause, options, fin, crédits), accessibilité, traduction, visuels"],
   ["art1","art","Persos & animations : PNJ, skins, anims, PNJ de l'époque 2"],
   ["art2","art","Décors & props : anachronismes, kits d'époque, habillage, visuels Steam"],
   ["tous","tous","Hors code : organisation, playtests, page Steam, trailer, réseaux, lancement"],

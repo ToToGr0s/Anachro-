@@ -25,8 +25,8 @@ import urllib.request
 
 SECTION = re.compile(r"^##\s*T[âa]che\(s\) du planning\s*$(.*?)(?=^##\s|\Z)", re.M | re.S | re.I)
 COMMENT = re.compile(r"<!--.*?-->", re.S)
-# Préfixes des tâches du site : Art, Célian, LD, Olivier, Production, Théo (online), Updates.
-TASK_ID = r"[ACLOPTU]\d{2}[a-z]?(?:-\d+)?"
+# Préfixes des tâches du site : Art, Célian, Hanaé, LD, Olivier, Production, Théo (online), Updates.
+TASK_ID = r"[ACHLOPTU]\d{2}[a-z]?(?:-\d+)?"
 TASK = re.compile(rf"\b({TASK_ID})\b")
 # Liste d'identifiants en tête de ligne (« T03, C04-1 ») : ce qui suit (« (suite de C04) », « voir P01 ») est ignoré.
 TASK_LIST = re.compile(rf"^\s*(?:[-*]\s*)?({TASK_ID}(?:\s*[,+/&]\s*{TASK_ID})*)\b")
