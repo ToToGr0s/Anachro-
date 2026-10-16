@@ -139,7 +139,8 @@ async function writeTask(env, user, action, before, after) {
 // Le jeton est un secret Cloudflare (wrangler secret put SYNC_TOKEN), le même que le secret GitHub
 // ANACHRO_SYNC_TOKEN : il ne donne accès qu'à cette route, et seulement pour passer des tâches à « done ».
 const SYNC_ID = /^[A-Za-z0-9_-]{1,40}$/;
-const SYNC_MAX = 50;
+// Chaque ID est lié deux fois (id et groupe) : 40 IDs = 80 paramètres, sous la limite de 100 de D1.
+const SYNC_MAX = 40;
 async function syncTasks(req, env) {
   if (!env.SYNC_TOKEN) return err("Synchro désactivée : secret SYNC_TOKEN absent du Worker.", 503);
   if (!safeEq(req.headers.get("authorization") || "", `Bearer ${env.SYNC_TOKEN}`)) return err("Jeton invalide", 401);
@@ -149,18 +150,26 @@ async function syncTasks(req, env) {
   if (!ids.length) return err("Aucune tâche à cocher.");
 
   const pr = Number.isInteger(b.pr) ? b.pr : null;
-  const bot = { id: pr ? `github#${pr}` : "github" };
-  const done = [], already = [], unknown = [];
-  for (const id of ids) {
-    // Sous-tâche (T02-5) ou tâche entière (T03 : toutes ses sous-tâches).
-    const rows = (await env.DB.prepare("SELECT * FROM tasks WHERE id=? OR g=? ORDER BY o").bind(id, id).all()).results;
-    if (!rows.length) { unknown.push(id); continue; }
-    for (const before of rows) {
-      if (before.s === "done") { already.push(before.id); continue; }
-      await writeTask(env, bot, "sync", before, { ...pick(before), s: "done" });
-      done.push(before.id);
-    }
+  const by = pr ? `github#${pr}` : "github";
+
+  // Sous-tâche (T02-5) ou tâche entière (T03 : toutes ses sous-tâches), en une seule lecture.
+  const marks = ids.map(() => "?").join(",");
+  const rows = (await env.DB.prepare(`SELECT * FROM tasks WHERE id IN (${marks}) OR g IN (${marks}) ORDER BY o`)
+    .bind(...ids, ...ids).all()).results;
+  const found = new Set(rows.flatMap((r) => [r.id, r.g]));
+  const unknown = ids.filter((id) => !found.has(id));
+
+  // Une seule écriture groupée : D1 l'applique en transaction, donc tout ou rien (jamais une synchro à moitié faite).
+  const now = Date.now();
+  const stmts = [], done = [], already = [];
+  for (const before of rows) {
+    if (before.s === "done") { already.push(before.id); continue; }
+    stmts.push(env.DB.prepare("UPDATE tasks SET s='done', updated_at=?, updated_by=? WHERE id=?").bind(now, by, before.id));
+    stmts.push(env.DB.prepare("INSERT INTO log (ts,user,action,task_id,before,after) VALUES (?,?,?,?,?,?)")
+      .bind(now, by, "sync", before.id, JSON.stringify(pick(before)), JSON.stringify({ ...pick(before), s: "done" })));
+    done.push(before.id);
   }
+  if (stmts.length) await env.DB.batch(stmts);
   return json({ ok: true, pr, done, already, unknown });
 }
 

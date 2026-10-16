@@ -11,10 +11,16 @@ permissions:
   contents: read
   pull-requests: write
 
+# Une synchro à la fois : deux merges rapprochés passent l'un après l'autre (commentaires dans l'ordre).
+concurrency:
+  group: tasks-sync
+  cancel-in-progress: false
+
 jobs:
   sync:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       # Script lu depuis Dev (déjà mergé et relu), pas depuis la branche de la PR : il manipule le secret.
       - uses: actions/checkout@v4

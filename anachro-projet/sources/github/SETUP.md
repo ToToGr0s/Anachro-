@@ -80,9 +80,9 @@ Ruleset `protection` (main + Dev) : PR obligatoire (1 approbation), **seul l'adm
 
 Quand une PR est mergée dans `Dev`, l'Action **Synchro des tâches** lit sa section « Tâche(s) du planning ». Si toutes les cases « Testé » sont cochées, elle coche ces tâches sur le site, puis commente le résultat sur la PR. Un seul jeton secret relie GitHub et le site. Il ne sert qu'à passer des tâches en « done », jamais à se connecter.
 
-1. **Créer le jeton** sur ton PC, puis le copier (il ne doit apparaître dans aucun message ni fichier) :
+1. **Créer le jeton** sur ton PC, dans PowerShell 7 (aléa cryptographique). Il est copié dans le presse-papiers et ne doit apparaître dans aucun message ni fichier :
    ```powershell
-   -join ((1..48) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) }) | Set-Clipboard
+   [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLower() | Set-Clipboard
    ```
 2. **Cloudflare** : Worker `anacro-pro` → **Settings → Variables and Secrets → Add** → type **Secret**, nom `SYNC_TOKEN`, valeur = le jeton → **Deploy**.
 3. **Déployer le nouveau Worker** : colle `anachro-projet/sources/site/worker.dist.js` dans Cloudflare (Edit code → Ctrl+A → Ctrl+V → **Deploy**).
@@ -93,8 +93,9 @@ Quand une PR est mergée dans `Dev`, l'Action **Synchro des tâches** lit sa sec
 
 Règles de lecture :
 - **`T02-5`** coche cette sous-tâche. **`T03`** coche toutes les sous-tâches de T03.
-- Une ligne qui contient **partiel, reste, correctif, préparation ou aide** n'est pas cochée (« T02 (partiel : …) », « Préparation de T13 »).
-- Si une case **« - [ ] Testé … »** n'est pas cochée, rien n'est coché : la règle de TACHES.md est « mergée sur Dev **et** testée en réseau ».
+- Seules les lignes qui **commencent** par un identifiant comptent : « T02-5 », « T03, C04-1 ». Le texte libre (« Aucune », « outil pour P01 ») est ignoré.
+- Une ligne qui contient **partiel, reste, correctif, préparation ou aide** n'est pas cochée (« T02 (partiel : …) »).
+- Il faut **au moins une case « - [x] Testé … » cochée et aucune vide**, sinon rien n'est coché : la règle de TACHES.md est « mergée sur Dev **et** testée en réseau ».
 - Sans secret configuré, l'Action prévient et ne bloque rien.
 
 ---

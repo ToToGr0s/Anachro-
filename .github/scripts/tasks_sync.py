@@ -1,10 +1,11 @@
 """Coche sur le site de suivi les tâches d'une PR mergée dans Dev.
 
 Lancé par .github/workflows/tasks-sync.yml. Lit la description de la PR :
-- section « ## Tâche(s) du planning » : identifiants T02-5, T03, C04-1… ; un identifiant de tâche entière
-  (T03) coche toutes ses sous-tâches. Une ligne qui contient « partiel », « reste », « correctif »,
-  « préparation » ou « aide » n'est pas cochée (ex. « T02 (partiel : …) », « Préparation de T13 ») ;
-- checklist : si une ligne « - [ ] Testé … » n'est pas cochée, rien n'est coché
+- section « ## Tâche(s) du planning » : seules les lignes qui COMMENCENT par un identifiant comptent
+  (« T02-5 », « T03, C04-1 », « - L01 ») ; le texte libre (« Aucune », « outil pour P01 ») est ignoré.
+  Un identifiant de tâche entière (T03) coche toutes ses sous-tâches ;
+- une ligne qui contient « partiel », « reste », « correctif », « préparation » ou « aide » n'est pas cochée ;
+- checklist : il faut au moins une case « - [x] Testé … » cochée et aucune « - [ ] Testé … » vide
   (règle de TACHES.md : une tâche est faite quand elle est mergée sur Dev ET testée en réseau).
 
 Sans secret ou sans URL configurés, le script prévient et sort sans erreur : la PR reste mergée.
@@ -21,24 +22,36 @@ import urllib.request
 SECTION = re.compile(r"^##\s*T[âa]che\(s\) du planning\s*$(.*?)(?=^##\s|\Z)", re.M | re.S | re.I)
 COMMENT = re.compile(r"<!--.*?-->", re.S)
 # Préfixes des tâches du site : Art, Célian, LD, Olivier, Production, Théo (online), Updates.
-TASK = re.compile(r"\b([ACLOPTU]\d{2}[a-z]?(?:-\d+)?)\b")
-# Mots qui disent que la tâche n'est pas finie, où qu'ils soient sur la ligne (avant ou après l'identifiant).
-NOT_DONE = re.compile(r"partiel|reste|correctif|pr[ée]paration|aide", re.I)
-UNCHECKED_TEST = re.compile(r"^\s*[-*]\s*\[ \]\s*Test", re.M | re.I)
+TASK_ID = r"[ACLOPTU]\d{2}[a-z]?(?:-\d+)?"
+TASK = re.compile(rf"\b({TASK_ID})\b")
+TASK_LINE = re.compile(rf"^\s*(?:[-*]\s*)?{TASK_ID}\b")
+# Début de mot seulement : « correctifs » compte, « décorrectif » non.
+NOT_DONE = re.compile(r"\b(?:partiel|reste|correctif|pr[ée]paration|aide)", re.I)
+CHECKED_TEST = re.compile(r"^\s*[-*]\s*\[[xX]\]\s*Test", re.M)
+UNCHECKED_TEST = re.compile(r"^\s*[-*]\s*\[ \]\s*Test", re.M)
 
 
 def parse(body):
-    """Renvoie (ids à cocher, ids ignorés, tests non cochés ?)."""
+    """Renvoie (ids à cocher, ids ignorés, raison de ne rien cocher ou None)."""
     body = COMMENT.sub("", body or "")
     section = SECTION.search(body)
     ids, skipped = [], []
     if section:
         for line in section.group(1).splitlines():
+            if not TASK_LINE.match(line):
+                continue
             target = skipped if NOT_DONE.search(line) else ids
             for task_id in TASK.findall(line):
                 if task_id not in target:
                     target.append(task_id)
-    return ids, skipped, bool(UNCHECKED_TEST.search(body))
+
+    if UNCHECKED_TEST.search(body):
+        blocker = "une case « Testé » de la checklist n'est pas cochée"
+    elif not CHECKED_TEST.search(body):
+        blocker = "aucune case « Testé » cochée dans la checklist"
+    else:
+        blocker = None
+    return ids, skipped, blocker
 
 
 def comment(text):
@@ -51,32 +64,15 @@ def comment(text):
         data=json.dumps({"body": text}).encode(),
         headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
         method="POST")
-    urllib.request.urlopen(request, timeout=20).close()
+    try:
+        urllib.request.urlopen(request, timeout=20).close()
+    except (urllib.error.URLError, TimeoutError) as error:
+        # Le résultat de la synchro reste dans le journal de l'Action, même sans commentaire.
+        print(f"::warning::Commentaire non publié ({error}) :\n{text}")
 
 
-def main():
-    ids, skipped, has_unchecked_test = parse(os.environ.get("PR_BODY", ""))
-    note_skipped = f"\nNon cochées (partiel / correctif) : {', '.join(skipped)}" if skipped else ""
-
-    if not ids:
-        print("Aucune tâche à cocher." + note_skipped)
-        return 0
-
-    if has_unchecked_test:
-        comment("📋 **Synchro des tâches** : rien n'a été coché, une case « Testé » de la checklist n'est pas cochée. "
-                f"Tâches concernées : {', '.join(ids)}. Coche-les sur le site après le test.{note_skipped}")
-        return 0
-
-    site, token = os.environ.get("SITE_URL", "").rstrip("/"), os.environ.get("SYNC_TOKEN", "")
-    payload = {"ids": ids, "pr": int(os.environ.get("PR_NUMBER") or 0) or None}
-    if os.environ.get("DRY_RUN"):
-        print("[envoi]", json.dumps(payload), note_skipped)
-        return 0
-
-    if not site or not token:
-        print("::warning::Synchro des tâches non configurée (variable ANACHRO_SITE_URL ou secret ANACHRO_SYNC_TOKEN manquant).")
-        return 0
-
+def send(site, token, payload):
+    """Renvoie (résultat JSON, None) ou (None, message d'erreur lisible)."""
     request = urllib.request.Request(
         f"{site}/api/sync/tasks",
         data=json.dumps(payload).encode(),
@@ -84,12 +80,43 @@ def main():
         method="POST")
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
-            result = json.load(response)
+            return json.load(response), None
     except urllib.error.HTTPError as error:
         # Le message du site (jeton invalide, route absente…) aide plus que le code HTTP seul.
-        message = error.read().decode(errors="replace")[:300]
-        comment(f"⚠️ **Synchro des tâches** : le site a refusé ({error.code}) : `{message}`. Coche {', '.join(ids)} à la main.")
-        print(f"::error::Synchro refusée ({error.code}) : {message}")
+        return None, f"le site a refusé ({error.code}) : `{error.read().decode(errors='replace')[:300]}`"
+    except (urllib.error.URLError, TimeoutError) as error:
+        return None, f"site injoignable ({error})"
+    except json.JSONDecodeError:
+        return None, "réponse du site illisible (pas du JSON : mauvaise URL ou Worker pas à jour ?)"
+
+
+def main():
+    ids, skipped, blocker = parse(os.environ.get("PR_BODY", ""))
+    note_skipped = f"\nNon cochées (partiel / correctif…) : {', '.join(skipped)}" if skipped else ""
+
+    if not ids:
+        print("Aucune tâche à cocher." + note_skipped)
+        return 0
+
+    if blocker:
+        comment(f"📋 **Synchro des tâches** : rien n'a été coché, {blocker}. "
+                f"Tâches concernées : {', '.join(ids)}. Coche-les sur le site après le test.{note_skipped}")
+        return 0
+
+    payload = {"ids": ids, "pr": int(os.environ.get("PR_NUMBER") or 0) or None}
+    if os.environ.get("DRY_RUN"):
+        print("[envoi]", json.dumps(payload), note_skipped)
+        return 0
+
+    site, token = os.environ.get("SITE_URL", "").rstrip("/"), os.environ.get("SYNC_TOKEN", "")
+    if not site or not token:
+        print("::warning::Synchro des tâches non configurée (variable ANACHRO_SITE_URL ou secret ANACHRO_SYNC_TOKEN manquant).")
+        return 0
+
+    result, error = send(site, token, payload)
+    if error:
+        comment(f"⚠️ **Synchro des tâches** : {error}. Rien n'a été coché, coche {', '.join(ids)} à la main.")
+        print(f"::error::Synchro échouée : {error}")
         return 1
 
     lines = ["📋 **Synchro des tâches**"]
@@ -100,7 +127,7 @@ def main():
     if result.get("unknown"):
         lines.append(f"⚠️ Introuvables sur le site : {', '.join(result['unknown'])}")
     if skipped:
-        lines.append(f"Non cochées (partiel / correctif) : {', '.join(skipped)}")
+        lines.append(f"Non cochées (partiel / correctif…) : {', '.join(skipped)}")
     comment("\n".join(lines))
     return 0
 
