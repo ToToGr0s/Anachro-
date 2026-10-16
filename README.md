@@ -22,7 +22,7 @@ Party game Unity 3D en ligne (4 à 8 joueurs), FishNet v4 + Steam. Règles du pr
    ```
    Chemin Windows. Sur macOS : `/Applications/Unity/Hub/Editor/6000.6.5f1/Unity.app/Contents/Tools/UnityYAMLMerge`. Adapte-le si Unity Hub est installé ailleurs.
 5. **Ouvrir** : Unity Hub → Add → choisir le dossier **`Anachro/`** (pas la racine du dépôt). Le premier import prend plusieurs minutes.
-6. Play (depuis n'importe quelle scène : l'éditeur démarre toujours sur `Boot`). Le menu « Créer une partie / Rejoindre » doit apparaître.
+6. Ouvrir `Assets/_Project/Scenes/Boot.unity` → Play. Le menu « Créer une partie / Rejoindre » doit apparaître. Play lancé depuis la map ou le menu marche pour le LD, mais sans réseau (pas de NetworkManager).
 
 ## Tester le réseau
 
