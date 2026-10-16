@@ -2,7 +2,7 @@ const $ = (s,r=document) => r.querySelector(s);
 const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; };
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ST = {todo:"À faire", doing:"En cours", done:"Fait", blocked:"Bloqué"};
-const ACT = {status:"Statut", edit:"Modifiée", create:"Ajoutée", delete:"Supprimée", revert:"Annulation", login:"Connexion", account:"Compte", import:"Import", links:"Liens"};
+const ACT = {status:"Statut", edit:"Modifiée", create:"Ajoutée", delete:"Supprimée", revert:"Annulation", sync:"Synchro GitHub", login:"Connexion", account:"Compte", import:"Import", links:"Liens"};
 const FIELDS = {t:"titre", gt:"groupe", who:"personne", wk:"semaine", cat:"catégorie", s:"statut"};
 const COLOR = id => !id ? "tous" : id.startsWith("art") ? "art" : (["theo","celian","olivier"].includes(id) ? id : "tous");
 let people = {}, tasks = {}, lastId = 0;
@@ -51,7 +51,7 @@ async function loadLog(append=false){
   if(!j.log.length && !append){ box.append(el("div","empty","Aucune activité sur cette période.")); $("#more").hidden=true; return; }
   for(const row of j.log){
     const r = el("div","lrow c-"+COLOR(row.user));
-    const canUndo = row.task_id && ["create","edit","status","delete","revert"].includes(row.action);
+    const canUndo = row.task_id && ["create","edit","status","delete","revert","sync"].includes(row.action);
     r.innerHTML = `<div class="when">${fmt(row.ts)}</div>
       <div class="who"><i class="dot" style="background:var(--c)"></i>${esc(name(row.user))}</div>
       <div><span class="act a-${row.action}">${ACT[row.action]||esc(row.action)}</span></div>
