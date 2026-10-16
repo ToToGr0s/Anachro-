@@ -214,7 +214,6 @@ namespace Anachronism.Network
                 SetPhase(GamePhase.Searching, 0f);
         }
 
-        /// <summary>Pénalité ponctuelle (T06 : tir sur un innocent). La montée continue repart de la nouvelle valeur.</summary>
         /// <summary>Seule entrée dans la cache (fin du briefing ou briefing à 0 s) : T07 n'aura qu'un endroit à compléter.</summary>
         [Server]
         private void EnterHiding()
@@ -222,6 +221,7 @@ namespace Anachronism.Network
             SetPhase(GamePhase.Hiding, _settings.HidingDuration);
         }
 
+        /// <summary>Pénalité ponctuelle (T06 : tir sur un innocent). La montée continue repart de la nouvelle valeur.</summary>
         [Server]
         private void AddDegradation(float amount)
         {

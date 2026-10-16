@@ -216,10 +216,12 @@ namespace Anachronism.Network
                 return;
 
             // Demande annulée, abandonnée (délai dépassé) ou remplacée par une autre : Steam répond quand même,
-            // on ressort sans se connecter.
+            // on ressort sans se connecter. Sauf si c'est le lobby où l'on est déjà (Rejoindre → Annuler → Rejoindre
+            // le même code : Steam envoie deux réponses identiques, la seconde ne doit pas nous en faire sortir).
             if (lobbyId != _joiningLobbyId)
             {
-                if (callback.m_EChatRoomEnterResponse == (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+                bool isSuccess = callback.m_EChatRoomEnterResponse == (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess;
+                if (isSuccess && lobbyId != _lobbyId)
                     SteamMatchmaking.LeaveLobby(lobbyId);
                 return;
             }
