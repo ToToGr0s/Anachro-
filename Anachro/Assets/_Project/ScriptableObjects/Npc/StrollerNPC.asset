@@ -11,31 +11,31 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e25d960fb80a996459c1d2a8c2247b7e, type: 3}
   m_Name: StrollerNPC
-  m_EditorClassIdentifier: Anachronism.Runtime::NpcProfile
-  prefab: {fileID: 3774926175398149242, guid: 05a108ad3ea831a4eab7c241b585c139, type: 3}
-  modelPrefab: {fileID: 100166, guid: fdfb5e1c4a1b339489c0eddebb1ab872, type: 3}
-  animatorController: {fileID: 9100000, guid: 6551af83127adf64ca2fb8646f25f2b1, type: 2}
-  modelScale: 1
-  speedParameter: Speed
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Npc.NpcProfile
+  _prefab: {fileID: 3774926175398149242, guid: 05a108ad3ea831a4eab7c241b585c139, type: 3}
+  _modelPrefab: {fileID: 100166, guid: fdfb5e1c4a1b339489c0eddebb1ab872, type: 3}
+  _animatorController: {fileID: 9100000, guid: 6551af83127adf64ca2fb8646f25f2b1, type: 2}
+  _modelScale: 1
+  _speedParameter: Speed
   animSpeedScale: 1
-  walkSpeedRange: {x: 7.5, y: 8.5}
-  acceleration: 28
-  cornerSlowdown: 0.2
-  speedChangeRate: 12
-  sprintChance: 0.1
-  sprintSpeedMultiplier: 1.6
-  sprintBurstChancePerSecond: 0.02
-  sprintBurstDuration: {x: 1, y: 3}
-  angularSpeed: 360
-  turnSmoothing: 10
-  wanderAmount: 0.25
-  wanderFrequency: 0.6
-  headingNoiseDegrees: 8
-  speedNoiseAmount: 0.12
-  speedNoiseFrequency: 0.4
-  radius: 0.65
-  avoidancePriority: 50
-  reactionDelayRange: {x: 0.2, y: 0.6}
-  pauseDurationRange: {x: 0.5, y: 2}
-  stoppingDistance: 0.8
-  walkDistanceRange: {x: 8, y: 25}
+  _walkSpeedRange: {x: 7.5, y: 8.5}
+  _acceleration: 28
+  _cornerSlowdown: 0.2
+  _speedChangeRate: 12
+  _sprintChance: 0.1
+  _sprintSpeedMultiplier: 1.6
+  _sprintBurstChancePerSecond: 0.02
+  _sprintBurstDuration: {x: 1, y: 3}
+  _angularSpeed: 360
+  _turnSmoothing: 10
+  _wanderAmount: 0.25
+  _wanderFrequency: 0.6
+  _headingNoiseDegrees: 8
+  _speedNoiseAmount: 0.12
+  _speedNoiseFrequency: 0.4
+  _radius: 0.65
+  _avoidancePriority: 50
+  _reactionDelayRange: {x: 0.2, y: 0.6}
+  _pauseDurationRange: {x: 0.5, y: 2}
+  _stoppingDistance: 0.8
+  _walkDistanceRange: {x: 8, y: 25}

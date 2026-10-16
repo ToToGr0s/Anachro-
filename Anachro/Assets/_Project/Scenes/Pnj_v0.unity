@@ -195,18 +195,18 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bc176c745f64b7c4c891ed3fd11940a1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.NpcTargetDistribution
-  spawnEntries:
-  - profile: {fileID: 11400000, guid: 5d8bb9271e63cf04c92fcb6e8d64d2dc, type: 2}
-    count: 5
-  - profile: {fileID: 11400000, guid: cbba01cf75bd9fe418826c3e87396c27, type: 2}
-    count: 5
-  - profile: {fileID: 11400000, guid: 2ea1e59bf618ad14d976a3d078945169, type: 2}
-    count: 5
-  - profile: {fileID: 11400000, guid: f8125aae86fe9e14d898a7a1b12b0fa1, type: 2}
-    count: 5
-  npcParent: {fileID: 412657809}
-  maxAttempts: 15
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Npc.NpcDestinationManager
+  _spawnEntries:
+  - _profile: {fileID: 11400000, guid: 5d8bb9271e63cf04c92fcb6e8d64d2dc, type: 2}
+    _count: 5
+  - _profile: {fileID: 11400000, guid: cbba01cf75bd9fe418826c3e87396c27, type: 2}
+    _count: 5
+  - _profile: {fileID: 11400000, guid: 2ea1e59bf618ad14d976a3d078945169, type: 2}
+    _count: 5
+  - _profile: {fileID: 11400000, guid: f8125aae86fe9e14d898a7a1b12b0fa1, type: 2}
+    _count: 5
+  _npcParent: {fileID: 412657809}
+  _maxAttempts: 15
 --- !u!1 &289543343
 GameObject:
   m_ObjectHideFlags: 0

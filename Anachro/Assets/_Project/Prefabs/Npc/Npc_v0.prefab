@@ -171,4 +171,4 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b77e470160afb04e910bfeb99b88438, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.NpcMovement
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Npc.NpcAgent
