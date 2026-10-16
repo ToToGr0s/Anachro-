@@ -1,4 +1,5 @@
 # Coche sur le site de suivi les tâches d'une PR mergée dans Dev, si ses cases « Testé » sont cochées.
+# Cochage manuel (sans PR) : commit vide « sync: T01, T03-1 » poussé sur la branche outil Sync-taches.
 # Configuration (une fois, par Théo) : voir anachro-projet/sources/github/SETUP.md, section « Synchro des tâches ».
 name: Synchro des tâches
 
@@ -6,6 +7,9 @@ on:
   pull_request:
     types: [closed]
     branches: [Dev]
+  # Pas de déclenchement manuel GitHub (workflow_dispatch) : il exige l'Action sur main, qui ne reçoit rien pour l'instant.
+  push:
+    branches: [Sync-taches]
 
 permissions:
   contents: read
@@ -18,7 +22,7 @@ concurrency:
 
 jobs:
   sync:
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -37,4 +41,22 @@ jobs:
           SYNC_TOKEN: ${{ secrets.ANACHRO_SYNC_TOKEN }}
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+        run: python3 .github/scripts/tasks_sync.py
+
+  manual:
+    # Pousser sur Sync-taches demande le droit d'écriture sur le dépôt : seule l'équipe peut cocher ainsi.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: Dev
+          sparse-checkout: .github/scripts
+
+      - name: Cocher les tâches demandées
+        env:
+          MANUAL_IDS: ${{ github.event.head_commit.message }}
+          SITE_URL: ${{ vars.ANACHRO_SITE_URL }}
+          SYNC_TOKEN: ${{ secrets.ANACHRO_SYNC_TOKEN }}
         run: python3 .github/scripts/tasks_sync.py

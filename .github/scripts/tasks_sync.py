@@ -9,6 +9,9 @@ Lancé par .github/workflows/tasks-sync.yml. Lit la description de la PR :
 - checklist : il faut au moins une case « - [x] Testé … » cochée et aucune « - [ ] Testé … » vide
   (règle de TACHES.md : une tâche est faite quand elle est mergée sur Dev ET testée en réseau).
 
+Cochage manuel : un commit poussé sur la branche Sync-taches avec le message « sync: T01, T03-1 »
+(MANUAL_IDS) coche ces tâches sans passer par une PR ; à faire seulement quand Théo l'a validé.
+
 Sans secret ou sans URL configurés, le script prévient et sort sans erreur : la PR reste mergée.
 DRY_RUN=1 affiche ce qui serait envoyé, sans rien appeler.
 """
@@ -29,6 +32,7 @@ TASK = re.compile(rf"\b({TASK_ID})\b")
 TASK_LIST = re.compile(rf"^\s*(?:[-*]\s*)?({TASK_ID}(?:\s*[,+/&]\s*{TASK_ID})*)\b")
 # Mots entiers : « reste » et « aide » comptent, « restera » ou « aidera » non.
 NOT_DONE = re.compile(r"\b(?:partiel(?:le)?s?|reste|correctifs?|pr[ée]paration|aide)\b", re.I)
+MANUAL = re.compile(r"^\s*sync\s*:\s*(.+)$", re.I | re.M)
 CHECKED_TEST = re.compile(r"^\s*[-*]\s*\[[xX]\]\s*Test", re.M)
 UNCHECKED_TEST = re.compile(r"^\s*[-*]\s*\[ \]\s*Test", re.M)
 
@@ -94,8 +98,21 @@ def send(site, token, payload):
         return None, "réponse du site illisible (pas du JSON : mauvaise URL ou Worker pas à jour ?)"
 
 
+def parse_manual(message):
+    """« sync: T01, T03-1 » → [T01, T03-1]. Faux préfixe ou liste vide : rien (un commit ordinaire ne coche rien)."""
+    match = MANUAL.match(message or "")
+    return list(dict.fromkeys(TASK.findall(match.group(1)))) if match else []
+
+
 def main():
-    ids, skipped, blocker = parse(os.environ.get("PR_BODY", ""))
+    if "MANUAL_IDS" in os.environ:
+        # Demande explicite (validée par Théo) : pas de PR, donc pas de checklist « Testé » à lire.
+        ids, skipped, blocker = parse_manual(os.environ["MANUAL_IDS"]), [], None
+        if not ids:
+            print("::warning::Message attendu : « sync: T01, T03-1 ». Rien n'a été coché.")
+            return 0
+    else:
+        ids, skipped, blocker = parse(os.environ.get("PR_BODY", ""))
     note_skipped = f"\nNon cochées (partiel / correctif…) : {', '.join(skipped)}" if skipped else ""
 
     if not ids:
