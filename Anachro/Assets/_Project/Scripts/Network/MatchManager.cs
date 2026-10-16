@@ -38,7 +38,7 @@ namespace Anachronism.Network
         private MatchSettings _settings;
 
         public GamePhase Phase => _phase.Value;
-        public float Degradation => ComputeDegradation(TimeManager.Tick);
+        public float Degradation => IsSpawned ? ComputeDegradation(TimeManager.Tick) : 0f;
         public Winner Winner => _winner.Value;
 
         /// <summary>Rôle du joueur local, reçu par TargetRpc et jamais diffusé aux autres.</summary>
@@ -49,6 +49,10 @@ namespace Anachronism.Network
         {
             get
             {
+                // TimeManager n'existe qu'une fois l'objet réseau initialisé (map ouverte hors partie, chargement).
+                if (!IsSpawned)
+                    return 0f;
+
                 uint endTick = _phaseEndTick.Value;
                 uint nowTick = TimeManager.Tick;
                 return endTick == 0 || endTick <= nowTick ? 0f : (float)TimeManager.TicksToTime(endTick - nowTick);
@@ -152,7 +156,12 @@ namespace Anachronism.Network
             _degradationBaseTick.Value = TimeManager.Tick;
             _degradationPerSecond.Value = 0f;
             _winner.Value = Winner.None;
-            SetPhase(GamePhase.Briefing, settings.BriefingDuration);
+            // Briefing à 0 s : sans chrono, la phase ne se terminerait jamais. On passe directement à la cache.
+            if (settings.BriefingDuration > 0f)
+                SetPhase(GamePhase.Briefing, settings.BriefingDuration);
+            else
+                SetPhase(GamePhase.Hiding, settings.HidingDuration);
+
             return MatchStartResult.Started;
         }
 
@@ -209,6 +218,10 @@ namespace Anachronism.Network
         [Server]
         private void AddDegradation(float amount)
         {
+            // Une pénalité (T06) n'a de sens qu'en jeu : hors manche, elle modifierait l'état de la partie suivante.
+            if (_phase.Value != GamePhase.Searching && _phase.Value != GamePhase.Portal)
+                return;
+
             uint now = TimeManager.Tick;
             _degradationBase.Value = Mathf.Min(1f, ComputeDegradation(now) + amount);
             _degradationBaseTick.Value = now;

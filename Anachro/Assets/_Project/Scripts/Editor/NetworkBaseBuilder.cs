@@ -75,6 +75,11 @@ namespace Anachronism.Editor
 
         private static NetworkObject BuildPlayerPrefab()
         {
+            // Déjà là : on le garde tel quel, c'est le travail de Célian (contrôleur, modèle) qu'on écraserait.
+            NetworkObject existing = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
+            if (existing != null)
+                return existing;
+
             // Capsule provisoire : Célian la remplace par le vrai joueur (Gameplay/Player).
             GameObject root = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             root.name = "Player_Base";

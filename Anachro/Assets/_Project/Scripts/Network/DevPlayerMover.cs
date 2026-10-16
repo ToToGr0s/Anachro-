@@ -14,13 +14,25 @@ namespace Anachronism.Network
         [SerializeField] private float _speed = 5f;
         [SerializeField] private Color _ownerColor = new Color(0.2f, 0.6f, 1f);
 
+        private Material _ownerMaterial;
+
         public override void OnStartClient()
         {
             base.OnStartClient();
 
             // Sa propre capsule en couleur : on se repère tout de suite parmi les autres joueurs.
+            // .material crée une copie du matériau : on la garde pour la détruire avec le joueur (sinon fuite).
             if (IsOwner && TryGetComponent(out Renderer capsuleRenderer))
-                capsuleRenderer.material.color = _ownerColor;
+            {
+                _ownerMaterial = capsuleRenderer.material;
+                _ownerMaterial.color = _ownerColor;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_ownerMaterial != null)
+                Destroy(_ownerMaterial);
         }
 
         private void Update()
