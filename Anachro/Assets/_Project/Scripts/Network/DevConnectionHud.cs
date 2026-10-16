@@ -79,8 +79,32 @@ namespace Anachronism.Network
             if (_steamLobby != null && _steamLobby.IsInLobby && GUILayout.Button("Inviter des amis"))
                 _steamLobby.InviteFriends();
 
+            DrawMatch(isServerStarted);
+
             if (GUILayout.Button("Stop"))
                 Stop(isServerStarted, isClientStarted);
+        }
+
+        private void DrawMatch(bool isServerStarted)
+        {
+            MatchManager match = MatchManager.Instance;
+            if (match == null)
+                return;
+
+            GUILayout.Label($"Phase : {match.Phase}  ({Mathf.CeilToInt(match.RemainingTime)} s)");
+            GUILayout.Label($"Mon rôle : {match.LocalRole}");
+            GUILayout.Label($"Dégradation : {Mathf.RoundToInt(match.Degradation * 100f)} %");
+
+            if (match.Phase == GamePhase.End)
+                GUILayout.Label($"Victoire : {match.Winner}");
+
+            bool canStart = match.Phase == GamePhase.Lobby || match.Phase == GamePhase.End;
+            if (isServerStarted && canStart && GUILayout.Button("Démarrer la partie"))
+            {
+                MatchStartResult result = match.StartMatch();
+                if (result != MatchStartResult.Started)
+                    Debug.LogWarning($"[DevConnectionHud] Partie non démarrée : {result}.");
+            }
         }
 
         private void StartLocalHost()

@@ -30,6 +30,8 @@ namespace Anachronism.Editor
         private const string MapScenePath = "Assets/_Project/Scenes/Maps/Map_Greybox.unity";
         private const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player/Player_Base.prefab";
         private const string DefaultPrefabObjectsPath = "Assets/DefaultPrefabObjects.asset";
+        private const string MatchPresetsPath = "Assets/_Project/Data/MatchPresets/MatchPresets_Default.asset";
+        private const string MatchManagerName = "MatchManager";
         private const string NetworkManagerName = "NetworkManager";
         private const string SpawnPointsName = "SpawnPoints";
         private const string GroundName = "Ground";
@@ -53,11 +55,15 @@ namespace Anachronism.Editor
                 return;
             }
 
-            NetworkObject playerPrefab = BuildPlayerPrefab();
-            RegisterPrefab(prefabObjects, playerPrefab);
+            RegisterPrefab(prefabObjects, BuildPlayerPrefab());
+            AssetDatabase.SaveAssets();
+
+            // Chaque ouverture de scène décharge les assets non référencés : les étapes suivantes rechargent
+            // leurs assets par chemin après avoir ouvert leur scène, au lieu de garder des références mortes.
             CreateSceneIfMissing(MainMenuScenePath, null);
             CreateSceneIfMissing(MapScenePath, BuildMapContent);
-            BuildBootScene(playerPrefab, prefabObjects);
+            EnsureMatchManager();
+            BuildBootScene();
             SetBuildScenes();
             AssetDatabase.SaveAssets();
             Debug.Log("[NetworkBaseBuilder] Base réseau construite.");
@@ -83,9 +89,11 @@ namespace Anachronism.Editor
             EditorUtility.SetDirty(prefabObjects);
         }
 
-        private static void BuildBootScene(NetworkObject playerPrefab, DefaultPrefabObjects prefabObjects)
+        private static void BuildBootScene()
         {
             Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
+            DefaultPrefabObjects prefabObjects = AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(DefaultPrefabObjectsPath);
+            NetworkObject playerPrefab = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
             DestroyRoot(scene, NetworkManagerName);
             // Sol et points d'apparition vivaient dans Boot avant l'enchaînement de scènes : ils sont dans la map.
             DestroyRoot(scene, SpawnPointsName);
@@ -154,6 +162,45 @@ namespace Anachronism.Editor
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             buildContent?.Invoke();
             EditorSceneManager.SaveScene(scene, path);
+        }
+
+        private static MatchPresetTable LoadOrCreateMatchPresets()
+        {
+            MatchPresetTable presets = AssetDatabase.LoadAssetAtPath<MatchPresetTable>(MatchPresetsPath);
+            if (presets != null)
+                return presets;
+
+            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<MatchPresetTable>(), MatchPresetsPath);
+            AssetDatabase.SaveAssets();
+            // Recharge depuis le disque : une référence vers l'instance tout juste créée n'est pas sérialisée dans la scène.
+            return AssetDatabase.LoadAssetAtPath<MatchPresetTable>(MatchPresetsPath);
+        }
+
+        private static void EnsureMatchManager()
+        {
+            // Ajout seulement s'il manque : la map est la scène de LD, on n'y touche à rien d'autre.
+            Scene scene = EditorSceneManager.OpenScene(MapScenePath, OpenSceneMode.Single);
+            MatchPresetTable presets = LoadOrCreateMatchPresets();
+            MatchManager matchManager = scene.GetRootGameObjects()
+                .Select(rootObject => rootObject.GetComponent<MatchManager>())
+                .FirstOrDefault(component => component != null);
+
+            if (matchManager == null)
+            {
+                GameObject matchObject = new GameObject(MatchManagerName);
+                matchObject.AddComponent<NetworkObject>();
+                matchManager = matchObject.AddComponent<MatchManager>();
+            }
+
+            // Préréglages assignés seulement s'ils manquent : un choix fait à la main dans la map est gardé.
+            SerializedObject matchSettings = new SerializedObject(matchManager);
+            SerializedProperty presetsProperty = matchSettings.FindProperty("_presets");
+            if (presetsProperty.objectReferenceValue == null)
+                presetsProperty.objectReferenceValue = presets;
+            matchSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
         }
 
         private static void BuildMapContent()
