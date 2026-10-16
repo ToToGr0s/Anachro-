@@ -76,6 +76,30 @@ Ruleset `protection` (main + Dev) : PR obligatoire (1 approbation), **seul l'adm
 
 ---
 
+## 7 bis. Synchro des tâches (PR mergée → tâche cochée sur le site)
+
+Quand une PR est mergée dans `Dev`, l'Action **Synchro des tâches** lit sa section « Tâche(s) du planning ». Si toutes les cases « Testé » sont cochées, elle coche ces tâches sur le site, puis commente le résultat sur la PR. Un seul jeton secret relie GitHub et le site. Il ne sert qu'à passer des tâches en « done », jamais à se connecter.
+
+1. **Créer le jeton** sur ton PC, dans PowerShell 7 (aléa cryptographique). Il est copié dans le presse-papiers et ne doit apparaître dans aucun message ni fichier :
+   ```powershell
+   [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLower() | Set-Clipboard
+   ```
+2. **Cloudflare** : Worker `anacro-pro` → **Settings → Variables and Secrets → Add** → type **Secret**, nom `SYNC_TOKEN`, valeur = le jeton → **Deploy**.
+3. **Déployer le nouveau Worker** : colle `anachro-projet/sources/site/worker.dist.js` dans Cloudflare (Edit code → Ctrl+A → Ctrl+V → **Deploy**).
+4. **GitHub** → dépôt → **Settings → Secrets and variables → Actions** :
+   - onglet **Secrets** → `ANACHRO_SYNC_TOKEN` = **le même** jeton ;
+   - onglet **Variables** → `ANACHRO_SITE_URL` = `https://anacro-pro.contact-davcel.workers.dev`.
+5. **Test** : merge une petite PR vers `Dev`, avec par exemple `T01-6` dans « Tâche(s) du planning » et ses cases « Testé » cochées. Un commentaire « 📋 Synchro des tâches » doit apparaître sur la PR, et la tâche passe en « done » sur le site (le journal d'admin indique `github#<numéro>`).
+
+Règles de lecture :
+- **`T02-5`** coche cette sous-tâche. **`T03`** coche toutes les sous-tâches de T03.
+- Seules les lignes qui **commencent** par un identifiant comptent : « T02-5 », « T03, C04-1 ». Le texte libre (« Aucune », « outil pour P01 ») est ignoré.
+- Une ligne qui contient **partiel, reste, correctif, préparation ou aide** n'est pas cochée (« T02 (partiel : …) »).
+- Il faut **au moins une case « - [x] Testé … » cochée et aucune vide**, sinon rien n'est coché : la règle de TACHES.md est « mergée sur Dev **et** testée en réseau ».
+- Sans secret configuré, l'Action prévient et ne bloque rien.
+
+---
+
 ## 8. Règles pour l'équipe (à leur envoyer)
 
 - Une branche par sujet : `Feat-<sujet>` ou `Fix-<sujet>`, créée depuis `Dev` → PR vers `Dev`.

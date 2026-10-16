@@ -273,6 +273,45 @@ async function writeTask(env, user, action, before, after) {
   return now;
 }
 
+// ---------- synchro GitHub ----------
+// Appelée par l'Action « Synchro des tâches » quand une PR testée est mergée dans Dev.
+// Le jeton est un secret Cloudflare (wrangler secret put SYNC_TOKEN), le même que le secret GitHub
+// ANACHRO_SYNC_TOKEN : il ne donne accès qu'à cette route, et seulement pour passer des tâches à « done ».
+const SYNC_ID = /^[A-Za-z0-9_-]{1,40}$/;
+// Chaque ID est lié deux fois (id et groupe) : 40 IDs = 80 paramètres, sous la limite de 100 de D1.
+const SYNC_MAX = 40;
+async function syncTasks(req, env) {
+  if (!env.SYNC_TOKEN) return err("Synchro désactivée : secret SYNC_TOKEN absent du Worker.", 503);
+  if (!safeEq(req.headers.get("authorization") || "", `Bearer ${env.SYNC_TOKEN}`)) return err("Jeton invalide", 401);
+
+  const b = await readJson(req);
+  const ids = Array.isArray(b.ids) ? [...new Set(b.ids.map(String).filter((id) => SYNC_ID.test(id)))].slice(0, SYNC_MAX) : [];
+  if (!ids.length) return err("Aucune tâche à cocher.");
+
+  const pr = Number.isInteger(b.pr) ? b.pr : null;
+  const by = pr ? `github#${pr}` : "github";
+
+  // Sous-tâche (T02-5) ou tâche entière (T03 : toutes ses sous-tâches), en une seule lecture.
+  const marks = ids.map(() => "?").join(",");
+  const rows = (await env.DB.prepare(`SELECT * FROM tasks WHERE id IN (${marks}) OR g IN (${marks}) ORDER BY o`)
+    .bind(...ids, ...ids).all()).results;
+  const found = new Set(rows.flatMap((r) => [r.id, r.g]));
+  const unknown = ids.filter((id) => !found.has(id));
+
+  // Une seule écriture groupée : D1 l'applique en transaction, donc tout ou rien (jamais une synchro à moitié faite).
+  const now = Date.now();
+  const stmts = [], done = [], already = [];
+  for (const before of rows) {
+    if (before.s === "done") { already.push(before.id); continue; }
+    stmts.push(env.DB.prepare("UPDATE tasks SET s='done', updated_at=?, updated_by=? WHERE id=?").bind(now, by, before.id));
+    stmts.push(env.DB.prepare("INSERT INTO log (ts,user,action,task_id,before,after) VALUES (?,?,?,?,?,?)")
+      .bind(now, by, "sync", before.id, JSON.stringify(pick(before)), JSON.stringify({ ...pick(before), s: "done" })));
+    done.push(before.id);
+  }
+  if (stmts.length) await env.DB.batch(stmts);
+  return json({ ok: true, pr, done, already, unknown });
+}
+
 // ---------- routes ----------
 export default {
   async scheduled(event, env, ctx) {
@@ -324,6 +363,9 @@ export default {
       if (p === "/api/logout" && req.method === "POST") {
         return json({ ok: true }, 200, { "set-cookie": "s=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0" });
       }
+
+      // --- synchro GitHub : une PR mergée dans Dev coche ses tâches (secret SYNC_TOKEN, jamais un compte) ---
+      if (p === "/api/sync/tasks" && req.method === "POST") return syncTasks(req, env);
 
       const me = await currentUser(req, env);
       if (!me) return err("Connexion requise", 401);
