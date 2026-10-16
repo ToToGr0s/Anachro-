@@ -273,6 +273,36 @@ async function writeTask(env, user, action, before, after) {
   return now;
 }
 
+// ---------- synchro GitHub ----------
+// Appelée par l'Action « Synchro des tâches » quand une PR testée est mergée dans Dev.
+// Le jeton est un secret Cloudflare (wrangler secret put SYNC_TOKEN), le même que le secret GitHub
+// ANACHRO_SYNC_TOKEN : il ne donne accès qu'à cette route, et seulement pour passer des tâches à « done ».
+const SYNC_ID = /^[A-Za-z0-9_-]{1,40}$/;
+const SYNC_MAX = 50;
+async function syncTasks(req, env) {
+  if (!env.SYNC_TOKEN) return err("Synchro désactivée : secret SYNC_TOKEN absent du Worker.", 503);
+  if (!safeEq(req.headers.get("authorization") || "", `Bearer ${env.SYNC_TOKEN}`)) return err("Jeton invalide", 401);
+
+  const b = await readJson(req);
+  const ids = Array.isArray(b.ids) ? [...new Set(b.ids.map(String).filter((id) => SYNC_ID.test(id)))].slice(0, SYNC_MAX) : [];
+  if (!ids.length) return err("Aucune tâche à cocher.");
+
+  const pr = Number.isInteger(b.pr) ? b.pr : null;
+  const bot = { id: pr ? `github#${pr}` : "github" };
+  const done = [], already = [], unknown = [];
+  for (const id of ids) {
+    // Sous-tâche (T02-5) ou tâche entière (T03 : toutes ses sous-tâches).
+    const rows = (await env.DB.prepare("SELECT * FROM tasks WHERE id=? OR g=? ORDER BY o").bind(id, id).all()).results;
+    if (!rows.length) { unknown.push(id); continue; }
+    for (const before of rows) {
+      if (before.s === "done") { already.push(before.id); continue; }
+      await writeTask(env, bot, "sync", before, { ...pick(before), s: "done" });
+      done.push(before.id);
+    }
+  }
+  return json({ ok: true, pr, done, already, unknown });
+}
+
 // ---------- routes ----------
 export default {
   async scheduled(event, env, ctx) {
@@ -324,6 +354,9 @@ export default {
       if (p === "/api/logout" && req.method === "POST") {
         return json({ ok: true }, 200, { "set-cookie": "s=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0" });
       }
+
+      // --- synchro GitHub : une PR mergée dans Dev coche ses tâches (secret SYNC_TOKEN, jamais un compte) ---
+      if (p === "/api/sync/tasks" && req.method === "POST") return syncTasks(req, env);
 
       const me = await currentUser(req, env);
       if (!me) return err("Connexion requise", 401);
