@@ -67,10 +67,32 @@ Format : `[ ] ID — tâche (semaine cible)`. Une tâche se coche quand elle est
 - [ ] **O07** — Dégradation v1 : post-process / shader piloté par `Degradation` (0..1) (S4)
 - [ ] **O08** — Glitchs : événements seedés par l'hôte (PNJ dupliqués, flicker, objets qui changent) (S5)
 - [ ] **O09** — Audio : musique de l'époque, SFX, mixer, musique qui se dégrade (S5)
-- [ ] **O10** — Options : audio, sensibilité, micro / push-to-talk, graphismes (S6)
-- [ ] **O11** — Écran de fin (S6)
-- [ ] **O12** — Polish UI + FX de dégradation (S7)
+- ~~**O10** — Options~~ → repris par Hanaé (**H03**)
+- ~~**O11** — Écran de fin~~ → repris par Hanaé (**H04**)
+- [ ] **O12** — Polish des FX de dégradation (S7) — le polish des menus passe à Hanaé (**H11**)
 - [ ] **O13** — Caméra libre spectateur pour les trailers et les clips (S8)
+
+---
+
+## Hanaé — UI (menus secondaires)
+
+Écrans hors chemin critique : un retard ne bloque personne. Olivier garde le HUD (O05) et le menu / lobby (O06), qui touchent au réseau.
+
+- [ ] **H01** — Écran titre + écran de chargement (S3)
+- [ ] **H02** — Menu pause : reprendre, options, quitter la partie + confirmation (S4)
+- [ ] **H03** — Menu options : audio, sensibilité, micro / push-to-talk, graphismes, sauvegarde (S5) — repris d'O10
+- [ ] **H04** — Écran de fin : vainqueur, rôles révélés + récap, rejouer / quitter (S6) — repris d'O11
+- [ ] **H05** — Écran « Comment jouer » : rôles, phases, victoire, illustrations (S6)
+- [ ] **H06** — Icônes du HUD (avec les artistes) + sons d'interface (S7)
+- [ ] **H07** — Crédits : équipe, école, outils, licences (S7)
+- [ ] **H08** — Accessibilité : taille du texte, contraste élevé (S8)
+- [ ] **H09** — Traduction anglaise de l'UI + choix de la langue (S8)
+- [ ] **H10** — Captures d'écran et GIF pour la page Steam / la démo (S9)
+- [ ] **H11** — Transitions et animations des menus (S10) — repris d'O12
+- [ ] **H12** — Test de tous les écrans en 720p / 1080p / ultrawide + bugs UI notés (S11)
+- [ ] **H13** — Press kit : textes et images (S12)
+- [ ] **H14** — Corrections UI remontées par les joueurs (1.1) (S14)
+- [ ] **H15** — UI de sélection de la map + habillage des menus de l'époque 2 (S16–S17) — repris d'U04
 
 ---
 
@@ -83,5 +105,5 @@ Le contenu exact se décide en **S13**, à partir des avis Steam et des bugs rem
 - [ ] **U02** (Olivier) — Améliorations UI / PNJ de la 1.1 (S14)
 - [ ] **T16** (Théo) — Build MAJ 1.1 + patch notes (S15)
 - [ ] **U03** (Célian) — Nouveaux anachronismes / mécanique de la 1.2 (S16)
-- [ ] **U04** (Olivier) — Dégradation, glitchs et audio de l'époque 2, sélection de map (S16–S17)
+- [ ] **U04** (Olivier) — Dégradation, glitchs et audio de l'époque 2 (S16–S17) — la sélection de map passe à Hanaé (**H15**)
 - [ ] **T17** (Théo) — Build MAJ 1.2 + patch notes (S18)

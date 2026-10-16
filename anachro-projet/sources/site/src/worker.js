@@ -10,10 +10,11 @@ const PEOPLE_DEFAULT = [
   { id: "olivier", name: "Olivier", role: "member" },
   { id: "art1", name: "Hugo", role: "member" },
   { id: "art2", name: "JB", role: "member" },
+  { id: "hanae", name: "Hanaé", role: "member" },
   { id: "xavier", name: "Xavier", role: "viewer" },
 ];
 const STATUSES = ["todo", "doing", "done", "blocked"];
-const WHO = ["theo", "celian", "olivier", "art1", "art2", "tous"];
+const WHO = ["theo", "celian", "olivier", "hanae", "art1", "art2", "tous"];
 const SESSION_DAYS = 30;
 const PBKDF2_ITER = 20000;
 
@@ -50,7 +51,70 @@ async function init(env) {
     env.DB.prepare("UPDATE users SET name='Hugo' WHERE id='art1' AND name='Artiste 1'"),
     env.DB.prepare("UPDATE users SET name='JB' WHERE id='art2' AND name='Artiste 2'"),
   ]);
+  await migrateHanae(env);
   initDone = true;
+}
+
+// ---------- arrivée de Hanaé (UI : menus secondaires) ----------
+// Une seule fois (drapeau meta) : si on modifie ou supprime ses tâches ensuite, elles ne reviennent pas.
+// [id, groupe, titre du groupe, sous-tâche, semaine, catégorie]
+const HANAE_TASKS = [
+  ["H01-1", "H01", "Écran titre + chargement", "Écran titre (logo, fond, « Appuie pour commencer »)", "S3", "UI"],
+  ["H01-2", "H01", "Écran titre + chargement", "Écran de chargement entre le menu et la map (fond + astuce)", "S3", "UI"],
+  ["H02-1", "H02", "Menu pause", "Menu pause (Échap) : reprendre, options, quitter la partie", "S4", "UI"],
+  ["H02-2", "H02", "Menu pause", "Confirmation « Quitter la partie ? »", "S4", "UI"],
+  ["H03-1", "H03", "Menu options", "Volumes audio", "S5", "UI"],
+  ["H03-2", "H03", "Menu options", "Sensibilité", "S5", "UI"],
+  ["H03-3", "H03", "Menu options", "Micro / push-to-talk", "S5", "UI"],
+  ["H03-4", "H03", "Menu options", "Graphismes (qualité, résolution)", "S5", "UI"],
+  ["H03-5", "H03", "Menu options", "Sauvegarde des préférences", "S5", "UI"],
+  ["H04-1", "H04", "Écran de fin", "Vainqueur", "S6", "UI"],
+  ["H04-2", "H04", "Écran de fin", "Rôles révélés + récap : objets trouvés, tirs ratés", "S6", "UI"],
+  ["H04-3", "H04", "Écran de fin", "Rejouer / quitter", "S6", "UI"],
+  ["H05-1", "H05", "Comment jouer", "Écran des règles : rôles, phases, conditions de victoire", "S6", "UI"],
+  ["H05-2", "H05", "Comment jouer", "Illustrations des règles (avec les artistes)", "S6", "UI"],
+  ["H06-1", "H06", "Icônes + sons d'UI", "Icônes du HUD : munitions, objets, rôles (avec les artistes)", "S7", "UI"],
+  ["H06-2", "H06", "Icônes + sons d'UI", "Sons d'interface : clic, survol, erreur", "S7", "Audio"],
+  ["H07-1", "H07", "Crédits", "Écran des crédits : équipe, école, outils, licences (FishNet, Steam)", "S7", "UI"],
+  ["H08-1", "H08", "Accessibilité", "Taille du texte réglable", "S8", "UI"],
+  ["H08-2", "H08", "Accessibilité", "Mode contraste élevé", "S8", "UI"],
+  ["H09-1", "H09", "Traduction anglaise", "Table de textes FR / EN de toute l'UI", "S8", "UI"],
+  ["H09-2", "H09", "Traduction anglaise", "Choix de la langue dans les options", "S8", "UI"],
+  ["H10-1", "H10", "Visuels Steam / démo", "Captures d'écran (5 minimum)", "S9", "Marketing"],
+  ["H10-2", "H10", "Visuels Steam / démo", "GIF courts pour la page Steam", "S9", "Marketing"],
+  ["H11-1", "H11", "Transitions des menus", "Polish UI : transitions et animations des menus", "S10", "UI"],
+  ["H12-1", "H12", "Test de l'UI", "Tester tous les écrans en 1280×720, 1920×1080 et 2560×1080", "S11", "Playtest"],
+  ["H12-2", "H12", "Test de l'UI", "Bugs UI notés sur le site", "S11", "Playtest"],
+  ["H13-1", "H13", "Press kit", "Textes : pitch, description courte et longue", "S12", "Marketing"],
+  ["H13-2", "H13", "Press kit", "Images : logo, captures, photo d'équipe", "S12", "Marketing"],
+  ["H14-1", "H14", "Corrections UI 1.1", "Corrections UI remontées par les joueurs", "S14", "UI"],
+  ["H15-1", "H15", "UI de la 1.2", "UI de sélection de la map", "S16", "UI"],
+  ["H15-2", "H15", "UI de la 1.2", "Habillage des menus pour l'époque 2", "S17", "UI"],
+];
+// Tâches d'Olivier qui passent à Hanaé : retirées seulement si elles sont encore « à faire ».
+const HANAE_FROM_OLIVIER = ["O10-1", "O10-2", "O10-3", "O10-4", "O10-5", "O11-1", "O11-2", "O11-3", "O12-1", "U04-3"];
+async function migrateHanae(env) {
+  if (await env.DB.prepare("SELECT v FROM meta WHERE k='migr_hanae'").first()) return;
+  const now = Date.now();
+  const marks = HANAE_FROM_OLIVIER.map(() => "?").join(",");
+  const moved = (await env.DB.prepare(`SELECT * FROM tasks WHERE s='todo' AND id IN (${marks})`).bind(...HANAE_FROM_OLIVIER).all()).results;
+  const stmts = [
+    // Base déjà configurée : on ajoute son compte (sans code, Théo le donne depuis l'admin). Sinon /api/setup le crée.
+    env.DB.prepare("INSERT INTO users (id,name,role) SELECT 'hanae','Hanaé','member' WHERE EXISTS (SELECT 1 FROM users WHERE id='theo') AND NOT EXISTS (SELECT 1 FROM users WHERE id='hanae')"),
+    ...HANAE_TASKS.map(([id, g, gt, t, wk, cat], i) =>
+      env.DB.prepare("INSERT OR IGNORE INTO tasks (id,g,gt,t,who,wk,cat,s,o,updated_at,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+        .bind(id, g, gt, t, "hanae", wk, cat, "todo", 9501 + i, now, null)),
+  ];
+  for (const t of moved) {
+    stmts.push(env.DB.prepare("DELETE FROM tasks WHERE id=?").bind(t.id));
+    // Ligne « delete » avec l'état d'avant : annulable depuis l'admin si on change d'avis.
+    stmts.push(env.DB.prepare("INSERT INTO log (ts,user,action,task_id,before,after) VALUES (?,?,?,?,?,?)")
+      .bind(now, null, "delete", t.id, JSON.stringify(pick(t)), null));
+  }
+  stmts.push(env.DB.prepare("INSERT INTO log (ts,user,action,task_id,before,after) VALUES (?,?,?,?,?,?)")
+    .bind(now, null, "import", null, null, JSON.stringify({ hanae: HANAE_TASKS.length, fromOlivier: moved.map((t) => t.id) })));
+  stmts.push(env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('migr_hanae', ?)").bind(String(now)));
+  await env.DB.batch(stmts);
 }
 
 // ---------- utilitaires ----------

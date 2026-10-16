@@ -1,11 +1,11 @@
 # Anachro — règles du projet (lues par Claude pendant les reviews)
 
 Jeu Unity 3D, multijoueur en ligne (4 à 8 joueurs), FishNet v4 + Steam (FishySteamworks), l'hôte fait serveur.
-Équipe : Théo (online + level design, valide toutes les PR), Célian (joueur & gameplay), Olivier (PNJ, monde, UI, audio), Hugo et JB (art).
+Équipe : Théo (online + level design, valide toutes les PR), Célian (joueur & gameplay), Olivier (PNJ, monde, HUD et lobby, audio), Hanaé (UI : menus secondaires, accessibilité, traduction), Hugo et JB (art).
 
 ## Arborescence
 - `Assets/_Project/Scripts/{Core,Network,Gameplay,Npc,World,UI,Editor}` — namespace = dossier (`Anachronism.Network`, …).
-- Responsables : Network → Théo · Gameplay → Célian · Npc / World / UI → Olivier. Toucher le dossier d'un autre = le signaler dans la PR.
+- Responsables : Network → Théo · Gameplay → Célian · Npc / World / UI (HUD, lobby) → Olivier · UI (menus secondaires) → Hanaé. Toucher le dossier d'un autre = le signaler dans la PR.
 - `Assets/ThirdParty/` (FishNet, etc.) : ne jamais modifier.
 - 2 asmdefs seulement : `Anachronism.Runtime` et `Anachronism.Editor`.
 
