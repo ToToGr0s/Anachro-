@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e25d960fb80a996459c1d2a8c2247b7e, type: 3}
+  m_Name: HurriedNPC
+  m_EditorClassIdentifier: Anachronism.Runtime::NpcProfile
+  prefab: {fileID: 3774926175398149242, guid: 05a108ad3ea831a4eab7c241b585c139, type: 3}
+  walkSpeedRange: {x: 13, y: 15}
+  acceleration: 50
+  cornerSlowdown: 0.15
+  speedChangeRate: 22
+  angularSpeed: 540
+  turnSmoothing: 16
+  radius: 0.8
+  avoidancePriority: 45
+  reactionDelayRange: {x: 0.05, y: 0.2}
+  pauseDurationRange: {x: 0.2, y: 1}
+  stoppingDistance: 1.2
+  walkDistanceRange: {x: 40, y: 100}
+  wanderAmount: 0.1
+  wanderFrequency: 1
+  headingNoiseDegrees: 4
+  speedNoiseAmount: 0.08
+  speedNoiseFrequency: 0.6
