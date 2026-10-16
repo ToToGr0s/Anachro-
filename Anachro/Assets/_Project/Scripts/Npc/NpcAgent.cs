@@ -15,8 +15,15 @@ public class NpcAgent : MonoBehaviour
     private float baseSpeed;
     private Vector3 pendingTarget;
 
+    private bool sprinting;
+    private float burstTimer;
+
     private float seed;
     private float noiseTime;
+
+    private Animator animator;
+    private int speedHash;
+    private bool hasSpeedParam;
 
     private void Awake()
     {
@@ -36,6 +43,35 @@ public class NpcAgent : MonoBehaviour
         Agent.stoppingDistance = profile.stoppingDistance;
         Agent.avoidancePriority = profile.avoidancePriority;
         Agent.updateRotation = false;
+
+        SpawnModel();
+    }
+
+    private void SpawnModel()
+    {
+        if (Profile.modelPrefab == null) return;
+
+        GameObject model = Instantiate(Profile.modelPrefab, transform);
+        model.transform.localPosition = Vector3.zero;
+        model.transform.localRotation = Quaternion.identity;
+        model.transform.localScale = Vector3.one * Profile.modelScale;
+
+        animator = model.GetComponentInChildren<Animator>();
+        if (animator == null) return;
+
+        animator.speed = Profile.animPlaybackSpeed;
+        animator.applyRootMotion = false;   // c'est le NavMeshAgent qui déplace le PNJ
+        if (Profile.animatorController != null)
+            animator.runtimeAnimatorController = Profile.animatorController;
+
+        speedHash = Animator.StringToHash(Profile.speedParameter);
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.nameHash == speedHash) { hasSpeedParam = true; break; }
+        }
+
+        if (!hasSpeedParam)
+            Debug.LogWarning($"Animator de {name} : paramètre '{Profile.speedParameter}' introuvable.", this);
     }
 
     public void BeginWalk(Vector3 target)
@@ -44,11 +80,16 @@ public class NpcAgent : MonoBehaviour
         timer = Random.Range(Profile.reactionDelayRange.x, Profile.reactionDelayRange.y);
         Agent.isStopped = true;
         state = State.Reacting;
+
+        // Tout le trajet en sprint ?
+        sprinting = Random.value < Profile.sprintChance;
+        burstTimer = -1f;
     }
 
     public void Wait(float seconds)
     {
         timer = seconds;
+        sprinting = false;
         state = State.Pausing;
     }
 
@@ -69,6 +110,7 @@ public class NpcAgent : MonoBehaviour
                 break;
 
             case State.Walking:
+                UpdateSprint(dt);
                 UpdateSpeed(dt);
                 ApplyWander(dt);
                 if (HasArrived())
@@ -82,16 +124,36 @@ public class NpcAgent : MonoBehaviour
         }
 
         UpdateRotation(dt);
+        UpdateAnimator(dt);
+    }
+
+    private void UpdateSprint(float dt)
+    {
+        if (!sprinting)
+        {
+            // Sprint ponctuel en plein trajet
+            if (Random.value < Profile.sprintBurstChancePerSecond * dt)
+            {
+                sprinting = true;
+                burstTimer = Random.Range(Profile.sprintBurstDuration.x, Profile.sprintBurstDuration.y);
+            }
+        }
+        else if (burstTimer > 0f)
+        {
+            burstTimer -= dt;
+            if (burstTimer <= 0f) sprinting = false;
+        }
     }
 
     private float Noise(float offset, float frequency)
     {
-        // Perlin ramené entre -1 et 1, unique pour ce PNJ grâce à la graine
         return Mathf.PerlinNoise(seed + offset, noiseTime * frequency) * 2f - 1f;
     }
 
     private void UpdateSpeed(float dt)
     {
+        float mult = sprinting ? Profile.sprintSpeedMultiplier : 1f;
+
         Vector3 desired = Agent.desiredVelocity; desired.y = 0f;
         float factor = 1f;
         if (desired.sqrMagnitude > 0.01f)
@@ -102,7 +164,8 @@ public class NpcAgent : MonoBehaviour
 
         factor *= 1f + Noise(50f, Profile.speedNoiseFrequency) * Profile.speedNoiseAmount;
 
-        Agent.speed = Mathf.MoveTowards(Agent.speed, baseSpeed * factor, Profile.speedChangeRate * dt);
+        Agent.acceleration = Profile.acceleration * mult;
+        Agent.speed = Mathf.MoveTowards(Agent.speed, baseSpeed * mult * factor, Profile.speedChangeRate * mult * dt);
     }
 
     private void ApplyWander(float dt)
@@ -111,8 +174,11 @@ public class NpcAgent : MonoBehaviour
         float speed = vel.magnitude;
         if (speed < 0.1f) return;
 
+        // On court plus droit qu'on ne marche
+        float amount = Profile.wanderAmount * (sprinting ? 0.5f : 1f);
+
         Vector3 right = Vector3.Cross(Vector3.up, vel / speed);
-        float lateral = Noise(0f, Profile.wanderFrequency) * Profile.wanderAmount * speed;
+        float lateral = Noise(0f, Profile.wanderFrequency) * amount * speed;
         Agent.Move(right * (lateral * dt));
     }
 
@@ -124,6 +190,25 @@ public class NpcAgent : MonoBehaviour
         float yawOffset = Noise(100f, Profile.wanderFrequency) * Profile.headingNoiseDegrees;
         Quaternion target = Quaternion.Euler(0f, yawOffset, 0f) * Quaternion.LookRotation(v);
         transform.rotation = Quaternion.Slerp(transform.rotation, target, Profile.turnSmoothing * dt);
+    }
+
+    private float ToAnimValue(float speed)
+    {
+        float halfWalk = baseSpeed * 0.5f;
+        float walkMax = baseSpeed * 1.15f;                       // tolère le bruit de vitesse
+        float sprintSpeed = baseSpeed * Profile.sprintSpeedMultiplier;
+
+        if (speed < halfWalk) return speed / halfWalk;           // idle -> marche
+        if (speed <= walkMax || sprintSpeed <= walkMax) return 1f;   // plateau de marche
+        return 1f + Mathf.Clamp01((speed - walkMax) / (sprintSpeed - walkMax));   // marche -> course
+    }
+
+    private void UpdateAnimator(float dt)
+    {
+        if (animator == null || !hasSpeedParam) return;
+
+        Vector3 v = Agent.velocity; v.y = 0f;
+        animator.SetFloat(speedHash, ToAnimValue(v.magnitude), 0.1f, dt);
     }
 
     private bool HasArrived()

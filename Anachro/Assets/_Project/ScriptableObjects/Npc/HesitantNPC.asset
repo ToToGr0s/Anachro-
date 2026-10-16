@@ -13,20 +13,29 @@ MonoBehaviour:
   m_Name: HesitantNPC
   m_EditorClassIdentifier: Anachronism.Runtime::NpcProfile
   prefab: {fileID: 3774926175398149242, guid: 05a108ad3ea831a4eab7c241b585c139, type: 3}
+  modelPrefab: {fileID: 6252356961377389083, guid: 2db03e7c8a8135146b280e5da7e0289c, type: 3}
+  animatorController: {fileID: 9100000, guid: e5f8f830c73a1d242b923028ec999572, type: 2}
+  modelScale: 1
+  speedParameter: Speed
+  animSpeedScale: 1
   walkSpeedRange: {x: 6.5, y: 8}
   acceleration: 24
   cornerSlowdown: 0.5
   speedChangeRate: 9
+  sprintChance: 0.05
+  sprintSpeedMultiplier: 1.5
+  sprintBurstChancePerSecond: 0.03
+  sprintBurstDuration: {x: 0.5, y: 1.5}
   angularSpeed: 300
   turnSmoothing: 7
-  radius: 0.8
-  avoidancePriority: 60
-  reactionDelayRange: {x: 0.5, y: 1.5}
-  pauseDurationRange: {x: 1, y: 4}
-  stoppingDistance: 1
-  walkDistanceRange: {x: 6, y: 30}
   wanderAmount: 0.4
   wanderFrequency: 0.9
   headingNoiseDegrees: 12
   speedNoiseAmount: 0.25
   speedNoiseFrequency: 0.8
+  radius: 0.65
+  avoidancePriority: 50
+  reactionDelayRange: {x: 0.5, y: 1.5}
+  pauseDurationRange: {x: 1, y: 4}
+  stoppingDistance: 1
+  walkDistanceRange: {x: 6, y: 30}
