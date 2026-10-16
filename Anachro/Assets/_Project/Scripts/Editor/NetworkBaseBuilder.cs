@@ -59,7 +59,11 @@ namespace Anachronism.Editor
                 return;
             }
 
-            RegisterPrefab(prefabObjects, BuildPlayerPrefab());
+            NetworkObject playerPrefab = BuildPlayerPrefab();
+            if (playerPrefab == null)
+                return;
+
+            RegisterPrefab(prefabObjects, playerPrefab);
             AssetDatabase.SaveAssets();
 
             // Chaque ouverture de scène décharge les assets non référencés : les étapes suivantes rechargent
@@ -76,9 +80,16 @@ namespace Anachronism.Editor
         private static NetworkObject BuildPlayerPrefab()
         {
             // Déjà là : on le garde tel quel, c'est le travail de Célian (contrôleur, modèle) qu'on écraserait.
-            NetworkObject existing = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
+            // Même sans NetworkObject (réglage cassé), on prévient au lieu de le remplacer par une capsule.
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             if (existing != null)
-                return existing;
+            {
+                if (existing.TryGetComponent(out NetworkObject existingNetworkObject))
+                    return existingNetworkObject;
+
+                Debug.LogError($"[NetworkBaseBuilder] {PlayerPrefabPath} n'a plus de NetworkObject à sa racine : ajoute-le à la main, rien n'a été modifié.", existing);
+                return null;
+            }
 
             // Capsule provisoire : Célian la remplace par le vrai joueur (Gameplay/Player).
             GameObject root = GameObject.CreatePrimitive(PrimitiveType.Capsule);

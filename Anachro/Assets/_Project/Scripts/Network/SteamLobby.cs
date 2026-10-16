@@ -29,13 +29,15 @@ namespace Anachronism.Network
         private CSteamID _lobbyId = CSteamID.Nil;
         // IsInLobby reste faux tant que Steam n'a pas répondu : sans ces verrous, un double clic crée deux lobbies.
         private bool _isCreatingLobby;
-        private bool _isJoining;
+        // Lobby attendu : une réponse tardive d'une demande annulée ne doit pas passer pour la nouvelle.
+        private CSteamID _joiningLobbyId = CSteamID.Nil;
         private float _joinDeadline;
         private bool _isLobbyClosedForMatch;
 
         public bool IsSteamReady => SteamService.Instance != null && SteamService.Instance.IsInitialized;
         public bool IsInLobby => _lobbyId != CSteamID.Nil;
-        public bool IsBusy => _isCreatingLobby || _isJoining;
+        public bool IsBusy => _isCreatingLobby || IsJoining;
+        private bool IsJoining => _joiningLobbyId != CSteamID.Nil;
 
         /// <summary>Code à partager (7 caractères), vide hors lobby.</summary>
         public string Code { get; private set; } = string.Empty;
@@ -73,9 +75,9 @@ namespace Anachronism.Network
 
         private void Update()
         {
-            if (_isJoining && Time.unscaledTime > _joinDeadline)
+            if (IsJoining && Time.unscaledTime > _joinDeadline)
             {
-                _isJoining = false;
+                _joiningLobbyId = CSteamID.Nil;
                 Failed?.Invoke("Steam ne répond pas. Réessaie dans un instant.");
             }
 
@@ -136,7 +138,7 @@ namespace Anachronism.Network
         /// <summary>Quitte la partie (client ou hôte) et le lobby, ou annule une demande en cours.</summary>
         public void LeaveGame()
         {
-            _isJoining = false;
+            _joiningLobbyId = CSteamID.Nil;
             LeaveLobby();
 
             if (_networkManager.ClientManager.Started)
@@ -213,15 +215,18 @@ namespace Anachronism.Network
             if (hostId == SteamUser.GetSteamID())
                 return;
 
-            // Demande annulée ou abandonnée (délai dépassé) : Steam répond quand même, on ressort sans se connecter.
-            if (!_isJoining)
+            // Demande annulée, abandonnée (délai dépassé) ou remplacée par une autre : Steam répond quand même,
+            // on ressort sans se connecter. Sauf si c'est le lobby où l'on est déjà (Rejoindre → Annuler → Rejoindre
+            // le même code : Steam envoie deux réponses identiques, la seconde ne doit pas nous en faire sortir).
+            if (lobbyId != _joiningLobbyId)
             {
-                if (callback.m_EChatRoomEnterResponse == (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+                bool isSuccess = callback.m_EChatRoomEnterResponse == (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess;
+                if (isSuccess && lobbyId != _lobbyId)
                     SteamMatchmaking.LeaveLobby(lobbyId);
                 return;
             }
 
-            _isJoining = false;
+            _joiningLobbyId = CSteamID.Nil;
 
             EChatRoomEnterResponse response = (EChatRoomEnterResponse)callback.m_EChatRoomEnterResponse;
             if (response != EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
@@ -296,7 +301,7 @@ namespace Anachronism.Network
             if (!IsSteamReady || !_networkManager.IsOffline || IsInLobby || IsBusy)
                 return false;
 
-            _isJoining = true;
+            _joiningLobbyId = lobbyId;
             _joinDeadline = Time.unscaledTime + _joinTimeout;
             SteamMatchmaking.JoinLobby(lobbyId);
             return true;

@@ -160,7 +160,7 @@ namespace Anachronism.Network
             if (settings.BriefingDuration > 0f)
                 SetPhase(GamePhase.Briefing, settings.BriefingDuration);
             else
-                SetPhase(GamePhase.Hiding, settings.HidingDuration);
+                EnterHiding();
 
             return MatchStartResult.Started;
         }
@@ -208,10 +208,17 @@ namespace Anachronism.Network
                 return;
 
             if (phase == GamePhase.Briefing)
-                SetPhase(GamePhase.Hiding, _settings.HidingDuration);
+                EnterHiding();
             // TODO (Théo) : avec T07, placer automatiquement les objets que les méchants n'ont pas posés à temps.
             else if (phase == GamePhase.Hiding)
                 SetPhase(GamePhase.Searching, 0f);
+        }
+
+        /// <summary>Seule entrée dans la cache (fin du briefing ou briefing à 0 s) : T07 n'aura qu'un endroit à compléter.</summary>
+        [Server]
+        private void EnterHiding()
+        {
+            SetPhase(GamePhase.Hiding, _settings.HidingDuration);
         }
 
         /// <summary>Pénalité ponctuelle (T06 : tir sur un innocent). La montée continue repart de la nouvelle valeur.</summary>
