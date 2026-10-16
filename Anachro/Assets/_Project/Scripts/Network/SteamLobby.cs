@@ -196,7 +196,11 @@ namespace Anachronism.Network
             _networkManager.ClientManager.StartConnection();
         }
 
-        private void OnJoinRequested(GameLobbyJoinRequested_t callback) => JoinLobby(callback.m_steamIDLobby);
+        private void OnJoinRequested(GameLobbyJoinRequested_t callback)
+        {
+            if (!JoinLobby(callback.m_steamIDLobby))
+                Failed?.Invoke("Invitation ignorée : quitte d'abord la partie en cours.");
+        }
 
         private void OnLobbyEntered(LobbyEnter_t callback)
         {
@@ -208,6 +212,14 @@ namespace Anachronism.Network
             // L'hôte reçoit aussi LobbyEnter pour son propre lobby : il s'est déjà connecté dans OnLobbyCreated.
             if (hostId == SteamUser.GetSteamID())
                 return;
+
+            // Demande annulée ou abandonnée (délai dépassé) : Steam répond quand même, on ressort sans se connecter.
+            if (!_isJoining)
+            {
+                if (callback.m_EChatRoomEnterResponse == (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+                    SteamMatchmaking.LeaveLobby(lobbyId);
+                return;
+            }
 
             _isJoining = false;
 
@@ -249,7 +261,8 @@ namespace Anachronism.Network
         private void OnClientConnectionState(ClientConnectionStateArgs args)
         {
             // Hôte parti ou déconnexion volontaire : on quitte le lobby pour ne pas y rester fantôme.
-            if (args.ConnectionState == LocalConnectionState.Stopped)
+            // Côté hôte, c'est l'arrêt du serveur qui ferme le lobby (OnServerConnectionState).
+            if (args.ConnectionState == LocalConnectionState.Stopped && !_networkManager.IsServerStarted)
                 LeaveLobby();
         }
 

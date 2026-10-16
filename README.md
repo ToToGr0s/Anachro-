@@ -18,7 +18,7 @@ Party game Unity 3D en ligne (4 à 8 joueurs), FishNet v4 + Steam. Règles du pr
    git config merge.unityyamlmerge.name "Unity SmartMerge"
    ```
    ```bash
-   git config merge.unityyamlmerge.driver "'C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/Tools/UnityYAMLMerge.exe' merge -p %O %B %A %A"
+   git config merge.unityyamlmerge.driver "'C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/Tools/UnityYAMLMerge.exe' merge -h -p --force %O %B %A %A"
    ```
    Chemin Windows. Sur macOS : `/Applications/Unity/Hub/Editor/6000.6.5f1/Unity.app/Contents/Tools/UnityYAMLMerge`. Adapte-le si Unity Hub est installé ailleurs.
 5. **Ouvrir** : Unity Hub → Add → choisir le dossier **`Anachro/`** (pas la racine du dépôt). Le premier import prend plusieurs minutes.

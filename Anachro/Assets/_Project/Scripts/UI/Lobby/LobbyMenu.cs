@@ -35,6 +35,10 @@ namespace Anachronism.UI
         private Button _createButton;
         private Button _joinButton;
         private Button _startButton;
+        private Button _copyButton;
+        private Button _leaveButton;
+        private Button _cancelButton;
+        private Button _quitButton;
         private Label _steamWarning;
         private Label _lobbyCode;
         private Label _playerCount;
@@ -83,10 +87,15 @@ namespace Anachronism.UI
             _createButton.clicked += OnCreateClicked;
             _joinButton.clicked += OnJoinClicked;
             _startButton.clicked += OnStartClicked;
-            root.Q<Button>("copy-button").clicked += OnCopyClicked;
-            root.Q<Button>("leave-button").clicked += OnLeaveClicked;
-            root.Q<Button>("cancel-button").clicked += OnLeaveClicked;
-            root.Q<Button>("quit-button").clicked += OnQuitClicked;
+            _copyButton = root.Q<Button>("copy-button");
+            _leaveButton = root.Q<Button>("leave-button");
+            _cancelButton = root.Q<Button>("cancel-button");
+            _quitButton = root.Q<Button>("quit-button");
+
+            _copyButton.clicked += OnCopyClicked;
+            _leaveButton.clicked += OnLeaveClicked;
+            _cancelButton.clicked += OnLeaveClicked;
+            _quitButton.clicked += OnQuitClicked;
             _codeField.RegisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
 
             _currentScreen = (MenuScreen)(-1);
@@ -94,14 +103,14 @@ namespace Anachronism.UI
 
         private void OnDisable()
         {
-            VisualElement root = _document.rootVisualElement;
+            // Mêmes références qu'à l'abonnement : l'arbre a pu être reconstruit entre-temps.
             _createButton.clicked -= OnCreateClicked;
             _joinButton.clicked -= OnJoinClicked;
             _startButton.clicked -= OnStartClicked;
-            root.Q<Button>("copy-button").clicked -= OnCopyClicked;
-            root.Q<Button>("leave-button").clicked -= OnLeaveClicked;
-            root.Q<Button>("cancel-button").clicked -= OnLeaveClicked;
-            root.Q<Button>("quit-button").clicked -= OnQuitClicked;
+            _copyButton.clicked -= OnCopyClicked;
+            _leaveButton.clicked -= OnLeaveClicked;
+            _cancelButton.clicked -= OnLeaveClicked;
+            _quitButton.clicked -= OnQuitClicked;
             _codeField.UnregisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
         }
 
@@ -257,6 +266,7 @@ namespace Anachronism.UI
                 MatchStartResult.NotEnoughPlayers => "Pas assez de joueurs pour lancer la partie.",
                 MatchStartResult.PlayersLoading => "Un joueur charge encore la map, réessaie dans un instant.",
                 MatchStartResult.InvalidSettings => "Réglages de partie invalides (voir la console).",
+                MatchStartResult.WrongPhase => "Une partie est déjà en cours.",
                 _ => string.Empty
             });
         }
@@ -265,7 +275,8 @@ namespace Anachronism.UI
 
         private void OnLeaveClicked()
         {
-            _isLeaving = true;
+            // Sans client démarré (annulation pendant « Connexion… »), aucun Stopped n'arrivera pour remettre le drapeau.
+            _isLeaving = _networkManager.ClientManager.Started;
             _steamLobby.LeaveGame();
         }
 

@@ -36,12 +36,28 @@ namespace Anachronism.Editor
             // Hors lancement par Steam, Steamworks lit l'AppID (480 en dev) dans ce fichier à côté de l'exe.
             // Seulement en build de dev : un build release est lancé par Steam avec le vrai AppID (T13).
             if (summary.result == BuildResult.Succeeded)
-                File.Copy(SteamAppIdFile, Path.Combine(Path.GetDirectoryName(OutputPath), SteamAppIdFile), true);
+                CopySteamAppId();
+
             Debug.Log($"[DevBuild] {summary.result} : {summary.totalErrors} erreur(s), {summary.totalWarnings} avertissement(s), {summary.totalSize / (1024 * 1024)} Mo → {OutputPath}");
 
             // En batchmode, un code de sortie non nul signale l'échec au script appelant.
             if (Application.isBatchMode && summary.result != BuildResult.Succeeded)
                 EditorApplication.Exit(1);
+        }
+
+        private static void CopySteamAppId()
+        {
+            // Chemins depuis le dossier du projet : en ligne de commande, le dossier courant peut être ailleurs.
+            string projectPath = Path.GetDirectoryName(Application.dataPath);
+            string source = Path.Combine(projectPath, SteamAppIdFile);
+            if (!File.Exists(source))
+            {
+                Debug.LogError($"[DevBuild] {source} introuvable : Steam ne s'initialisera pas dans ce build.");
+                return;
+            }
+
+            string destination = Path.Combine(projectPath, Path.GetDirectoryName(OutputPath), SteamAppIdFile);
+            File.Copy(source, destination, true);
         }
 
         private static BuildSummary BuildWindowed(BuildPlayerOptions options)
