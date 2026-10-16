@@ -1,0 +1,167 @@
+/* Menu et lobby provisoires, lisibles en 1280×720 comme en 1920×1080 (PanelSettings : référence 1920×1080).
+   Olivier : à reprendre librement dans l'UI Builder, seuls les noms (name="…") sont utilisés par le code. */
+
+.root {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.panel {
+    width: 640px;
+    padding: 40px 48px;
+    background-color: rgba(18, 20, 26, 0.92);
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    align-items: stretch;
+}
+
+.title {
+    font-size: 72px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(240, 138, 75);
+    letter-spacing: 8px;
+}
+
+.subtitle {
+    font-size: 22px;
+    -unity-text-align: middle-center;
+    color: rgb(155, 161, 179);
+    margin-bottom: 32px;
+}
+
+.caption {
+    font-size: 18px;
+    color: rgb(155, 161, 179);
+    margin-top: 24px;
+    margin-bottom: 8px;
+}
+
+.info {
+    font-size: 22px;
+    -unity-text-align: middle-center;
+    color: rgb(233, 235, 241);
+    margin: 16px 0;
+}
+
+.warning {
+    font-size: 18px;
+    color: rgb(233, 188, 69);
+    white-space: normal;
+    margin-top: 16px;
+}
+
+.result {
+    font-size: 28px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(92, 201, 148);
+    margin: 8px 0;
+}
+
+.row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.button {
+    height: 56px;
+    margin: 8px 0;
+    padding: 0 24px;
+    font-size: 22px;
+    color: rgb(233, 235, 241);
+    background-color: rgb(50, 55, 70);
+    border-width: 0;
+    border-radius: 10px;
+}
+
+.button:hover {
+    background-color: rgb(64, 70, 88);
+}
+
+.button:disabled {
+    opacity: 0.4;
+}
+
+.button--primary {
+    background-color: rgb(194, 65, 12);
+    -unity-font-style: bold;
+}
+
+.button--primary:hover {
+    background-color: rgb(220, 82, 24);
+}
+
+.button--ghost {
+    background-color: rgba(0, 0, 0, 0);
+    color: rgb(155, 161, 179);
+}
+
+.button--small {
+    height: 44px;
+    font-size: 18px;
+    margin-left: 16px;
+}
+
+.row > .button {
+    margin-left: 12px;
+}
+
+.code-field {
+    flex-grow: 1;
+    margin: 0;
+    font-size: 30px;
+    height: 56px;
+}
+
+.code-field > #unity-text-input {
+    font-size: 30px;
+    -unity-text-align: middle-center;
+    letter-spacing: 6px;
+    background-color: rgb(36, 40, 51);
+    color: rgb(233, 235, 241);
+    border-radius: 10px;
+    border-width: 0;
+}
+
+.code {
+    flex-grow: 1;
+    font-size: 56px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 8px;
+    color: rgb(240, 138, 75);
+}
+
+.match-bar {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 10px 24px;
+    flex-direction: row;
+    background-color: rgba(18, 20, 26, 0.8);
+    border-radius: 10px;
+}
+
+.match-text {
+    font-size: 24px;
+    color: rgb(233, 235, 241);
+    margin: 0 12px;
+}
+
+.match-text--role {
+    -unity-font-style: bold;
+    color: rgb(240, 138, 75);
+}
+
+.status {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
+    font-size: 22px;
+    color: rgb(240, 120, 120);
+    -unity-text-align: middle-center;
+}

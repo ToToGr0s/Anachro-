@@ -1,5 +1,6 @@
 using Anachronism.Core;
 using Anachronism.Network;
+using Anachronism.UI;
 using System.Collections.Generic;
 using System.Linq;
 using FishNet.Component.Scenes;
@@ -9,17 +10,16 @@ using FishNet.Managing;
 using FishNet.Managing.Object;
 using FishNet.Managing.Transporting;
 using FishNet.Object;
-using FishNet.Transporting.Multipass;
-using FishNet.Transporting.Tugboat;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 
 namespace Anachronism.Editor
 {
     /// <summary>
-    /// Construit la base réseau : prefab joueur, NetworkManager de Boot (Multipass Tugboat + Steam, spawn, lobby Steam,
+    /// Construit la base réseau : prefab joueur, NetworkManager de Boot (transport Steam, spawn, lobby Steam,
     /// enchaînement Boot → MainMenu → map) et Build Settings. Rejouable : Boot est reconstruit, le GUID du prefab est gardé,
     /// MainMenu et la map ne sont créés que s'ils n'existent pas (on n'écrase jamais le travail de LD ou d'UI).
     /// </summary>
@@ -32,11 +32,15 @@ namespace Anachronism.Editor
         private const string DefaultPrefabObjectsPath = "Assets/DefaultPrefabObjects.asset";
         private const string MatchPresetsPath = "Assets/_Project/Data/MatchPresets/MatchPresets_Default.asset";
         private const string MatchManagerName = "MatchManager";
+        private const string UiName = "UI";
+        private const string LobbyMenuPath = "Assets/_Project/Prefabs/UI/Lobby/LobbyMenu.uxml";
+        private const string PanelSettingsPath = "Assets/_Project/Prefabs/UI/AnachroPanelSettings.asset";
+        private const string RuntimeThemePath = "Assets/_Project/Prefabs/UI/AnachroRuntimeTheme.tss";
         private const string NetworkManagerName = "NetworkManager";
         private const string SpawnPointsName = "SpawnPoints";
         private const string GroundName = "Ground";
         private const string ServicesName = "Services";
-        // Le client local de l'hôte compte comme une connexion Tugboat : 8 = hôte + 7 joueurs.
+        // Limite de connexions du transport Steam : 8 = hôte + 7 joueurs.
         private const int MaxPlayers = 8;
         private const int SpawnPointCount = MaxPlayers;
         private const float SpawnRadius = 4f;
@@ -101,39 +105,26 @@ namespace Anachronism.Editor
             DestroyRoot(scene, SpawnPointsName);
             DestroyRoot(scene, GroundName);
             DestroyRoot(scene, ServicesName);
+            DestroyRoot(scene, UiName);
 
             GameObject managerObject = new GameObject(NetworkManagerName);
             NetworkManager networkManager = managerObject.AddComponent<NetworkManager>();
             networkManager.SpawnablePrefabs = prefabObjects;
 
-            // Multipass : le serveur écoute en local (Tugboat) et sur Steam (FishySteamworks) en même temps,
-            // le client choisit son transport au moment de se connecter.
-            Tugboat tugboat = managerObject.AddComponent<Tugboat>();
+            // Steam seulement : on rejoint une partie par son code (lobby Steam), jamais par une IP.
             FishySteamworks.FishySteamworks steamTransport = managerObject.AddComponent<FishySteamworks.FishySteamworks>();
-            Multipass multipass = managerObject.AddComponent<Multipass>();
 
             // Les setters runtime touchent des sockets absents hors Play Mode : on passe par les champs sérialisés.
-            SerializedObject tugboatSettings = new SerializedObject(tugboat);
-            tugboatSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
-            tugboatSettings.ApplyModifiedPropertiesWithoutUndo();
-
             SerializedObject steamSettings = new SerializedObject(steamTransport);
             steamSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
             // P2P : on se connecte au SteamID de l'hôte via le relais Steam, pas à une IP.
             steamSettings.FindProperty("_peerToPeer").boolValue = true;
             steamSettings.ApplyModifiedPropertiesWithoutUndo();
 
-            SerializedObject multipassSettings = new SerializedObject(multipass);
-            SerializedProperty transports = multipassSettings.FindProperty("_transports");
-            transports.arraySize = 2;
-            transports.GetArrayElementAtIndex(0).objectReferenceValue = tugboat;
-            transports.GetArrayElementAtIndex(1).objectReferenceValue = steamTransport;
-            multipassSettings.ApplyModifiedPropertiesWithoutUndo();
-
             TransportManager transportManager = managerObject.GetComponent<TransportManager>();
             if (transportManager == null)
                 transportManager = managerObject.AddComponent<TransportManager>();
-            transportManager.Transport = multipass;
+            transportManager.Transport = steamTransport;
 
             // Points d'apparition fournis par la map à son chargement (MapSpawnPoints).
             PlayerSpawner spawner = managerObject.AddComponent<PlayerSpawner>();
@@ -148,9 +139,9 @@ namespace Anachronism.Editor
             defaultSceneSettings.ApplyModifiedPropertiesWithoutUndo();
 
             managerObject.AddComponent<SteamLobby>();
-            managerObject.AddComponent<DevConnectionHud>();
 
             new GameObject(ServicesName).AddComponent<SteamService>();
+            CreateLobbyMenu();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -211,8 +202,8 @@ namespace Anachronism.Editor
             ground.name = GroundName;
             ground.transform.localScale = new Vector3(3f, 1f, 3f);
 
-            Transform[] spawns = CreateSpawnPoints();
-            MapSpawnPoints mapSpawnPoints = spawns[0].parent.gameObject.AddComponent<MapSpawnPoints>();
+            Transform spawnRoot = CreateSpawnPoints(out Transform[] spawns);
+            MapSpawnPoints mapSpawnPoints = spawnRoot.gameObject.AddComponent<MapSpawnPoints>();
             SerializedObject spawnSettings = new SerializedObject(mapSpawnPoints);
             SerializedProperty spawnArray = spawnSettings.FindProperty("_spawns");
             spawnArray.arraySize = spawns.Length;
@@ -226,6 +217,32 @@ namespace Anachronism.Editor
                 camera.transform.SetPositionAndRotation(new Vector3(0f, 10f, -10f), Quaternion.Euler(45f, 0f, 0f));
         }
 
+        private static void CreateLobbyMenu()
+        {
+            GameObject uiObject = new GameObject(UiName);
+            UIDocument document = uiObject.AddComponent<UIDocument>();
+            document.panelSettings = LoadOrCreatePanelSettings();
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(LobbyMenuPath);
+            uiObject.AddComponent<LobbyMenu>();
+        }
+
+        private static PanelSettings LoadOrCreatePanelSettings()
+        {
+            PanelSettings panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+            if (panelSettings != null)
+                return panelSettings;
+
+            panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            // Mise en page pensée en 1920×1080, mise à l'échelle pour les fenêtres de test plus petites.
+            panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+            panelSettings.match = 0.5f;
+            panelSettings.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(RuntimeThemePath);
+            AssetDatabase.CreateAsset(panelSettings, PanelSettingsPath);
+            AssetDatabase.SaveAssets();
+            return AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+        }
+
         private static void SetBuildScenes()
         {
             // Boot en premier (index 0) ; les autres scènes déjà listées sont gardées après.
@@ -235,10 +252,10 @@ namespace Anachronism.Editor
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 
-        private static Transform[] CreateSpawnPoints()
+        private static Transform CreateSpawnPoints(out Transform[] spawns)
         {
             Transform root = new GameObject(SpawnPointsName).transform;
-            Transform[] spawns = new Transform[SpawnPointCount];
+            spawns = new Transform[SpawnPointCount];
 
             for (int i = 0; i < SpawnPointCount; i++)
             {
@@ -251,7 +268,7 @@ namespace Anachronism.Editor
                 spawns[i] = spawn;
             }
 
-            return spawns;
+            return root;
         }
 
         private static void DestroyRoot(Scene scene, string objectName)

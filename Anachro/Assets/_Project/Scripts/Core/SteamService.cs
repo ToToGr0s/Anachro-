@@ -5,7 +5,8 @@ namespace Anachronism.Core
 {
     /// <summary>
     /// Initialise l'API Steam et pompe ses callbacks. FishySteamworks ne le fait pas lui-même.
-    /// Le jeu tourne sans Steam (IsInitialized = false) pour garder le test local via Tugboat.
+    /// Sans Steam (IsInitialized = false), le jeu se lance mais on ne peut ni créer ni rejoindre de partie :
+    /// le menu le signale. Steam doit être lancé avant le jeu, les callbacks ne sont pas recréés ensuite.
     /// </summary>
     public sealed class SteamService : MonoBehaviour
     {
@@ -58,7 +59,7 @@ namespace Anachronism.Core
                 ESteamAPIInitResult result = SteamAPI.InitEx(out string errorMessage);
                 if (result != ESteamAPIInitResult.k_ESteamAPIInitResult_OK)
                 {
-                    Debug.LogWarning($"[Steam] Non initialisé ({result}) : {errorMessage}. Steam est-il lancé ? Test local via Tugboat seulement.");
+                    Debug.LogWarning($"[Steam] Non initialisé ({result}) : {errorMessage}. Steam est-il lancé ?");
                     return false;
                 }
             }
