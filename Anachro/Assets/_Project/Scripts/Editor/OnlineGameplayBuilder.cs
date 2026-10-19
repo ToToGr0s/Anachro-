@@ -1,10 +1,8 @@
 using System.Linq;
-using Anachronism.Gameplay;
 using Anachronism.Network;
 using Anachronism.Npc;
 using Anachronism.UI;
 using FishNet.Component.Spawning;
-using FishNet.Component.Transforming;
 using FishNet.Managing.Object;
 using FishNet.Object;
 using Unity.AI.Navigation;
@@ -12,17 +10,14 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
 namespace Anachronism.Editor
 {
     /// <summary>
-    /// Passage en ligne du joueur de Célian et des PNJ d'Olivier. Rejouable :
-    /// - Player_Base est créé depuis Player_Fugitive la première fois, puis seulement complété : les réglages faits
-    ///   à la main dans Player_Base (échelle, composants) sont gardés ;
-    /// - Npc_v0 reçoit ses composants réseau s'ils manquent ;
+    /// Branche Boot et la map sur le joueur et les PNJ. Rejouable, et ne touche jamais aux prefabs Player_Base et Npc_v0 :
+    /// ils sont faits à la main (un enfant par rôle : Controller, Input, Network, Camera, Model) et seulement enregistrés ici ;
     /// - Map_Greybox reçoit un NavMesh cuit et le spawner de PNJ s'ils manquent (réglages copiés de Pnj_v0) ;
     /// - les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner) et plus à la connexion (PlayerSpawner retiré de Boot) ;
     /// - joueurs et PNJ tirent leur skin dans la même table (NpcSkins, tenue à jour par NpcAssetSync) ;
@@ -33,7 +28,6 @@ namespace Anachronism.Editor
         private const string BootScenePath = "Assets/_Project/Scenes/Boot.unity";
         private const string MapScenePath = "Assets/_Project/Scenes/Maps/Map_Greybox.unity";
         private const string NpcTestScenePath = "Assets/_Project/Scenes/Pnj_v0.unity";
-        private const string FugitivePrefabPath = "Assets/_Project/Prefabs/Player/Player_Fugitive.prefab";
         private const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player/Player_Base.prefab";
         private const string NpcPrefabPath = NpcAssetSync.NpcPrefabPath;
         private const string DefaultPrefabObjectsPath = "Assets/DefaultPrefabObjects.asset";
@@ -41,8 +35,6 @@ namespace Anachronism.Editor
         private const string MapNavMeshFolderName = "Map_Greybox";
         private const string NavMeshName = "NpcNavMesh";
         private const string NpcsName = "Npcs";
-        private const string ModelRootName = "Model";
-        private const string SkinTablePath = NpcAssetSync.SkinTablePath;
         private const string OverlayName = "Overlay";
         private const string OverlayLayoutPath = "Assets/_Project/Prefabs/UI/Overlay/Overlay.uxml";
         private const string PanelSettingsPath = "Assets/_Project/Prefabs/UI/AnachroPanelSettings.asset";
@@ -78,15 +70,15 @@ namespace Anachronism.Editor
                 return;
             }
 
-            // Table des skins avant le joueur (il la référence) ; listes du prefab PNJ une fois ses composants posés.
             NpcAssetSync.Sync();
-            NetworkObject player = BuildPlayerPrefab();
-            NetworkObject npc = BuildNpcPrefab();
-            NpcAssetSync.Sync();
+            NetworkObject player = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
+            NetworkObject npc = AssetDatabase.LoadAssetAtPath<NetworkObject>(NpcPrefabPath);
             if (player == null || npc == null)
+            {
+                Debug.LogError($"[OnlineGameplayBuilder] {PlayerPrefabPath} ou {NpcPrefabPath} introuvable, ou sans NetworkObject à la racine.");
                 return;
+            }
 
-            // Player_Base créé pour la première fois : une ancienne entrée peut pointer sur un composant qui n'existe plus.
             prefabObjects.RemoveNull();
             prefabObjects.AddObject(player, true);
             prefabObjects.AddObject(npc, true);
@@ -100,126 +92,8 @@ namespace Anachronism.Editor
             Debug.Log("[OnlineGameplayBuilder] Joueur et PNJ branchés sur le réseau.");
         }
 
-        // ---------- Joueur ----------
-
-        private static NetworkObject BuildPlayerPrefab()
-        {
-            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
-            if (existing != null && existing.TryGetComponent(out PlayerNetworkSetup _))
-                return UpdatePlayerPrefabInPlace();
-
-            GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(FugitivePrefabPath);
-            if (source == null)
-            {
-                Debug.LogError($"[OnlineGameplayBuilder] {FugitivePrefabPath} introuvable.");
-                return null;
-            }
-
-            // Copie (pas une instance) : les UnityEvents du PlayerInput sont remappés sur l'InputManager de la copie.
-            GameObject root = Object.Instantiate(source);
-            root.name = "Player_Base";
-
-            try
-            {
-                PlayerInput playerInput = root.GetComponent<PlayerInput>();
-                InputManager inputManager = root.GetComponent<InputManager>();
-                CharacterMovement movement = root.GetComponent<CharacterMovement>();
-                CapsuleCollider capsule = root.GetComponent<CapsuleCollider>();
-                MouseLook mouseLook = root.GetComponentInChildren<MouseLook>(true);
-                Camera camera = mouseLook != null ? mouseLook.GetComponent<Camera>() : null;
-                AudioListener listener = camera != null ? camera.GetComponent<AudioListener>() : null;
-                PlayerControllerSettings settings = movement != null
-                    ? new SerializedObject(movement).FindProperty("_settings").objectReferenceValue as PlayerControllerSettings
-                    : null;
-
-                if (playerInput == null || inputManager == null || movement == null || capsule == null
-                    || mouseLook == null || camera == null || listener == null || settings == null)
-                {
-                    Debug.LogError($"[OnlineGameplayBuilder] {FugitivePrefabPath} : il manque un composant du contrôleur (PlayerInput, InputManager, CharacterMovement, MouseLook, Camera, AudioListener ou réglages).", source);
-                    return null;
-                }
-
-                Behaviour[] ownerOnly = { playerInput, inputManager, movement, mouseLook, camera, listener };
-                // Éteints dans le prefab : chez un joueur distant, rien ne doit lire les entrées, rendre ou bouger.
-                foreach (Behaviour component in ownerOnly)
-                    component.enabled = false;
-
-                root.AddComponent<NetworkObject>();
-                ConfigureTransform(root.AddComponent<NetworkTransform>());
-
-                // Pas de NavMeshObstacle : les PNJ n'esquivent pas les joueurs. Chez l'hôte l'esquive serait instantanée,
-                // chez un client elle arriverait après un aller-retour réseau : l'hôte « pousserait » les PNJ, pas le client.
-
-                // Skin de PNJ tiré par le serveur ; la capsule n'est plus qu'un repli si la table est vide.
-                root.AddComponent<NpcSkin>();
-                PlayerSkin playerSkin = root.AddComponent<PlayerSkin>();
-                SerializedObject skinSettings = new SerializedObject(playerSkin);
-                skinSettings.FindProperty("_skins").objectReferenceValue = AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath);
-                skinSettings.FindProperty("_settings").objectReferenceValue = settings;
-                skinSettings.FindProperty("_placeholderRenderer").objectReferenceValue = root.GetComponent<MeshRenderer>();
-                GameObject npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NpcPrefabPath);
-                skinSettings.FindProperty("_npcReference").objectReferenceValue = npcPrefab != null ? npcPrefab.GetComponent<NpcSkin>() : null;
-                skinSettings.ApplyModifiedPropertiesWithoutUndo();
-
-                PlayerNetworkSetup setup = root.AddComponent<PlayerNetworkSetup>();
-                SerializedObject setupSettings = new SerializedObject(setup);
-                SerializedProperty ownerOnlyProperty = setupSettings.FindProperty("_ownerOnlyComponents");
-                ownerOnlyProperty.arraySize = ownerOnly.Length;
-                for (int i = 0; i < ownerOnly.Length; i++)
-                    ownerOnlyProperty.GetArrayElementAtIndex(i).objectReferenceValue = ownerOnly[i];
-                setupSettings.FindProperty("_capsule").objectReferenceValue = capsule;
-                setupSettings.FindProperty("_camera").objectReferenceValue = camera;
-                setupSettings.FindProperty("_playerInput").objectReferenceValue = playerInput;
-                setupSettings.ApplyModifiedPropertiesWithoutUndo();
-
-                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
-                return prefab != null ? prefab.GetComponent<NetworkObject>() : null;
-            }
-            finally
-            {
-                Object.DestroyImmediate(root);
-            }
-        }
-
         // Le PlayerSpawner de FishNet fait apparaître le joueur dès la connexion : au lobby, il verrouillerait la souris
-        // au-dessus du menu. MatchPlayerSpawner le remplace.
-        // Player_Base déjà branché : on ne remplit que les références manquantes (nouveaux champs), sans rien écraser.
-        private static NetworkObject UpdatePlayerPrefabInPlace()
-        {
-            GameObject contents = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
-            try
-            {
-                if (!contents.TryGetComponent(out NpcSkin _))
-                    contents.AddComponent<NpcSkin>();
-                if (!contents.TryGetComponent(out PlayerSkin playerSkin))
-                    playerSkin = contents.AddComponent<PlayerSkin>();
-
-                CharacterMovement movement = contents.GetComponent<CharacterMovement>();
-                GameObject npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NpcPrefabPath);
-                SerializedObject skinSettings = new SerializedObject(playerSkin);
-                SetIfMissing(skinSettings, "_skins", AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath));
-                SetIfMissing(skinSettings, "_settings", movement != null ? new SerializedObject(movement).FindProperty("_settings").objectReferenceValue : null);
-                SetIfMissing(skinSettings, "_placeholderRenderer", contents.GetComponent<MeshRenderer>());
-                SetIfMissing(skinSettings, "_npcReference", npcPrefab != null ? npcPrefab.GetComponent<NpcSkin>() : null);
-                skinSettings.ApplyModifiedPropertiesWithoutUndo();
-
-                PrefabUtility.SaveAsPrefabAsset(contents, PlayerPrefabPath);
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(contents);
-            }
-
-            return AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
-        }
-
-        private static void SetIfMissing(SerializedObject settings, string propertyName, Object value)
-        {
-            SerializedProperty property = settings.FindProperty(propertyName);
-            if (property.objectReferenceValue == null)
-                property.objectReferenceValue = value;
-        }
-
+        // au-dessus du menu. MatchPlayerSpawner (dans la map) le remplace.
         private static void BuildBoot()
         {
             Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
@@ -268,66 +142,6 @@ namespace Anachronism.Editor
             PlayerSettings.resizableWindow = true;
             // Indispensable à deux instances : celle qui n'a pas le focus doit continuer à tourner.
             PlayerSettings.runInBackground = true;
-        }
-
-        // ---------- PNJ ----------
-
-        private static NetworkObject BuildNpcPrefab()
-        {
-            // Édité en place : les profils d'Olivier gardent leur référence vers le prefab.
-            GameObject contents = PrefabUtility.LoadPrefabContents(NpcPrefabPath);
-            try
-            {
-                if (!contents.TryGetComponent(out NetworkObject _))
-                    contents.AddComponent<NetworkObject>();
-                if (!contents.TryGetComponent(out NetworkTransform networkTransform))
-                    networkTransform = contents.AddComponent<NetworkTransform>();
-                ConfigureTransform(networkTransform);
-
-                if (!contents.TryGetComponent(out NpcSkin npcSkin))
-                    npcSkin = contents.AddComponent<NpcSkin>();
-                SetupModelRoot(contents, npcSkin);
-                // Ses listes (comportements, skins) sont tenues à jour par NpcAssetSync.
-                if (!contents.TryGetComponent(out NetworkNpc _))
-                    contents.AddComponent<NetworkNpc>();
-
-                // Seul le serveur (ou la scène de test hors ligne) l'allume, dans NpcDestinationManager.SpawnOne.
-                contents.GetComponent<NavMeshAgent>().enabled = false;
-
-                PrefabUtility.SaveAsPrefabAsset(contents, NpcPrefabPath);
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(contents);
-            }
-
-            return AssetDatabase.LoadAssetAtPath<NetworkObject>(NpcPrefabPath);
-        }
-
-        // Enfant « Model » : on règle la hauteur du mesh en le déplaçant dans le prefab. L'aperçu (un skin de la table)
-        // n'est là que pour voir où tombent les pieds : NpcSkin le supprime en jeu et le tag EditorOnly le retire des builds.
-        private static void SetupModelRoot(GameObject npc, NpcSkin npcSkin)
-        {
-            Transform modelRoot = npc.transform.Find(ModelRootName);
-            if (modelRoot == null)
-            {
-                modelRoot = new GameObject(ModelRootName).transform;
-                modelRoot.SetParent(npc.transform, false);
-            }
-
-            NpcSkinTable table = AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath);
-            NpcProfile previewSkin = table != null ? table.Get(0) : null;
-            if (modelRoot.childCount == 0 && previewSkin != null && previewSkin.ModelPrefab != null)
-            {
-                GameObject preview = (GameObject)PrefabUtility.InstantiatePrefab(previewSkin.ModelPrefab, modelRoot);
-                preview.name = "Apercu (supprime en jeu)";
-                preview.tag = "EditorOnly";
-                preview.transform.localScale = Vector3.one * previewSkin.ModelScale;
-            }
-
-            SerializedObject skinSettings = new SerializedObject(npcSkin);
-            skinSettings.FindProperty("_modelRoot").objectReferenceValue = modelRoot;
-            skinSettings.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void BuildMap()
@@ -416,24 +230,6 @@ namespace Anachronism.Editor
             {
                 EditorSceneManager.CloseScene(testScene, true);
             }
-        }
-
-        // ---------- Commun ----------
-
-        // Joueurs et PNJ ont exactement le même NetworkTransform (règle réseau 5) : un PNJ et un joueur
-        // ne doivent pas se distinguer par leur fluidité. Sans owner, un PNJ reste piloté par le serveur.
-        private static void ConfigureTransform(NetworkTransform networkTransform)
-        {
-            SerializedObject transformSettings = new SerializedObject(networkTransform);
-            transformSettings.FindProperty("_clientAuthoritative").boolValue = true;
-            transformSettings.FindProperty("_sendToOwner").boolValue = true;
-            transformSettings.FindProperty("_interval").intValue = 1;
-            transformSettings.FindProperty("_interpolation").intValue = 2;
-            transformSettings.FindProperty("_extrapolation").intValue = 2;
-            transformSettings.FindProperty("_synchronizePosition").boolValue = true;
-            transformSettings.FindProperty("_synchronizeRotation").boolValue = true;
-            transformSettings.FindProperty("_synchronizeScale").boolValue = false;
-            transformSettings.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static GameObject FindRoot(Scene scene, string objectName) =>

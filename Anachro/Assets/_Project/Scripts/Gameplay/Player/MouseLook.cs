@@ -32,7 +32,7 @@ namespace Anachronism.Gameplay
             _camera.fieldOfView = _settings.FieldOfView;
             // Plan proche plus petit que le rayon du joueur: sinon, colle a un mur, ses coins passent derriere et on voit a travers.
             _camera.nearClipPlane = _settings.NearClipPlane;
-            _movement = _playerBody.GetComponent<CharacterMovement>();
+            _movement = _playerBody.GetComponentInChildren<CharacterMovement>(true);
 
             // Les renderers sous la camera (future arme en main, GDD 2.3) restent visibles: c'est la vue du joueur.
             var bodyRenderers = new List<Renderer>();

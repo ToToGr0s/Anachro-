@@ -69,7 +69,8 @@ namespace Anachronism.Editor
         private static void SyncNpcPrefab(NpcProfile[] behaviours)
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(NpcPrefabPath);
-            if (prefab == null || !prefab.TryGetComponent(out NetworkNpc networkNpc))
+            NetworkNpc networkNpc = prefab != null ? prefab.GetComponentInChildren<NetworkNpc>(true) : null;
+            if (networkNpc == null)
                 return;
 
             SerializedObject npcSettings = new SerializedObject(networkNpc);

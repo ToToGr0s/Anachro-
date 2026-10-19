@@ -91,9 +91,11 @@ namespace Anachronism.Npc
             Vector3 position = RandomPointOnNavMesh();
             Quaternion rotation = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
             // En ligne, pas de parent : FishNet ne synchronise pas un parent qui n'est pas un objet réseau.
+            // Le profil pointe le NpcAgent de l'enfant « Controller » : on instancie tout le prefab (sa racine).
+            GameObject prefabRoot = profile.Prefab.transform.root.gameObject;
             NpcAgent npc = IsOnline
-                ? Instantiate(profile.Prefab, position, rotation)
-                : InstantiateOffline(profile.Prefab, position, rotation);
+                ? Instantiate(prefabRoot, position, rotation).GetComponentInChildren<NpcAgent>()
+                : InstantiateOffline(prefabRoot, position, rotation);
             // Désactivé dans le prefab : un client ne doit jamais déplacer un PNJ lui-même.
             npc.Agent.enabled = true;
             npc.Agent.Warp(position);
@@ -101,9 +103,10 @@ namespace Anachronism.Npc
 
             if (IsOnline)
             {
-                if (npc.TryGetComponent(out NetworkNpc networkNpc))
+                NetworkNpc networkNpc = npc.Body.GetComponentInChildren<NetworkNpc>();
+                if (networkNpc != null)
                     networkNpc.SetSpawnProfile(profile);
-                _networkManager.ServerManager.Spawn(npc.gameObject, null, gameObject.scene);
+                _networkManager.ServerManager.Spawn(npc.Body.gameObject, null, gameObject.scene);
             }
 
             _npcs.Add(npc);
@@ -113,20 +116,20 @@ namespace Anachronism.Npc
         // Hors ligne (scène de test lancée sans Boot) : FishNet signale en erreur puis désactive tout NetworkObject
         // qui n'est pas spawné. On instancie sous un parent inactif (aucun Awake ne tourne) et on retire les composants
         // réseau avant d'activer le PNJ.
-        private NpcAgent InstantiateOffline(NpcAgent prefab, Vector3 position, Quaternion rotation)
+        private NpcAgent InstantiateOffline(GameObject prefabRoot, Vector3 position, Quaternion rotation)
         {
             GameObject holder = new GameObject("NpcOfflineSpawn");
             holder.SetActive(false);
 
-            NpcAgent npc = Instantiate(prefab, position, rotation, holder.transform);
-            foreach (NetworkBehaviour networkBehaviour in npc.GetComponents<NetworkBehaviour>())
+            GameObject instance = Instantiate(prefabRoot, position, rotation, holder.transform);
+            foreach (NetworkBehaviour networkBehaviour in instance.GetComponentsInChildren<NetworkBehaviour>(true))
                 DestroyImmediate(networkBehaviour);
-            if (npc.TryGetComponent(out NetworkObject networkObject))
+            if (instance.TryGetComponent(out NetworkObject networkObject))
                 DestroyImmediate(networkObject);
 
-            npc.transform.SetParent(_npcParent, true);
+            instance.transform.SetParent(_npcParent, true);
             Destroy(holder);
-            return npc;
+            return instance.GetComponentInChildren<NpcAgent>();
         }
 
         /// <summary>Réglages de l'hôte : retire tous les PNJ et en refait apparaître de nouveaux (positions, skins).</summary>
@@ -153,7 +156,8 @@ namespace Anachronism.Npc
 
             foreach (NpcAgent npc in _npcs)
             {
-                if (npc != null && npc.TryGetComponent(out NetworkNpc networkNpc))
+                NetworkNpc networkNpc = npc != null ? npc.Body.GetComponentInChildren<NetworkNpc>() : null;
+                if (networkNpc != null)
                     networkNpc.RerollSkin();
             }
         }
@@ -178,9 +182,9 @@ namespace Anachronism.Npc
         {
             _npcs.Remove(npc);
             if (IsOnline)
-                _networkManager.ServerManager.Despawn(npc.gameObject);
+                _networkManager.ServerManager.Despawn(npc.Body.gameObject);
             else
-                Destroy(npc.gameObject);
+                Destroy(npc.Body.gameObject);
         }
 
         // ---------- Boucle ----------
@@ -218,7 +222,7 @@ namespace Anachronism.Npc
         {
             NavMeshPath path = new NavMeshPath();
             Vector2 range = npc.Profile.WalkDistanceRange;
-            Vector3 origin = npc.transform.position;
+            Vector3 origin = npc.Body.position;
 
             for (int i = 0; i < _maxAttempts; i++)
             {

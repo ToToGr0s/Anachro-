@@ -10,9 +10,11 @@ namespace Anachronism.Network
     /// PNJ en ligne : l'hôte fait tourner l'IA (NpcAgent + NavMeshAgent) et le NetworkTransform diffuse la position.
     /// Les clients n'ont que le visuel : skin tiré par le serveur et Animator piloté par la vitesse mesurée localement.
     /// </summary>
-    [RequireComponent(typeof(NpcAgent))]
+    // Sur l'enfant « Network » du PNJ.
     public sealed class NetworkNpc : NetworkBehaviour
     {
+        [Tooltip("NpcAgent de l'enfant « Controller ».")]
+        [SerializeField] private NpcAgent _agent;
         [Tooltip("Profils de comportement que ce prefab peut prendre. Seul l'index est envoyé aux clients.")]
         [SerializeField] private NpcProfile[] _profiles = new NpcProfile[0];
         [SerializeField] private NpcSkinTable _skins;
@@ -25,7 +27,6 @@ namespace Anachronism.Network
         private readonly SyncVar<byte> _skinIndex = new SyncVar<byte>();
         private readonly SyncVar<float> _baseSpeed = new SyncVar<float>();
 
-        private NpcAgent _agent;
         private NpcProfile _pendingProfile;
         private Vector3 _lastPosition;
         private bool _isRemoteVisual;
@@ -33,7 +34,6 @@ namespace Anachronism.Network
 
         private void Awake()
         {
-            _agent = GetComponent<NpcAgent>();
             _skinIndex.OnChange += OnSkinIndexChange;
         }
 
@@ -92,7 +92,7 @@ namespace Anachronism.Network
                 }
 
                 _agent.InitVisual(_profiles[index], _baseSpeed.Value);
-                _lastPosition = transform.position;
+                _lastPosition = _agent.Body.position;
                 _isRemoteVisual = true;
             }
 
@@ -135,9 +135,10 @@ namespace Anachronism.Network
             if (dt <= 0f)
                 return;
 
-            Vector3 delta = transform.position - _lastPosition;
+            Vector3 position = _agent.Body.position;
+            Vector3 delta = position - _lastPosition;
             delta.y = 0f;
-            _lastPosition = transform.position;
+            _lastPosition = position;
             _agent.UpdateAnimator(delta.magnitude / dt, dt);
         }
 

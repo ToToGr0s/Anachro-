@@ -3,12 +3,14 @@ using UnityEngine.AI;
 
 namespace Anachronism.Npc
 {
-    [RequireComponent(typeof(NavMeshAgent), typeof(NpcSkin))]
+    // Sur l'enfant « Controller » du PNJ : il pilote le NavMeshAgent de la racine et le skin de l'enfant « Model ».
     public class NpcAgent : MonoBehaviour
     {
         private enum State { Idle, Reacting, Walking, Pausing }
 
         public NavMeshAgent Agent { get; private set; }
+        /// <summary>Racine du PNJ : l'objet que le NavMeshAgent déplace et que le réseau synchronise.</summary>
+        public Transform Body => Agent.transform;
         public NpcProfile Profile { get; private set; }
         public bool NeedsDestination => _state == State.Idle;
         public float BaseSpeed => _baseSpeed;
@@ -28,8 +30,8 @@ namespace Anachronism.Npc
 
         private void Awake()
         {
-            Agent = GetComponent<NavMeshAgent>();
-            _skin = GetComponent<NpcSkin>();
+            Agent = GetComponentInParent<NavMeshAgent>();
+            _skin = Agent.GetComponentInChildren<NpcSkin>(true);
             _seed = Random.value * 1000f;
         }
 
@@ -148,7 +150,7 @@ namespace Anachronism.Npc
             float factor = 1f;
             if (desired.sqrMagnitude > 0.01f)
             {
-                float angle = Vector3.Angle(transform.forward, desired);
+                float angle = Vector3.Angle(Body.forward, desired);
                 factor = 1f - Profile.CornerSlowdown * Mathf.Clamp01(angle / 90f);
             }
 
@@ -179,7 +181,7 @@ namespace Anachronism.Npc
 
             float yawOffset = Noise(100f, Profile.WanderFrequency) * Profile.HeadingNoiseDegrees;
             Quaternion target = Quaternion.Euler(0f, yawOffset, 0f) * Quaternion.LookRotation(v);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Profile.TurnSmoothing * dt);
+            Body.rotation = Quaternion.Slerp(Body.rotation, target, Profile.TurnSmoothing * dt);
         }
 
         // Piloté par la seule vitesse horizontale (règle réseau 5) : un client la mesure sur le transform synchronisé.
