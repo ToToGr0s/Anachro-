@@ -488,7 +488,6 @@ GameObject:
   - component: {fileID: 1418230400}
   - component: {fileID: 1418230399}
   - component: {fileID: 1418230398}
-  - component: {fileID: 1418230397}
   - component: {fileID: 1418230396}
   - component: {fileID: 1418230395}
   m_Layer: 0
@@ -529,21 +528,6 @@ MonoBehaviour:
   _offlineScene: Assets/_Project/Scenes/MainMenu.unity
   _onlineScene: Assets/_Project/Scenes/Maps/Map_Greybox.unity
   _replaceScenes: 0
---- !u!114 &1418230397
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1418230394}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 211a9f6ec51ddc14f908f5acc0cd0423, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Spawning.PlayerSpawner
-  _playerPrefab: {fileID: 765951197041507023, guid: d405f0a9b0d3f0c43845426e7a50d774, type: 3}
-  _addToDefaultScene: 1
-  Spawns: []
 --- !u!114 &1418230398
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -4,7 +4,6 @@ using Anachronism.UI;
 using System.Collections.Generic;
 using System.Linq;
 using FishNet.Component.Scenes;
-using FishNet.Component.Spawning;
 using FishNet.Component.Transforming;
 using FishNet.Managing;
 using FishNet.Managing.Object;
@@ -113,7 +112,6 @@ namespace Anachronism.Editor
         {
             Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
             DefaultPrefabObjects prefabObjects = AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(DefaultPrefabObjectsPath);
-            NetworkObject playerPrefab = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
             DestroyRoot(scene, NetworkManagerName);
             // Sol et points d'apparition vivaient dans Boot avant l'enchaînement de scènes : ils sont dans la map.
             DestroyRoot(scene, SpawnPointsName);
@@ -140,9 +138,7 @@ namespace Anachronism.Editor
                 transportManager = managerObject.AddComponent<TransportManager>();
             transportManager.Transport = steamTransport;
 
-            // Points d'apparition fournis par la map à son chargement (MapSpawnPoints).
-            PlayerSpawner spawner = managerObject.AddComponent<PlayerSpawner>();
-            spawner.SetPlayerPrefab(playerPrefab);
+            // Pas de PlayerSpawner : les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner, dans la map).
 
             // Boot charge MainMenu au lancement, la map quand le serveur démarre, et revient au menu à la déconnexion.
             DefaultScene defaultScene = managerObject.AddComponent<DefaultScene>();

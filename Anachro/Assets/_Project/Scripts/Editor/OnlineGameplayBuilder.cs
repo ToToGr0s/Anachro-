@@ -20,7 +20,8 @@ namespace Anachronism.Editor
     /// Passage en ligne du joueur de Célian et des PNJ d'Olivier. Rejouable :
     /// - Player_Base est regénéré depuis Player_Fugitive : à relancer quand Célian modifie son prefab ;
     /// - Npc_v0 reçoit ses composants réseau s'ils manquent, sa liste de profils est remise à jour ;
-    /// - Map_Greybox reçoit un NavMesh cuit et le spawner de PNJ s'ils manquent (réglages copiés de Pnj_v0).
+    /// - Map_Greybox reçoit un NavMesh cuit et le spawner de PNJ s'ils manquent (réglages copiés de Pnj_v0) ;
+    /// - les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner) et plus à la connexion (PlayerSpawner retiré de Boot).
     /// </summary>
     public static class OnlineGameplayBuilder
     {
@@ -61,8 +62,8 @@ namespace Anachronism.Editor
             EditorUtility.SetDirty(prefabObjects);
             AssetDatabase.SaveAssets();
 
-            PointSpawnerToPlayer();
-            BuildMapNpcs();
+            RemovePlayerSpawnerFromBoot();
+            BuildMap();
             AssetDatabase.SaveAssets();
             Debug.Log("[OnlineGameplayBuilder] Joueur et PNJ branchés sur le réseau.");
         }
@@ -137,21 +138,19 @@ namespace Anachronism.Editor
             }
         }
 
-        private static void PointSpawnerToPlayer()
+        // Le PlayerSpawner de FishNet fait apparaître le joueur dès la connexion : au lobby, il verrouillerait la souris
+        // au-dessus du menu. MatchPlayerSpawner le remplace.
+        private static void RemovePlayerSpawnerFromBoot()
         {
             Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
-            PlayerSpawner spawner = scene.GetRootGameObjects()
-                .Select(rootObject => rootObject.GetComponentInChildren<PlayerSpawner>(true))
-                .FirstOrDefault(component => component != null);
-            if (spawner == null)
-            {
-                Debug.LogError("[OnlineGameplayBuilder] Pas de PlayerSpawner dans Boot : lancer d'abord Anachro > Setup > Construire la base réseau.");
+            PlayerSpawner[] spawners = scene.GetRootGameObjects()
+                .SelectMany(rootObject => rootObject.GetComponentsInChildren<PlayerSpawner>(true))
+                .ToArray();
+            if (spawners.Length == 0)
                 return;
-            }
 
-            // Rechargé après l'ouverture de la scène, qui décharge les assets non référencés.
-            spawner.SetPlayerPrefab(AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath));
-            EditorUtility.SetDirty(spawner);
+            foreach (PlayerSpawner spawner in spawners)
+                Object.DestroyImmediate(spawner);
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
         }
@@ -200,9 +199,10 @@ namespace Anachronism.Editor
             return AssetDatabase.LoadAssetAtPath<NetworkObject>(NpcPrefabPath);
         }
 
-        private static void BuildMapNpcs()
+        private static void BuildMap()
         {
             Scene map = EditorSceneManager.OpenScene(MapScenePath, OpenSceneMode.Single);
+            SetupMatchPlayerSpawner(map);
 
             GameObject navMeshObject = FindRoot(map, NavMeshName) ?? new GameObject(NavMeshName);
             if (!navMeshObject.TryGetComponent(out NavMeshSurface surface))
@@ -230,6 +230,30 @@ namespace Anachronism.Editor
 
             EditorSceneManager.MarkSceneDirty(map);
             EditorSceneManager.SaveScene(map);
+        }
+
+        private static void SetupMatchPlayerSpawner(Scene map)
+        {
+            MatchManager matchManager = map.GetRootGameObjects()
+                .Select(rootObject => rootObject.GetComponentInChildren<MatchManager>(true))
+                .FirstOrDefault(component => component != null);
+            MapSpawnPoints spawnPoints = map.GetRootGameObjects()
+                .Select(rootObject => rootObject.GetComponentInChildren<MapSpawnPoints>(true))
+                .FirstOrDefault(component => component != null);
+            if (matchManager == null || spawnPoints == null)
+            {
+                Debug.LogError("[OnlineGameplayBuilder] MatchManager ou MapSpawnPoints absent de la map : lancer d'abord Anachro > Setup > Construire la base réseau.");
+                return;
+            }
+
+            if (!matchManager.TryGetComponent(out MatchPlayerSpawner playerSpawner))
+                playerSpawner = matchManager.gameObject.AddComponent<MatchPlayerSpawner>();
+
+            // Rechargé après l'ouverture de la scène, qui décharge les assets non référencés.
+            SerializedObject spawnerSettings = new SerializedObject(playerSpawner);
+            spawnerSettings.FindProperty("_playerPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
+            spawnerSettings.FindProperty("_spawnPoints").objectReferenceValue = spawnPoints;
+            spawnerSettings.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // Mêmes profils et quantités que la scène de test d'Olivier : aucune valeur d'équilibrage inventée ici.
