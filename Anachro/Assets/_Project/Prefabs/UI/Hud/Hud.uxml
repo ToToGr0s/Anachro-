@@ -1,0 +1,48 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="../Lobby/LobbyMenu.uss" />
+    <Style src="Hud.uss" />
+    <ui:VisualElement name="hud-root" class="hud" picking-mode="Ignore">
+
+        <ui:VisualElement name="role-badge" class="match-bar hud-role" picking-mode="Ignore">
+            <ui:Label name="role-label" class="match-text match-text--role" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="disruption" class="match-bar hud-disruption" picking-mode="Ignore">
+            <ui:VisualElement class="row hud-disruption__header" picking-mode="Ignore">
+                <ui:Label text="Dérèglement" class="caption hud-disruption__title" picking-mode="Ignore" />
+                <ui:Label name="disruption-value" text="0 %" class="match-text hud-disruption__value" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hud-disruption__track" picking-mode="Ignore">
+                <ui:VisualElement name="disruption-fill" class="hud-disruption__fill" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="end-countdown-bar" class="match-bar hud-countdown" picking-mode="Ignore">
+            <ui:Label name="end-countdown" class="match-text hud-countdown__text" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="item-bar" class="hud-items" picking-mode="Ignore">
+            <ui:VisualElement name="item-slot-small" class="hud-slot" picking-mode="Ignore">
+                <ui:VisualElement class="hud-slot__gauge" picking-mode="Ignore">
+                    <ui:VisualElement name="item-gauge-fill" class="hud-slot__gauge-fill" picking-mode="Ignore" />
+                    <ui:Label name="item-timer" class="hud-slot__timer" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label text="Petit" class="caption hud-slot__name" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement name="item-slot-medium" class="hud-slot" picking-mode="Ignore">
+                <ui:VisualElement class="hud-slot__gauge" picking-mode="Ignore">
+                    <ui:VisualElement name="item-gauge-fill" class="hud-slot__gauge-fill" picking-mode="Ignore" />
+                    <ui:Label name="item-timer" class="hud-slot__timer" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label text="Moyen" class="caption hud-slot__name" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement name="item-slot-large" class="hud-slot" picking-mode="Ignore">
+                <ui:VisualElement class="hud-slot__gauge" picking-mode="Ignore">
+                    <ui:VisualElement name="item-gauge-fill" class="hud-slot__gauge-fill" picking-mode="Ignore" />
+                    <ui:Label name="item-timer" class="hud-slot__timer" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label text="Grand" class="caption hud-slot__name" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
