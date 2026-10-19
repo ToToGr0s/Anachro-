@@ -15,6 +15,7 @@ namespace Anachronism.Npc
         private NpcProfile _appliedSkin;
         private float _baseSpeed;
         private float _sprintMultiplier;
+        private Vector3 _localOffset;
 
         public NpcProfile AppliedSkin => _appliedSkin;
         public GameObject Model => _model;
@@ -27,6 +28,7 @@ namespace Anachronism.Npc
         {
             _baseSpeed = baseSpeed;
             _sprintMultiplier = sprintMultiplier;
+            _localOffset = localOffset;
             if (skin == _appliedSkin && _model != null)
                 return;
 
@@ -36,9 +38,8 @@ namespace Anachronism.Npc
                 return;
 
             _model = Instantiate(skin.ModelPrefab, transform);
-            _model.transform.localPosition = localOffset;
             _model.transform.localRotation = Quaternion.identity;
-            _model.transform.localScale = Vector3.one * skin.ModelScale;
+            PlaceModel();
 
             _animator = _model.GetComponentInChildren<Animator>();
             if (_animator == null)
@@ -59,6 +60,22 @@ namespace Anachronism.Npc
             if (!_hasSpeedParam)
                 Debug.LogWarning($"Animator de {name} : paramètre '{skin.SpeedParameter}' introuvable.", this);
         }
+
+        // Hauteur et échelle viennent du profil : un même réglage vaut pour les PNJ et les joueurs qui portent ce skin.
+        private void PlaceModel()
+        {
+            _model.transform.localPosition = _localOffset + Vector3.up * _appliedSkin.ModelHeightOffset;
+            _model.transform.localScale = Vector3.one * _appliedSkin.ModelScale;
+        }
+
+#if UNITY_EDITOR
+        // Réglage en direct : changer la hauteur ou l'échelle du profil pendant le Play déplace le modèle tout de suite.
+        private void LateUpdate()
+        {
+            if (_model != null && _appliedSkin != null)
+                PlaceModel();
+        }
+#endif
 
         public void Clear()
         {

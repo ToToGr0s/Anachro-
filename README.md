@@ -62,6 +62,7 @@ Le menu **Anachro > Setup > Construire la base réseau** régénère le NetworkM
 
 1. **Modèle** : le déposer dans `Assets/_Project/Art/Characters/<Nom>/` (FBX, matériaux, textures ensemble). Un pack du store va dans `Assets/Import/<Pack>/`.
 2. **Profil** : dans `Assets/_Project/ScriptableObjects/Npc/`, clic droit > Create > Anachronism > Npc Profile (ou dupliquer un profil existant). Y glisser le modèle (`Model Prefab`), son Animator Controller, l'échelle, et le comportement (vitesses, pauses, sprint).
+   Pieds dans le sol ou en l'air : **Model Height Offset** (mètres, + monte). Réglable pendant le Play : le modèle bouge en direct et la valeur reste après l'arrêt.
 3. C'est tout : la table `NpcSkins` et le prefab `Npc_v0` se mettent à jour seuls (`NpcAssetSync`). Tout profil avec un modèle devient un skin tiré au hasard pour les PNJ **et** les joueurs.
 4. Pour que ce comportement **apparaisse** dans une map (combien de PNJ de ce type) : l'ajouter dans la liste du `NpcDestinationManager` de la map (objet `Npcs`).
 
