@@ -21,10 +21,10 @@ namespace Anachronism.Editor
     /// <summary>
     /// Passage en ligne du joueur de Célian et des PNJ d'Olivier. Rejouable :
     /// - Player_Base est regénéré depuis Player_Fugitive : à relancer quand Célian modifie son prefab ;
-    /// - Npc_v0 reçoit ses composants réseau s'ils manquent, sa liste de profils est remise à jour ;
+    /// - Npc_v0 reçoit ses composants réseau s'ils manquent ;
     /// - Map_Greybox reçoit un NavMesh cuit et le spawner de PNJ s'ils manquent (réglages copiés de Pnj_v0) ;
     /// - les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner) et plus à la connexion (PlayerSpawner retiré de Boot) ;
-    /// - joueurs et PNJ tirent leur skin dans la même table (NpcSkins) ;
+    /// - joueurs et PNJ tirent leur skin dans la même table (NpcSkins, tenue à jour par NpcAssetSync) ;
     /// - Boot reçoit l'overlay : debug F1 et menu Échap.
     /// </summary>
     public static class OnlineGameplayBuilder
@@ -34,13 +34,13 @@ namespace Anachronism.Editor
         private const string NpcTestScenePath = "Assets/_Project/Scenes/Pnj_v0.unity";
         private const string FugitivePrefabPath = "Assets/_Project/Prefabs/Player/Player_Fugitive.prefab";
         private const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player/Player_Base.prefab";
-        private const string NpcPrefabPath = "Assets/_Project/Prefabs/Npc/Npc_v0.prefab";
+        private const string NpcPrefabPath = NpcAssetSync.NpcPrefabPath;
         private const string DefaultPrefabObjectsPath = "Assets/DefaultPrefabObjects.asset";
         private const string MapNavMeshFolderParent = "Assets/_Project/Scenes/Maps";
         private const string MapNavMeshFolderName = "Map_Greybox";
         private const string NavMeshName = "NpcNavMesh";
         private const string NpcsName = "Npcs";
-        private const string SkinTablePath = "Assets/_Project/ScriptableObjects/Npc/NpcSkins.asset";
+        private const string SkinTablePath = NpcAssetSync.SkinTablePath;
         private const string OverlayName = "Overlay";
         private const string OverlayLayoutPath = "Assets/_Project/Prefabs/UI/Overlay/Overlay.uxml";
         private const string PanelSettingsPath = "Assets/_Project/Prefabs/UI/AnachroPanelSettings.asset";
@@ -60,9 +60,11 @@ namespace Anachronism.Editor
                 return;
             }
 
-            LoadOrCreateSkinTable();
+            // Table des skins avant le joueur (il la référence) ; listes du prefab PNJ une fois ses composants posés.
+            NpcAssetSync.Sync();
             NetworkObject player = BuildPlayerPrefab();
             NetworkObject npc = BuildNpcPrefab();
+            NpcAssetSync.Sync();
             if (player == null || npc == null)
                 return;
 
@@ -212,32 +214,6 @@ namespace Anachronism.Editor
             PlayerSettings.runInBackground = true;
         }
 
-        // ---------- Skins ----------
-
-        // Créée seulement si elle manque : ensuite, Olivier y ajoute ou retire des skins à la main.
-        private static void LoadOrCreateSkinTable()
-        {
-            if (AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath) != null)
-                return;
-
-            NpcSkinTable table = ScriptableObject.CreateInstance<NpcSkinTable>();
-            NpcProfile[] profiles = AssetDatabase.FindAssets("t:" + nameof(NpcProfile))
-                .Select(guid => AssetDatabase.LoadAssetAtPath<NpcProfile>(AssetDatabase.GUIDToAssetPath(guid)))
-                .Where(profile => profile != null && profile.ModelPrefab != null)
-                .OrderBy(profile => profile.name)
-                .ToArray();
-
-            SerializedObject tableSettings = new SerializedObject(table);
-            SerializedProperty skinsProperty = tableSettings.FindProperty("_skins");
-            skinsProperty.arraySize = profiles.Length;
-            for (int i = 0; i < profiles.Length; i++)
-                skinsProperty.GetArrayElementAtIndex(i).objectReferenceValue = profiles[i];
-            tableSettings.ApplyModifiedPropertiesWithoutUndo();
-
-            AssetDatabase.CreateAsset(table, SkinTablePath);
-            AssetDatabase.SaveAssets();
-        }
-
         // ---------- PNJ ----------
 
         private static NetworkObject BuildNpcPrefab()
@@ -254,23 +230,9 @@ namespace Anachronism.Editor
 
                 if (!contents.TryGetComponent(out NpcSkin _))
                     contents.AddComponent<NpcSkin>();
-                if (!contents.TryGetComponent(out NetworkNpc networkNpc))
-                    networkNpc = contents.AddComponent<NetworkNpc>();
-
-                // Ordre stable : l'index envoyé aux clients doit désigner le même profil partout.
-                NpcProfile[] profiles = AssetDatabase.FindAssets("t:" + nameof(NpcProfile))
-                    .Select(guid => AssetDatabase.LoadAssetAtPath<NpcProfile>(AssetDatabase.GUIDToAssetPath(guid)))
-                    .Where(profile => profile != null && profile.Prefab != null && AssetDatabase.GetAssetPath(profile.Prefab) == NpcPrefabPath)
-                    .OrderBy(profile => profile.name)
-                    .ToArray();
-
-                SerializedObject npcSettings = new SerializedObject(networkNpc);
-                SerializedProperty profilesProperty = npcSettings.FindProperty("_profiles");
-                profilesProperty.arraySize = profiles.Length;
-                for (int i = 0; i < profiles.Length; i++)
-                    profilesProperty.GetArrayElementAtIndex(i).objectReferenceValue = profiles[i];
-                npcSettings.FindProperty("_skins").objectReferenceValue = AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath);
-                npcSettings.ApplyModifiedPropertiesWithoutUndo();
+                // Ses listes (comportements, skins) sont tenues à jour par NpcAssetSync.
+                if (!contents.TryGetComponent(out NetworkNpc _))
+                    contents.AddComponent<NetworkNpc>();
 
                 // Seul le serveur (ou la scène de test hors ligne) l'allume, dans NpcDestinationManager.SpawnOne.
                 contents.GetComponent<NavMeshAgent>().enabled = false;
