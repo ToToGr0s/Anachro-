@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using Anachronism.Network;
+using FishNet;
+using FishNet.Managing;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace Anachronism.Npc
 {
     // Fait apparaître les PNJ et leur choisit des destinations au hasard sur le NavMesh (tirage pondéré par l'aire).
-    // TODO (Théo) : passage en réseau (spawn et IA côté serveur, même synchro que le méchant).
+    // En ligne, seul l'hôte fait apparaître les PNJ et pilote leur IA ; les clients les reçoivent par le réseau (NetworkNpc).
     public class NpcDestinationManager : MonoBehaviour
     {
         [Serializable]
@@ -30,9 +33,19 @@ namespace Anachronism.Npc
         private NavMeshTriangulation _triangulation;
         private float[] _cumulativeAreas;
         private float _totalArea;
+        private NetworkManager _networkManager; // null hors ligne (scène de test lancée sans Boot)
+
+        private bool IsOnline => _networkManager != null && _networkManager.IsServerStarted;
 
         private void Start()
         {
+            _networkManager = InstanceFinder.NetworkManager;
+            if (_networkManager != null && _networkManager.IsClientStarted && !_networkManager.IsServerStarted)
+            {
+                enabled = false;
+                return;
+            }
+
             BuildTriangleData();
             SpawnAll();
         }
@@ -74,9 +87,21 @@ namespace Anachronism.Npc
             if (profile == null || profile.Prefab == null) return null;
 
             Vector3 position = RandomPointOnNavMesh();
-            NpcAgent npc = Instantiate(profile.Prefab, position, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f), _npcParent);
+            // En ligne, pas de parent : FishNet ne synchronise pas un parent qui n'est pas un objet réseau.
+            Transform parent = IsOnline ? null : _npcParent;
+            NpcAgent npc = Instantiate(profile.Prefab, position, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f), parent);
+            // Désactivé dans le prefab : un client ne doit jamais déplacer un PNJ lui-même.
+            npc.Agent.enabled = true;
             npc.Agent.Warp(position);
             npc.Init(profile);
+
+            if (IsOnline)
+            {
+                if (npc.TryGetComponent(out NetworkNpc networkNpc))
+                    networkNpc.SetSpawnProfile(profile);
+                _networkManager.ServerManager.Spawn(npc.gameObject, null, gameObject.scene);
+            }
+
             _npcs.Add(npc);
             return npc;
         }
@@ -84,7 +109,10 @@ namespace Anachronism.Npc
         public void Despawn(NpcAgent npc)
         {
             _npcs.Remove(npc);
-            Destroy(npc.gameObject);
+            if (IsOnline)
+                _networkManager.ServerManager.Despawn(npc.gameObject);
+            else
+                Destroy(npc.gameObject);
         }
 
         // ---------- Boucle ----------
@@ -96,6 +124,13 @@ namespace Anachronism.Npc
             for (int i = 0; i < _npcs.Count; i++)
             {
                 NpcAgent npc = _npcs[i];
+                // Détruit sans passer par Despawn (arrêt du serveur, déchargement de la map).
+                if (npc == null)
+                {
+                    _npcs.RemoveAt(i--);
+                    continue;
+                }
+
                 npc.Tick(dt);
 
                 if (npc.NeedsDestination)

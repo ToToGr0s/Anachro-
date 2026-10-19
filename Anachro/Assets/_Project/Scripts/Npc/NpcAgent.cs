@@ -11,6 +11,7 @@ namespace Anachronism.Npc
         public NavMeshAgent Agent { get; private set; }
         public NpcProfile Profile { get; private set; }
         public bool NeedsDestination => _state == State.Idle;
+        public float BaseSpeed => _baseSpeed;
 
         private State _state = State.Idle;
         private float _timer;
@@ -33,10 +34,10 @@ namespace Anachronism.Npc
             _seed = Random.value * 1000f;
         }
 
+        // Hors ligne ou côté serveur : IA complète + visuel.
         public void Init(NpcProfile profile)
         {
-            Profile = profile;
-            _baseSpeed = Random.Range(profile.WalkSpeedRange.x, profile.WalkSpeedRange.y);
+            InitVisual(profile, Random.Range(profile.WalkSpeedRange.x, profile.WalkSpeedRange.y));
 
             Agent.speed = _baseSpeed;
             Agent.acceleration = profile.Acceleration;
@@ -45,7 +46,14 @@ namespace Anachronism.Npc
             Agent.stoppingDistance = profile.StoppingDistance;
             Agent.avoidancePriority = profile.AvoidancePriority;
             Agent.updateRotation = false;
+        }
 
+        // Client en ligne : pas d'IA (le serveur déplace le PNJ), seulement le modèle et l'Animator.
+        // La vitesse de base sert à l'échelle de l'Animator (ToAnimValue), elle doit être celle tirée par le serveur.
+        public void InitVisual(NpcProfile profile, float baseSpeed)
+        {
+            Profile = profile;
+            _baseSpeed = baseSpeed;
             SpawnModel();
         }
 
@@ -126,7 +134,9 @@ namespace Anachronism.Npc
             }
 
             UpdateRotation(dt);
-            UpdateAnimator(dt);
+
+            Vector3 velocity = Agent.velocity; velocity.y = 0f;
+            UpdateAnimator(velocity.magnitude, dt);
         }
 
         private void UpdateSprint(float dt)
@@ -205,12 +215,12 @@ namespace Anachronism.Npc
             return 1f + Mathf.Clamp01((speed - walkMax) / (sprintSpeed - walkMax));   // marche -> course
         }
 
-        private void UpdateAnimator(float dt)
+        // Piloté par la seule vitesse horizontale (règle réseau 5) : un client la mesure sur le transform synchronisé.
+        public void UpdateAnimator(float horizontalSpeed, float dt)
         {
             if (_animator == null || !_hasSpeedParam) return;
 
-            Vector3 v = Agent.velocity; v.y = 0f;
-            _animator.SetFloat(_speedHash, ToAnimValue(v.magnitude), 0.1f, dt);
+            _animator.SetFloat(_speedHash, ToAnimValue(horizontalSpeed), 0.1f, dt);
         }
 
         private bool HasArrived()

@@ -91,14 +91,12 @@ namespace Anachronism.Editor
                 return null;
             }
 
-            // Capsule provisoire : Célian la remplace par le vrai joueur (Gameplay/Player).
+            // Capsule provisoire : Anachro > Setup > Brancher joueur et PNJ en réseau la remplace par le contrôleur de Célian.
             GameObject root = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             root.name = "Player_Base";
             root.AddComponent<NetworkObject>();
             // Client-autoritaire par défaut : le mouvement joueur est le seul point client-autoritaire assumé.
             root.AddComponent<NetworkTransform>();
-            // Déplacement de test provisoire, remplacé par le contrôleur de Célian (C01).
-            root.AddComponent<DevPlayerMover>();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);
