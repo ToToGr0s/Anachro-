@@ -26,6 +26,7 @@ namespace Anachronism.UI
         private UIDocument _document;
         private NetworkManager _networkManager;
         private SteamLobby _steamLobby;
+        private LocalSession _localSession;
 
         private VisualElement _homePanel;
         private VisualElement _connectingPanel;
@@ -39,6 +40,8 @@ namespace Anachronism.UI
         private Button _leaveButton;
         private Button _cancelButton;
         private Button _quitButton;
+        private Button _localHostButton;
+        private Button _localJoinButton;
         private Label _steamWarning;
         private Label _lobbyCode;
         private Label _playerCount;
@@ -91,11 +94,15 @@ namespace Anachronism.UI
             _leaveButton = root.Q<Button>("leave-button");
             _cancelButton = root.Q<Button>("cancel-button");
             _quitButton = root.Q<Button>("quit-button");
+            _localHostButton = root.Q<Button>("local-host-button");
+            _localJoinButton = root.Q<Button>("local-join-button");
 
             _copyButton.clicked += OnCopyClicked;
             _leaveButton.clicked += OnLeaveClicked;
             _cancelButton.clicked += OnLeaveClicked;
             _quitButton.clicked += OnQuitClicked;
+            _localHostButton.clicked += OnLocalHostClicked;
+            _localJoinButton.clicked += OnLocalJoinClicked;
             _codeField.RegisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
 
             _currentScreen = (MenuScreen)(-1);
@@ -111,6 +118,8 @@ namespace Anachronism.UI
             _leaveButton.clicked -= OnLeaveClicked;
             _cancelButton.clicked -= OnLeaveClicked;
             _quitButton.clicked -= OnQuitClicked;
+            _localHostButton.clicked -= OnLocalHostClicked;
+            _localJoinButton.clicked -= OnLocalJoinClicked;
             _codeField.UnregisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
         }
 
@@ -125,6 +134,10 @@ namespace Anachronism.UI
             }
 
             _steamLobby = _networkManager.GetComponent<SteamLobby>();
+            _localSession = _networkManager.GetComponent<LocalSession>();
+            // Boot sans transport local (base réseau pas reconstruite) : on cache les boutons au lieu de planter.
+            SetVisible(_localHostButton, _localSession != null);
+            SetVisible(_localJoinButton, _localSession != null);
             _steamLobby.Failed += OnLobbyFailed;
             _steamLobby.LobbyChanged += OnLobbyChanged;
             _networkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
@@ -186,7 +199,9 @@ namespace Anachronism.UI
                 bool isHost = _networkManager.IsServerStarted;
                 SetVisible(_startButton, isHost);
                 SetVisible(_waitingLabel, !isHost);
-                _lobbyCode.text = LobbyCode.Format(_steamLobby.Code);
+                bool isLocal = _localSession != null && _localSession.IsLocal;
+                SetVisible(_copyButton, !isLocal);
+                _lobbyCode.text = isLocal ? "LOCAL" : LobbyCode.Format(_steamLobby.Code);
                 SetStatus(string.Empty);
             }
         }
@@ -246,6 +261,20 @@ namespace Anachronism.UI
         {
             SetStatus(string.Empty);
             _steamLobby.JoinByCode(_codeField.value);
+        }
+
+        private void OnLocalHostClicked()
+        {
+            SetStatus(string.Empty);
+            if (!_localSession.Host())
+                SetStatus("Impossible d'héberger en local (une partie locale tourne déjà sur ce PC ?).");
+        }
+
+        private void OnLocalJoinClicked()
+        {
+            SetStatus(string.Empty);
+            if (!_localSession.Join())
+                SetStatus("Impossible de rejoindre la partie locale.");
         }
 
         private void OnCodeFieldKeyDown(KeyDownEvent keyEvent)

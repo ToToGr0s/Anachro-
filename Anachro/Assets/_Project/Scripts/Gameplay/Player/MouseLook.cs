@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Anachronism.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -80,14 +81,10 @@ namespace Anachronism.Gameplay
         {
             if (Mouse.current == null) return;
 
-            // Echap libere la souris (la pause du GDD 2.1 viendra du menu)
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
+            // Echap ouvre le menu (UI/PauseMenu), qui libere la souris : pas de regard tant qu'il est ouvert.
+            if (GameMenuState.IsOpen) return;
 
-            // Clic gauche pour recapturer la souris
+            // Clic gauche pour recapturer la souris (perdue en changeant de fenetre)
             if (Cursor.lockState != CursorLockMode.Locked && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 Cursor.lockState = CursorLockMode.Locked;

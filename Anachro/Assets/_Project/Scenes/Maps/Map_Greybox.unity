@@ -760,6 +760,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 1600597746}
   _networkObjectCache: {fileID: 0}
   _playerPrefab: {fileID: 765951197041507023, guid: d405f0a9b0d3f0c43845426e7a50d774, type: 3}
+  _npcs: {fileID: 1793267842}
   _spawnPoints: {fileID: 1204517706}
 --- !u!1 &1766315799
 GameObject:

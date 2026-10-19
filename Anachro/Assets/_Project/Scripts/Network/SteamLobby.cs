@@ -9,7 +9,8 @@ namespace Anachronism.Network
 {
     /// <summary>
     /// Lobby Steam : l'hôte crée un lobby et partage son code (LobbyCode), les autres le rejoignent avec ce code
-    /// et se connectent en P2P (FishySteamworks, seul transport du jeu) sur le SteamID du propriétaire du lobby.
+    /// et se connectent en P2P (FishySteamworks) sur le SteamID du propriétaire du lobby.
+    /// Le Multipass contient aussi Tugboat pour les parties locales (LocalSession) : on n'ouvre que le transport Steam ici.
     /// </summary>
     [RequireComponent(typeof(NetworkManager))]
     public sealed class SteamLobby : MonoBehaviour
@@ -184,7 +185,7 @@ namespace Anachronism.Network
                 return;
             }
 
-            if (!_networkManager.ServerManager.StartConnection())
+            if (!_networkManager.StartServerOn<FishySteamworks.FishySteamworks>())
             {
                 Failed?.Invoke("Le serveur n'a pas démarré.");
                 LeaveLobby();
@@ -195,6 +196,7 @@ namespace Anachronism.Network
             LobbyChanged?.Invoke();
 
             // Sans adresse : FishySteamworks voit le serveur local et connecte l'hôte sans passer par le réseau.
+            _networkManager.UseClientTransport<FishySteamworks.FishySteamworks>();
             _networkManager.ClientManager.StartConnection();
         }
 
@@ -254,6 +256,7 @@ namespace Anachronism.Network
             Code = code;
             LobbyChanged?.Invoke();
 
+            _networkManager.UseClientTransport<FishySteamworks.FishySteamworks>();
             _networkManager.ClientManager.StartConnection(hostId.m_SteamID.ToString());
         }
 

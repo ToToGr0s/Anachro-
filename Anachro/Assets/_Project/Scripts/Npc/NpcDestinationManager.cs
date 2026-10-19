@@ -106,6 +106,51 @@ namespace Anachronism.Npc
             return npc;
         }
 
+        /// <summary>Réglages de l'hôte : retire tous les PNJ et en refait apparaître de nouveaux (positions, skins).</summary>
+        public void RespawnAll()
+        {
+            if (!CanCommandNpcs())
+                return;
+
+            for (int i = _npcs.Count - 1; i >= 0; i--)
+            {
+                if (_npcs[i] != null)
+                    Despawn(_npcs[i]);
+            }
+
+            _npcs.Clear();
+            SpawnAll();
+        }
+
+        /// <summary>Réglages de l'hôte : chaque PNJ reçoit un nouveau skin au hasard, sans changer de comportement.</summary>
+        public void RerollSkins()
+        {
+            if (!IsOnline)
+                return;
+
+            foreach (NpcAgent npc in _npcs)
+            {
+                if (npc != null && npc.TryGetComponent(out NetworkNpc networkNpc))
+                    networkNpc.RerollSkin();
+            }
+        }
+
+        /// <summary>Point au hasard sur le NavMesh, tiré comme les PNJ (sert aussi à faire apparaître les joueurs).</summary>
+        public bool TryGetRandomPoint(out Vector3 point)
+        {
+            if (_totalArea <= 0f)
+            {
+                point = default;
+                return false;
+            }
+
+            point = RandomPointOnNavMesh();
+            return true;
+        }
+
+        // Désactivé chez un client pur (Start) : seuls l'hôte et la scène de test hors ligne pilotent les PNJ.
+        private bool CanCommandNpcs() => enabled && _totalArea > 0f;
+
         public void Despawn(NpcAgent npc)
         {
             _npcs.Remove(npc);

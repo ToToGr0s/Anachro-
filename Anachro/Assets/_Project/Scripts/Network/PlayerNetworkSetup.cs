@@ -1,5 +1,7 @@
+using Anachronism.Core;
 using FishNet.Object;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Anachronism.Network
 {
@@ -14,6 +16,7 @@ namespace Anachronism.Network
         [SerializeField] private Behaviour[] _ownerOnlyComponents = new Behaviour[0];
         [SerializeField] private CapsuleCollider _capsule;
         [SerializeField] private Camera _camera;
+        [SerializeField] private PlayerInput _playerInput;
 
         private GameObject _hiddenSceneCamera;
 
@@ -39,6 +42,8 @@ namespace Anachronism.Network
             }
 
             SetOwnerComponentsEnabled(true);
+            GameMenuState.OpenChanged += OnMenuOpenChanged;
+            OnMenuOpenChanged(GameMenuState.IsOpen);
         }
 
         public override void OnStopClient()
@@ -48,6 +53,7 @@ namespace Anachronism.Network
             if (!IsOwner)
                 return;
 
+            GameMenuState.OpenChanged -= OnMenuOpenChanged;
             SetOwnerComponentsEnabled(false);
             if (_hiddenSceneCamera != null)
                 _hiddenSceneCamera.SetActive(true);
@@ -55,6 +61,22 @@ namespace Anachronism.Network
             // MouseLook verrouille la souris : de retour au menu, il faut pouvoir cliquer.
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+
+        // Menu Échap ouvert : souris libre pour cliquer, et plus d'entrées (le joueur s'arrête au lieu de garder
+        // la dernière touche enfoncée : désactiver les actions envoie leur « canceled »).
+        private void OnMenuOpenChanged(bool isOpen)
+        {
+            if (_playerInput != null)
+            {
+                if (isOpen)
+                    _playerInput.DeactivateInput();
+                else
+                    _playerInput.ActivateInput();
+            }
+
+            Cursor.lockState = isOpen ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = isOpen;
         }
 
         private void SetOwnerComponentsEnabled(bool isEnabled)

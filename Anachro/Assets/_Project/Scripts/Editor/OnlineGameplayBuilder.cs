@@ -2,6 +2,7 @@ using System.Linq;
 using Anachronism.Gameplay;
 using Anachronism.Network;
 using Anachronism.Npc;
+using Anachronism.UI;
 using FishNet.Component.Spawning;
 using FishNet.Component.Transforming;
 using FishNet.Managing.Object;
@@ -13,6 +14,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 
 namespace Anachronism.Editor
 {
@@ -21,7 +23,9 @@ namespace Anachronism.Editor
     /// - Player_Base est regénéré depuis Player_Fugitive : à relancer quand Célian modifie son prefab ;
     /// - Npc_v0 reçoit ses composants réseau s'ils manquent, sa liste de profils est remise à jour ;
     /// - Map_Greybox reçoit un NavMesh cuit et le spawner de PNJ s'ils manquent (réglages copiés de Pnj_v0) ;
-    /// - les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner) et plus à la connexion (PlayerSpawner retiré de Boot).
+    /// - les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner) et plus à la connexion (PlayerSpawner retiré de Boot) ;
+    /// - joueurs et PNJ tirent leur skin dans la même table (NpcSkins) ;
+    /// - Boot reçoit l'overlay : debug F1 et menu Échap.
     /// </summary>
     public static class OnlineGameplayBuilder
     {
@@ -36,6 +40,12 @@ namespace Anachronism.Editor
         private const string MapNavMeshFolderName = "Map_Greybox";
         private const string NavMeshName = "NpcNavMesh";
         private const string NpcsName = "Npcs";
+        private const string SkinTablePath = "Assets/_Project/ScriptableObjects/Npc/NpcSkins.asset";
+        private const string OverlayName = "Overlay";
+        private const string OverlayLayoutPath = "Assets/_Project/Prefabs/UI/Overlay/Overlay.uxml";
+        private const string PanelSettingsPath = "Assets/_Project/Prefabs/UI/AnachroPanelSettings.asset";
+        // Au-dessus du menu du lobby (même PanelSettings, ordre 0).
+        private const int OverlaySortingOrder = 10;
 
         [MenuItem("Anachro/Setup/Brancher joueur et PNJ en réseau")]
         public static void Build()
@@ -50,6 +60,7 @@ namespace Anachronism.Editor
                 return;
             }
 
+            LoadOrCreateSkinTable();
             NetworkObject player = BuildPlayerPrefab();
             NetworkObject npc = BuildNpcPrefab();
             if (player == null || npc == null)
@@ -62,8 +73,9 @@ namespace Anachronism.Editor
             EditorUtility.SetDirty(prefabObjects);
             AssetDatabase.SaveAssets();
 
-            RemovePlayerSpawnerFromBoot();
+            BuildBoot();
             BuildMap();
+            ApplyWindowSettings();
             AssetDatabase.SaveAssets();
             Debug.Log("[OnlineGameplayBuilder] Joueur et PNJ branchés sur le réseau.");
         }
@@ -119,6 +131,15 @@ namespace Anachronism.Editor
                 obstacle.height = settings.Height;
                 obstacle.carving = false;
 
+                // Skin de PNJ tiré par le serveur ; la capsule n'est plus qu'un repli si la table est vide.
+                root.AddComponent<NpcSkin>();
+                PlayerSkin playerSkin = root.AddComponent<PlayerSkin>();
+                SerializedObject skinSettings = new SerializedObject(playerSkin);
+                skinSettings.FindProperty("_skins").objectReferenceValue = AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath);
+                skinSettings.FindProperty("_settings").objectReferenceValue = settings;
+                skinSettings.FindProperty("_placeholderRenderer").objectReferenceValue = root.GetComponent<MeshRenderer>();
+                skinSettings.ApplyModifiedPropertiesWithoutUndo();
+
                 PlayerNetworkSetup setup = root.AddComponent<PlayerNetworkSetup>();
                 SerializedObject setupSettings = new SerializedObject(setup);
                 SerializedProperty ownerOnlyProperty = setupSettings.FindProperty("_ownerOnlyComponents");
@@ -127,6 +148,7 @@ namespace Anachronism.Editor
                     ownerOnlyProperty.GetArrayElementAtIndex(i).objectReferenceValue = ownerOnly[i];
                 setupSettings.FindProperty("_capsule").objectReferenceValue = capsule;
                 setupSettings.FindProperty("_camera").objectReferenceValue = camera;
+                setupSettings.FindProperty("_playerInput").objectReferenceValue = playerInput;
                 setupSettings.ApplyModifiedPropertiesWithoutUndo();
 
                 GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
@@ -140,19 +162,80 @@ namespace Anachronism.Editor
 
         // Le PlayerSpawner de FishNet fait apparaître le joueur dès la connexion : au lobby, il verrouillerait la souris
         // au-dessus du menu. MatchPlayerSpawner le remplace.
-        private static void RemovePlayerSpawnerFromBoot()
+        private static void BuildBoot()
         {
             Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
-            PlayerSpawner[] spawners = scene.GetRootGameObjects()
-                .SelectMany(rootObject => rootObject.GetComponentsInChildren<PlayerSpawner>(true))
-                .ToArray();
-            if (spawners.Length == 0)
-                return;
-
-            foreach (PlayerSpawner spawner in spawners)
+            foreach (PlayerSpawner spawner in scene.GetRootGameObjects().SelectMany(rootObject => rootObject.GetComponentsInChildren<PlayerSpawner>(true)))
                 Object.DestroyImmediate(spawner);
+
+            EnsureOverlay(scene);
+            GameObject managerObject = scene.GetRootGameObjects()
+                .Select(rootObject => rootObject.GetComponentInChildren<FishNet.Managing.NetworkManager>(true))
+                .Where(component => component != null)
+                .Select(component => component.gameObject)
+                .FirstOrDefault();
+            if (managerObject != null)
+                NetworkBaseBuilder.EnsureLocalTransport(managerObject);
+            else
+                Debug.LogError("[OnlineGameplayBuilder] Pas de NetworkManager dans Boot : lancer d'abord Anachro > Setup > Construire la base réseau.");
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
+        }
+
+        // Debug F1 et menu Échap : un UIDocument à part, par-dessus le menu du lobby.
+        private static void EnsureOverlay(Scene scene)
+        {
+            GameObject overlay = FindRoot(scene, OverlayName) ?? new GameObject(OverlayName);
+            if (!overlay.TryGetComponent(out UIDocument document))
+                document = overlay.AddComponent<UIDocument>();
+            document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(OverlayLayoutPath);
+            document.sortingOrder = OverlaySortingOrder;
+
+            if (!overlay.TryGetComponent(out DebugOverlay _))
+                overlay.AddComponent<DebugOverlay>();
+            if (!overlay.TryGetComponent(out PauseMenu _))
+                overlay.AddComponent<PauseMenu>();
+            if (!overlay.TryGetComponent(out DisplayModeToggle _))
+                overlay.AddComponent<DisplayModeToggle>();
+        }
+
+        // Fenêtré par défaut pour lancer deux instances côte à côte ; F11 passe en plein écran (DisplayModeToggle).
+        private static void ApplyWindowSettings()
+        {
+            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+            PlayerSettings.defaultScreenWidth = 1280;
+            PlayerSettings.defaultScreenHeight = 720;
+            PlayerSettings.resizableWindow = true;
+            // Indispensable à deux instances : celle qui n'a pas le focus doit continuer à tourner.
+            PlayerSettings.runInBackground = true;
+        }
+
+        // ---------- Skins ----------
+
+        // Créée seulement si elle manque : ensuite, Olivier y ajoute ou retire des skins à la main.
+        private static void LoadOrCreateSkinTable()
+        {
+            if (AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath) != null)
+                return;
+
+            NpcSkinTable table = ScriptableObject.CreateInstance<NpcSkinTable>();
+            NpcProfile[] profiles = AssetDatabase.FindAssets("t:" + nameof(NpcProfile))
+                .Select(guid => AssetDatabase.LoadAssetAtPath<NpcProfile>(AssetDatabase.GUIDToAssetPath(guid)))
+                .Where(profile => profile != null && profile.ModelPrefab != null)
+                .OrderBy(profile => profile.name)
+                .ToArray();
+
+            SerializedObject tableSettings = new SerializedObject(table);
+            SerializedProperty skinsProperty = tableSettings.FindProperty("_skins");
+            skinsProperty.arraySize = profiles.Length;
+            for (int i = 0; i < profiles.Length; i++)
+                skinsProperty.GetArrayElementAtIndex(i).objectReferenceValue = profiles[i];
+            tableSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            AssetDatabase.CreateAsset(table, SkinTablePath);
+            AssetDatabase.SaveAssets();
         }
 
         // ---------- PNJ ----------
@@ -169,6 +252,8 @@ namespace Anachronism.Editor
                     networkTransform = contents.AddComponent<NetworkTransform>();
                 ConfigureTransform(networkTransform);
 
+                if (!contents.TryGetComponent(out NpcSkin _))
+                    contents.AddComponent<NpcSkin>();
                 if (!contents.TryGetComponent(out NetworkNpc networkNpc))
                     networkNpc = contents.AddComponent<NetworkNpc>();
 
@@ -184,6 +269,7 @@ namespace Anachronism.Editor
                 profilesProperty.arraySize = profiles.Length;
                 for (int i = 0; i < profiles.Length; i++)
                     profilesProperty.GetArrayElementAtIndex(i).objectReferenceValue = profiles[i];
+                npcSettings.FindProperty("_skins").objectReferenceValue = AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath);
                 npcSettings.ApplyModifiedPropertiesWithoutUndo();
 
                 // Seul le serveur (ou la scène de test hors ligne) l'allume, dans NpcDestinationManager.SpawnOne.
@@ -202,7 +288,6 @@ namespace Anachronism.Editor
         private static void BuildMap()
         {
             Scene map = EditorSceneManager.OpenScene(MapScenePath, OpenSceneMode.Single);
-            SetupMatchPlayerSpawner(map);
 
             GameObject navMeshObject = FindRoot(map, NavMeshName) ?? new GameObject(NavMeshName);
             if (!navMeshObject.TryGetComponent(out NavMeshSurface surface))
@@ -227,6 +312,8 @@ namespace Anachronism.Editor
                 NpcDestinationManager manager = npcsObject.AddComponent<NpcDestinationManager>();
                 CopyNpcSettingsFromTestScene(manager);
             }
+
+            SetupMatchPlayerSpawner(map);
 
             EditorSceneManager.MarkSceneDirty(map);
             EditorSceneManager.SaveScene(map);
@@ -253,6 +340,9 @@ namespace Anachronism.Editor
             SerializedObject spawnerSettings = new SerializedObject(playerSpawner);
             spawnerSettings.FindProperty("_playerPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
             spawnerSettings.FindProperty("_spawnPoints").objectReferenceValue = spawnPoints;
+            spawnerSettings.FindProperty("_npcs").objectReferenceValue = map.GetRootGameObjects()
+                .Select(rootObject => rootObject.GetComponentInChildren<NpcDestinationManager>(true))
+                .FirstOrDefault(component => component != null);
             spawnerSettings.ApplyModifiedPropertiesWithoutUndo();
         }
 

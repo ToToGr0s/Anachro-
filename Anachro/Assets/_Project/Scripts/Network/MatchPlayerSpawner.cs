@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Anachronism.Npc;
 using FishNet.Connection;
 using FishNet.Object;
 using UnityEngine;
@@ -13,7 +14,13 @@ namespace Anachronism.Network
     public sealed class MatchPlayerSpawner : NetworkBehaviour
     {
         [SerializeField] private NetworkObject _playerPrefab;
+        [Tooltip("Tirage d'un point au hasard sur le NavMesh, comme les PNJ : un joueur ne se repère pas à son point d'apparition.")]
+        [SerializeField] private NpcDestinationManager _npcs;
+        [Tooltip("Secours si la map n'a pas de NavMesh.")]
         [SerializeField] private MapSpawnPoints _spawnPoints;
+
+        // Le pivot du joueur est au centre de sa capsule : apparaître au ras du sol l'enfoncerait à moitié dedans.
+        private const float SpawnHeightAboveGround = 1f;
 
         private readonly Dictionary<NetworkConnection, NetworkObject> _players = new Dictionary<NetworkConnection, NetworkObject>();
         private readonly List<NetworkConnection> _toSpawn = new List<NetworkConnection>();
@@ -69,14 +76,25 @@ namespace Anachronism.Network
 
             for (int i = 0; i < _toSpawn.Count; i++)
             {
-                Transform spawn = _spawnPoints != null ? _spawnPoints.GetSpawn(i) : null;
-                Vector3 position = spawn != null ? spawn.position : _playerPrefab.transform.position;
-                Quaternion rotation = spawn != null ? spawn.rotation : _playerPrefab.transform.rotation;
-
+                GetSpawn(i, out Vector3 position, out Quaternion rotation);
                 NetworkObject player = NetworkManager.GetPooledInstantiated(_playerPrefab, position, rotation, true);
                 ServerManager.Spawn(player, _toSpawn[i], gameObject.scene);
                 _players[_toSpawn[i]] = player;
             }
+        }
+
+        private void GetSpawn(int index, out Vector3 position, out Quaternion rotation)
+        {
+            if (_npcs != null && _npcs.TryGetRandomPoint(out Vector3 point))
+            {
+                position = point + Vector3.up * SpawnHeightAboveGround;
+                rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+                return;
+            }
+
+            Transform spawn = _spawnPoints != null ? _spawnPoints.GetSpawn(index) : null;
+            position = spawn != null ? spawn.position : _playerPrefab.transform.position;
+            rotation = spawn != null ? spawn.rotation : _playerPrefab.transform.rotation;
         }
 
         [Server]

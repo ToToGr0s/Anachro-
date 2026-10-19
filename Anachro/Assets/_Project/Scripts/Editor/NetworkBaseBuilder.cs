@@ -9,6 +9,8 @@ using FishNet.Managing;
 using FishNet.Managing.Object;
 using FishNet.Managing.Transporting;
 using FishNet.Object;
+using FishNet.Transporting.Multipass;
+using FishNet.Transporting.Tugboat;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -43,6 +45,8 @@ namespace Anachronism.Editor
         private const int MaxPlayers = 8;
         private const int SpawnPointCount = MaxPlayers;
         private const float SpawnRadius = 4f;
+        // Parties locales (LocalSession) : uniquement sur ce PC, jamais exposées au réseau.
+        private const string LocalAddress = "127.0.0.1";
 
         [MenuItem("Anachro/Setup/Construire la base réseau")]
         public static void Build()
@@ -123,7 +127,8 @@ namespace Anachronism.Editor
             NetworkManager networkManager = managerObject.AddComponent<NetworkManager>();
             networkManager.SpawnablePrefabs = prefabObjects;
 
-            // Steam seulement : on rejoint une partie par son code (lobby Steam), jamais par une IP.
+            // Vraies parties par Steam : on rejoint par le code du lobby, jamais par une IP. Tugboat (EnsureLocalTransport)
+            // ne sert qu'aux tests locaux sur 127.0.0.1.
             FishySteamworks.FishySteamworks steamTransport = managerObject.AddComponent<FishySteamworks.FishySteamworks>();
 
             // Les setters runtime touchent des sockets absents hors Play Mode : on passe par les champs sérialisés.
@@ -133,10 +138,7 @@ namespace Anachronism.Editor
             steamSettings.FindProperty("_peerToPeer").boolValue = true;
             steamSettings.ApplyModifiedPropertiesWithoutUndo();
 
-            TransportManager transportManager = managerObject.GetComponent<TransportManager>();
-            if (transportManager == null)
-                transportManager = managerObject.AddComponent<TransportManager>();
-            transportManager.Transport = steamTransport;
+            EnsureLocalTransport(managerObject);
 
             // Pas de PlayerSpawner : les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner, dans la map).
 
@@ -155,6 +157,41 @@ namespace Anachronism.Editor
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
+        }
+
+        /// <summary>
+        /// Steam + Tugboat dans un Multipass : Steam pour les vraies parties, Tugboat pour tester plusieurs instances
+        /// sur un même PC (Steam refuse de se connecter à soi-même). Rejouable sur un NetworkManager existant.
+        /// </summary>
+        public static void EnsureLocalTransport(GameObject managerObject)
+        {
+            FishySteamworks.FishySteamworks steamTransport = managerObject.GetComponent<FishySteamworks.FishySteamworks>();
+
+            if (!managerObject.TryGetComponent(out Tugboat tugboat))
+                tugboat = managerObject.AddComponent<Tugboat>();
+            SerializedObject tugboatSettings = new SerializedObject(tugboat);
+            tugboatSettings.FindProperty("_ipv4BindAddress").stringValue = LocalAddress;
+            tugboatSettings.FindProperty("_enableIpv6").boolValue = false;
+            tugboatSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
+            tugboatSettings.FindProperty("_clientAddress").stringValue = LocalAddress;
+            tugboatSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            if (!managerObject.TryGetComponent(out Multipass multipass))
+                multipass = managerObject.AddComponent<Multipass>();
+            SerializedObject multipassSettings = new SerializedObject(multipass);
+            SerializedProperty transports = multipassSettings.FindProperty("_transports");
+            transports.arraySize = 2;
+            transports.GetArrayElementAtIndex(0).objectReferenceValue = steamTransport;
+            transports.GetArrayElementAtIndex(1).objectReferenceValue = tugboat;
+            multipassSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            if (!managerObject.TryGetComponent(out TransportManager transportManager))
+                transportManager = managerObject.AddComponent<TransportManager>();
+            transportManager.Transport = multipass;
+            EditorUtility.SetDirty(transportManager);
+
+            if (!managerObject.TryGetComponent(out LocalSession _))
+                managerObject.AddComponent<LocalSession>();
         }
 
         private static void CreateSceneIfMissing(string path, System.Action buildContent)
