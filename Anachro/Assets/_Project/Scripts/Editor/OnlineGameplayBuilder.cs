@@ -40,6 +40,7 @@ namespace Anachronism.Editor
         private const string MapNavMeshFolderName = "Map_Greybox";
         private const string NavMeshName = "NpcNavMesh";
         private const string NpcsName = "Npcs";
+        private const string ModelRootName = "Model";
         private const string SkinTablePath = NpcAssetSync.SkinTablePath;
         private const string OverlayName = "Overlay";
         private const string OverlayLayoutPath = "Assets/_Project/Prefabs/UI/Overlay/Overlay.uxml";
@@ -53,6 +54,22 @@ namespace Anachronism.Editor
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
+            // Le builder ouvre Boot puis la map : on remet ensuite la ou les scènes de l'utilisateur
+            // (sinon il se retrouve sur la map et son prochain Play part sans Boot, donc sans réseau ni UI).
+            SceneSetup[] userScenes = EditorSceneManager.GetSceneManagerSetup();
+            try
+            {
+                BuildAll();
+            }
+            finally
+            {
+                if (userScenes.Length > 0 && userScenes.All(setup => !string.IsNullOrEmpty(setup.path)))
+                    EditorSceneManager.RestoreSceneManagerSetup(userScenes);
+            }
+        }
+
+        private static void BuildAll()
+        {
             DefaultPrefabObjects prefabObjects = AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(DefaultPrefabObjectsPath);
             if (prefabObjects == null)
             {
@@ -228,8 +245,9 @@ namespace Anachronism.Editor
                     networkTransform = contents.AddComponent<NetworkTransform>();
                 ConfigureTransform(networkTransform);
 
-                if (!contents.TryGetComponent(out NpcSkin _))
-                    contents.AddComponent<NpcSkin>();
+                if (!contents.TryGetComponent(out NpcSkin npcSkin))
+                    npcSkin = contents.AddComponent<NpcSkin>();
+                SetupModelRoot(contents, npcSkin);
                 // Ses listes (comportements, skins) sont tenues à jour par NpcAssetSync.
                 if (!contents.TryGetComponent(out NetworkNpc _))
                     contents.AddComponent<NetworkNpc>();
@@ -245,6 +263,32 @@ namespace Anachronism.Editor
             }
 
             return AssetDatabase.LoadAssetAtPath<NetworkObject>(NpcPrefabPath);
+        }
+
+        // Enfant « Model » : on règle la hauteur du mesh en le déplaçant dans le prefab. L'aperçu (un skin de la table)
+        // n'est là que pour voir où tombent les pieds : NpcSkin le supprime en jeu et le tag EditorOnly le retire des builds.
+        private static void SetupModelRoot(GameObject npc, NpcSkin npcSkin)
+        {
+            Transform modelRoot = npc.transform.Find(ModelRootName);
+            if (modelRoot == null)
+            {
+                modelRoot = new GameObject(ModelRootName).transform;
+                modelRoot.SetParent(npc.transform, false);
+            }
+
+            NpcSkinTable table = AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath);
+            NpcProfile previewSkin = table != null ? table.Get(0) : null;
+            if (modelRoot.childCount == 0 && previewSkin != null && previewSkin.ModelPrefab != null)
+            {
+                GameObject preview = (GameObject)PrefabUtility.InstantiatePrefab(previewSkin.ModelPrefab, modelRoot);
+                preview.name = "Apercu (supprime en jeu)";
+                preview.tag = "EditorOnly";
+                preview.transform.localScale = Vector3.one * previewSkin.ModelScale;
+            }
+
+            SerializedObject skinSettings = new SerializedObject(npcSkin);
+            skinSettings.FindProperty("_modelRoot").objectReferenceValue = modelRoot;
+            skinSettings.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void BuildMap()

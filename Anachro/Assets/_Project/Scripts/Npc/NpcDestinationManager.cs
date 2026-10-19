@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Anachronism.Network;
 using FishNet;
 using FishNet.Managing;
+using FishNet.Object;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -39,7 +40,8 @@ namespace Anachronism.Npc
 
         private void Start()
         {
-            _networkManager = InstanceFinder.NetworkManager;
+            // Instances d'abord : InstanceFinder écrit un message dans la console quand il n'en trouve aucun (scène de test).
+            _networkManager = NetworkManager.Instances.Count > 0 ? InstanceFinder.NetworkManager : null;
             if (_networkManager != null && _networkManager.IsClientStarted && !_networkManager.IsServerStarted)
             {
                 enabled = false;
@@ -87,9 +89,11 @@ namespace Anachronism.Npc
             if (profile == null || profile.Prefab == null) return null;
 
             Vector3 position = RandomPointOnNavMesh();
+            Quaternion rotation = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
             // En ligne, pas de parent : FishNet ne synchronise pas un parent qui n'est pas un objet réseau.
-            Transform parent = IsOnline ? null : _npcParent;
-            NpcAgent npc = Instantiate(profile.Prefab, position, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f), parent);
+            NpcAgent npc = IsOnline
+                ? Instantiate(profile.Prefab, position, rotation)
+                : InstantiateOffline(profile.Prefab, position, rotation);
             // Désactivé dans le prefab : un client ne doit jamais déplacer un PNJ lui-même.
             npc.Agent.enabled = true;
             npc.Agent.Warp(position);
@@ -103,6 +107,25 @@ namespace Anachronism.Npc
             }
 
             _npcs.Add(npc);
+            return npc;
+        }
+
+        // Hors ligne (scène de test lancée sans Boot) : FishNet signale en erreur puis désactive tout NetworkObject
+        // qui n'est pas spawné. On instancie sous un parent inactif (aucun Awake ne tourne) et on retire les composants
+        // réseau avant d'activer le PNJ.
+        private NpcAgent InstantiateOffline(NpcAgent prefab, Vector3 position, Quaternion rotation)
+        {
+            GameObject holder = new GameObject("NpcOfflineSpawn");
+            holder.SetActive(false);
+
+            NpcAgent npc = Instantiate(prefab, position, rotation, holder.transform);
+            foreach (NetworkBehaviour networkBehaviour in npc.GetComponents<NetworkBehaviour>())
+                DestroyImmediate(networkBehaviour);
+            if (npc.TryGetComponent(out NetworkObject networkObject))
+                DestroyImmediate(networkObject);
+
+            npc.transform.SetParent(_npcParent, true);
+            Destroy(holder);
             return npc;
         }
 

@@ -359,6 +359,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 909c59e6d17dc3348a6e7a41976631e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Npc.NpcSkin
+  _modelRoot: {fileID: 0}
 --- !u!114 &7422036158301977208
 MonoBehaviour:
   m_ObjectHideFlags: 0

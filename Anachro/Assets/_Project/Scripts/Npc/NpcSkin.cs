@@ -8,6 +8,9 @@ namespace Anachronism.Npc
     /// </summary>
     public class NpcSkin : MonoBehaviour
     {
+        [Tooltip("Parent du modèle. Sa position Y dans le prefab règle la hauteur du mesh. Vide = cet objet.")]
+        [SerializeField] private Transform _modelRoot;
+
         private GameObject _model;
         private Animator _animator;
         private int _speedHash;
@@ -19,6 +22,18 @@ namespace Anachronism.Npc
 
         public NpcProfile AppliedSkin => _appliedSkin;
         public GameObject Model => _model;
+
+        private Transform ModelRoot => _modelRoot != null ? _modelRoot : transform;
+
+        private void Awake()
+        {
+            // L'aperçu posé dans le prefab (pour régler la hauteur à l'œil) laisse la place au skin tiré.
+            if (_modelRoot == null || _modelRoot == transform)
+                return;
+
+            for (int i = _modelRoot.childCount - 1; i >= 0; i--)
+                Destroy(_modelRoot.GetChild(i).gameObject);
+        }
 
         /// <param name="skin">Profil dont on prend l'apparence (modèle, Animator, échelle).</param>
         /// <param name="baseSpeed">Vitesse de marche de référence : en dessous, l'Animator passe de l'arrêt à la marche.</param>
@@ -37,7 +52,7 @@ namespace Anachronism.Npc
             if (skin == null || skin.ModelPrefab == null)
                 return;
 
-            _model = Instantiate(skin.ModelPrefab, transform);
+            _model = Instantiate(skin.ModelPrefab, ModelRoot);
             _model.transform.localRotation = Quaternion.identity;
             PlaceModel();
 
