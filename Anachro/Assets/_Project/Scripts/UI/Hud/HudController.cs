@@ -104,8 +104,8 @@ namespace Anachronism.UI
 
             // TODO (Olivier) : passer à _match.Disruption.Value quand le DisruptionMeter de Théo remplacera Degradation (T18).
             SetDisruption(_match.Degradation);
-            // TODO (Olivier) : afficher _match.RemainingTime pendant GamePhase.LastMinute quand Théo l'aura ajoutée (T03-2) :
-            // aujourd'hui aucune phase ne représente la fin du temps réglementaire (GDD 2.12).
+            // TODO (Olivier) : quand Théo aura ajouté GamePhase.FinalCountdown (T03-2) et le DisruptionMeter (T18),
+            // remplacer par SetEndCountdown(_match.Phase == GamePhase.FinalCountdown, _match.Disruption.CountdownRemaining).
             SetEndCountdown(false, 0f);
             _itemBar.Tick(Time.deltaTime);
         }
@@ -234,7 +234,7 @@ namespace Anachronism.UI
             _shownCountdown = int.MinValue;
         }
 
-        // TODO (Olivier) : passer à PlayerRole.Hunter / Fugitive quand Théo renommera l'enum (Archi T03).
+        // TODO (Olivier) : passer à PlayerRole.Hunter / Fugitive quand Théo renommera l'enum (Archi T03), ici, dans SetRole et dans l'aperçu.
         private static string DescribeRole(PlayerRole role) => role switch
         {
             PlayerRole.Guardian => "Chasseur",

@@ -3,6 +3,8 @@ using UnityEngine.UIElements;
 
 namespace Anachronism.UI
 {
+    // Hors Archi : vue de la barre d'items sortie de HudController pour l'alléger. Elle reçoit le restant de
+    // FugitivePlacer.CooldownChanged, en déduit la durée totale et décompte entre deux events.
     public sealed class ItemBarView
     {
         public const int SlotCount = 3;
