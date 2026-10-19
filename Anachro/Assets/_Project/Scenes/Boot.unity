@@ -507,7 +507,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e2cc2c67e130a1a4c9dcdc6648556bfb, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.UI.DisplayModeToggle
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.UI.DisplayController
   _windowSize: {x: 1280, y: 720}
 --- !u!114 &1056042164
 MonoBehaviour:

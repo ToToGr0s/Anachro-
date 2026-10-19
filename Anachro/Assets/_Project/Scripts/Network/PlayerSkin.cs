@@ -15,6 +15,8 @@ namespace Anachronism.Network
     {
         [SerializeField] private NpcSkinTable _skins;
         [SerializeField] private PlayerControllerSettings _settings;
+        [Tooltip("NpcSkin du prefab Npc_v0 : le joueur reprend la hauteur et l'échelle réglées sur son enfant Model, pour qu'aucun réglage ne le distingue d'un PNJ.")]
+        [SerializeField] private NpcSkin _npcReference;
         [Tooltip("Capsule provisoire, cachée dès qu'un skin est posé.")]
         [SerializeField] private Renderer _placeholderRenderer;
 
@@ -67,8 +69,18 @@ namespace Anachronism.Network
             if (skin == null)
                 return;
 
-            // Pivot du joueur au centre de la capsule, pieds du modèle au bas de la capsule.
-            _skin.Apply(skin, _settings.WalkSpeed, _settings.SprintMultiplier, Vector3.down * (_settings.Height * 0.5f));
+            // Pivot du joueur au centre de la capsule, pieds du modèle au bas de la capsule ; puis le même réglage
+            // (hauteur, échelle) que l'enfant Model des PNJ, sinon un joueur se repère à sa taille.
+            Transform npcModelRoot = _npcReference != null ? _npcReference.ModelRoot : null;
+            Vector3 npcOffset = npcModelRoot != null ? npcModelRoot.localPosition : Vector3.zero;
+            Vector3 npcScale = npcModelRoot != null ? npcModelRoot.localScale : Vector3.one;
+
+            // L'échelle de la racine du joueur (réglée à la main dans Player_Base) agit sur sa capsule et sa caméra,
+            // jamais sur son apparence : on la retire du mesh, qui garde exactement la taille d'un PNJ.
+            Vector3 rootScale = transform.lossyScale;
+            Vector3 inverseRootScale = new Vector3(1f / rootScale.x, 1f / rootScale.y, 1f / rootScale.z);
+            Vector3 offset = Vector3.down * (_settings.Height * 0.5f) + Vector3.Scale(npcOffset, inverseRootScale);
+            _skin.Apply(skin, _settings.WalkSpeed, _settings.SprintMultiplier, offset, Vector3.Scale(npcScale, inverseRootScale));
 
             if (_placeholderRenderer != null)
                 _placeholderRenderer.enabled = false;

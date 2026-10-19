@@ -20,7 +20,8 @@ namespace Anachronism.Editor
 {
     /// <summary>
     /// Passage en ligne du joueur de Célian et des PNJ d'Olivier. Rejouable :
-    /// - Player_Base est regénéré depuis Player_Fugitive : à relancer quand Célian modifie son prefab ;
+    /// - Player_Base est créé depuis Player_Fugitive la première fois, puis seulement complété : les réglages faits
+    ///   à la main dans Player_Base (échelle, composants) sont gardés ;
     /// - Npc_v0 reçoit ses composants réseau s'ils manquent ;
     /// - Map_Greybox reçoit un NavMesh cuit et le spawner de PNJ s'ils manquent (réglages copiés de Pnj_v0) ;
     /// - les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner) et plus à la connexion (PlayerSpawner retiré de Boot) ;
@@ -85,7 +86,7 @@ namespace Anachronism.Editor
             if (player == null || npc == null)
                 return;
 
-            // Player_Base est regénéré : l'ancienne entrée pointe sur un composant qui n'existe plus.
+            // Player_Base créé pour la première fois : une ancienne entrée peut pointer sur un composant qui n'existe plus.
             prefabObjects.RemoveNull();
             prefabObjects.AddObject(player, true);
             prefabObjects.AddObject(npc, true);
@@ -103,6 +104,10 @@ namespace Anachronism.Editor
 
         private static NetworkObject BuildPlayerPrefab()
         {
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            if (existing != null && existing.TryGetComponent(out PlayerNetworkSetup _))
+                return UpdatePlayerPrefabInPlace();
+
             GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(FugitivePrefabPath);
             if (source == null)
             {
@@ -142,13 +147,8 @@ namespace Anachronism.Editor
                 root.AddComponent<NetworkObject>();
                 ConfigureTransform(root.AddComponent<NetworkTransform>());
 
-                // Les PNJ (NavMeshAgent, côté serveur) contournent les joueurs comme ils se contournent entre eux.
-                NavMeshObstacle obstacle = root.AddComponent<NavMeshObstacle>();
-                obstacle.shape = NavMeshObstacleShape.Capsule;
-                obstacle.center = Vector3.zero;
-                obstacle.radius = settings.Radius;
-                obstacle.height = settings.Height;
-                obstacle.carving = false;
+                // Pas de NavMeshObstacle : les PNJ n'esquivent pas les joueurs. Chez l'hôte l'esquive serait instantanée,
+                // chez un client elle arriverait après un aller-retour réseau : l'hôte « pousserait » les PNJ, pas le client.
 
                 // Skin de PNJ tiré par le serveur ; la capsule n'est plus qu'un repli si la table est vide.
                 root.AddComponent<NpcSkin>();
@@ -157,6 +157,8 @@ namespace Anachronism.Editor
                 skinSettings.FindProperty("_skins").objectReferenceValue = AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath);
                 skinSettings.FindProperty("_settings").objectReferenceValue = settings;
                 skinSettings.FindProperty("_placeholderRenderer").objectReferenceValue = root.GetComponent<MeshRenderer>();
+                GameObject npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NpcPrefabPath);
+                skinSettings.FindProperty("_npcReference").objectReferenceValue = npcPrefab != null ? npcPrefab.GetComponent<NpcSkin>() : null;
                 skinSettings.ApplyModifiedPropertiesWithoutUndo();
 
                 PlayerNetworkSetup setup = root.AddComponent<PlayerNetworkSetup>();
@@ -181,6 +183,43 @@ namespace Anachronism.Editor
 
         // Le PlayerSpawner de FishNet fait apparaître le joueur dès la connexion : au lobby, il verrouillerait la souris
         // au-dessus du menu. MatchPlayerSpawner le remplace.
+        // Player_Base déjà branché : on ne remplit que les références manquantes (nouveaux champs), sans rien écraser.
+        private static NetworkObject UpdatePlayerPrefabInPlace()
+        {
+            GameObject contents = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
+            try
+            {
+                if (!contents.TryGetComponent(out NpcSkin _))
+                    contents.AddComponent<NpcSkin>();
+                if (!contents.TryGetComponent(out PlayerSkin playerSkin))
+                    playerSkin = contents.AddComponent<PlayerSkin>();
+
+                CharacterMovement movement = contents.GetComponent<CharacterMovement>();
+                GameObject npcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NpcPrefabPath);
+                SerializedObject skinSettings = new SerializedObject(playerSkin);
+                SetIfMissing(skinSettings, "_skins", AssetDatabase.LoadAssetAtPath<NpcSkinTable>(SkinTablePath));
+                SetIfMissing(skinSettings, "_settings", movement != null ? new SerializedObject(movement).FindProperty("_settings").objectReferenceValue : null);
+                SetIfMissing(skinSettings, "_placeholderRenderer", contents.GetComponent<MeshRenderer>());
+                SetIfMissing(skinSettings, "_npcReference", npcPrefab != null ? npcPrefab.GetComponent<NpcSkin>() : null);
+                skinSettings.ApplyModifiedPropertiesWithoutUndo();
+
+                PrefabUtility.SaveAsPrefabAsset(contents, PlayerPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+
+            return AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
+        }
+
+        private static void SetIfMissing(SerializedObject settings, string propertyName, Object value)
+        {
+            SerializedProperty property = settings.FindProperty(propertyName);
+            if (property.objectReferenceValue == null)
+                property.objectReferenceValue = value;
+        }
+
         private static void BuildBoot()
         {
             Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
@@ -216,11 +255,11 @@ namespace Anachronism.Editor
                 overlay.AddComponent<DebugOverlay>();
             if (!overlay.TryGetComponent(out PauseMenu _))
                 overlay.AddComponent<PauseMenu>();
-            if (!overlay.TryGetComponent(out DisplayModeToggle _))
-                overlay.AddComponent<DisplayModeToggle>();
+            if (!overlay.TryGetComponent(out DisplayController _))
+                overlay.AddComponent<DisplayController>();
         }
 
-        // Fenêtré par défaut pour lancer deux instances côte à côte ; F11 passe en plein écran (DisplayModeToggle).
+        // Fenêtré par défaut pour lancer deux instances côte à côte ; F11 passe en plein écran (DisplayController).
         private static void ApplyWindowSettings()
         {
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;

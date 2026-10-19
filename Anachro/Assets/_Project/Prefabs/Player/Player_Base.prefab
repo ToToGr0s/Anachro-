@@ -17,7 +17,6 @@ GameObject:
   - component: {fileID: 7567151471635064754}
   - component: {fileID: 765951197041507023}
   - component: {fileID: 3969182938739963823}
-  - component: {fileID: 3282153862626220499}
   - component: {fileID: 2949540036812197049}
   - component: {fileID: 7422036158301977208}
   - component: {fileID: 2168415380857481803}
@@ -38,8 +37,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 1.35, y: 1.35, z: 1.35}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 5526224817007714654}
   m_Father: {fileID: 0}
@@ -331,22 +330,6 @@ MonoBehaviour:
     X: 0
     Y: 0
     Z: 0
---- !u!208 &3282153862626220499
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 622806563057723990}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 0
-  m_Extents: {x: 0.4, y: 0.9, z: 0.4}
-  m_MoveThreshold: 0.1
-  m_Carve: 0
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 0, z: 0}
-  m_TimeToStationary: 0.5
 --- !u!114 &2949540036812197049
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -377,6 +360,7 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   _skins: {fileID: 11400000, guid: 0de02c0d456cda74f8a7d16f69ca8e64, type: 2}
   _settings: {fileID: 11400000, guid: 277c5246d3431694ea154502c5a8d292, type: 2}
+  _npcReference: {fileID: 4779792842858117658, guid: 05a108ad3ea831a4eab7c241b585c139, type: 3}
   _placeholderRenderer: {fileID: 6546940612628858704}
 --- !u!114 &2168415380857481803
 MonoBehaviour:

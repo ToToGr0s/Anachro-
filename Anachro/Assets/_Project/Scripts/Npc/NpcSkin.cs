@@ -19,11 +19,13 @@ namespace Anachronism.Npc
         private float _baseSpeed;
         private float _sprintMultiplier;
         private Vector3 _localOffset;
+        private Vector3 _scaleMultiplier = Vector3.one;
 
         public NpcProfile AppliedSkin => _appliedSkin;
         public GameObject Model => _model;
 
-        private Transform ModelRoot => _modelRoot != null ? _modelRoot : transform;
+        /// <summary>Parent du modèle : sur Npc_v0, l'enfant « Model » réglé à la main (hauteur, échelle).</summary>
+        public Transform ModelRoot => _modelRoot != null ? _modelRoot : transform;
 
         private void Awake()
         {
@@ -39,11 +41,13 @@ namespace Anachronism.Npc
         /// <param name="baseSpeed">Vitesse de marche de référence : en dessous, l'Animator passe de l'arrêt à la marche.</param>
         /// <param name="sprintMultiplier">Multiplicateur de course : au-delà de la marche, l'Animator passe à la course.</param>
         /// <param name="localOffset">Décalage du modèle (un joueur a son pivot au centre de la capsule, un PNJ aux pieds).</param>
-        public void Apply(NpcProfile skin, float baseSpeed, float sprintMultiplier, Vector3 localOffset = default)
+        /// <param name="scaleMultiplier">Échelle en plus de celle du profil (un joueur reprend celle de l'enfant Model de Npc_v0).</param>
+        public void Apply(NpcProfile skin, float baseSpeed, float sprintMultiplier, Vector3 localOffset = default, Vector3? scaleMultiplier = null)
         {
             _baseSpeed = baseSpeed;
             _sprintMultiplier = sprintMultiplier;
             _localOffset = localOffset;
+            _scaleMultiplier = scaleMultiplier ?? Vector3.one;
             if (skin == _appliedSkin && _model != null)
                 return;
 
@@ -80,7 +84,7 @@ namespace Anachronism.Npc
         private void PlaceModel()
         {
             _model.transform.localPosition = _localOffset + Vector3.up * _appliedSkin.ModelHeightOffset;
-            _model.transform.localScale = Vector3.one * _appliedSkin.ModelScale;
+            _model.transform.localScale = Vector3.Scale(Vector3.one * _appliedSkin.ModelScale, _scaleMultiplier);
         }
 
 #if UNITY_EDITOR
