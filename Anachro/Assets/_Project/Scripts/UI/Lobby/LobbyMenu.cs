@@ -42,6 +42,7 @@ namespace Anachronism.UI
         private Button _quitButton;
         private Button _localHostButton;
         private Button _localJoinButton;
+        private Button _soloRoleButton;
         private Label _steamWarning;
         private Label _lobbyCode;
         private Label _playerCount;
@@ -58,6 +59,8 @@ namespace Anachronism.UI
         private int _shownSeconds = -1;
         private GamePhase _shownPhase;
         private PlayerRole _shownRole;
+        // Rôle d'une partie de test en solo, choisi par l'hôte seul dans le lobby.
+        private PlayerRole _soloRole = PlayerRole.Guardian;
 
         private void Awake()
         {
@@ -96,6 +99,7 @@ namespace Anachronism.UI
             _quitButton = root.Q<Button>("quit-button");
             _localHostButton = root.Q<Button>("local-host-button");
             _localJoinButton = root.Q<Button>("local-join-button");
+            _soloRoleButton = root.Q<Button>("solo-role-button");
 
             _copyButton.clicked += OnCopyClicked;
             _leaveButton.clicked += OnLeaveClicked;
@@ -103,6 +107,7 @@ namespace Anachronism.UI
             _quitButton.clicked += OnQuitClicked;
             _localHostButton.clicked += OnLocalHostClicked;
             _localJoinButton.clicked += OnLocalJoinClicked;
+            _soloRoleButton.clicked += OnSoloRoleClicked;
             _codeField.RegisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
 
             _currentScreen = (MenuScreen)(-1);
@@ -120,6 +125,7 @@ namespace Anachronism.UI
             _quitButton.clicked -= OnQuitClicked;
             _localHostButton.clicked -= OnLocalHostClicked;
             _localJoinButton.clicked -= OnLocalJoinClicked;
+            _soloRoleButton.clicked -= OnSoloRoleClicked;
             _codeField.UnregisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
         }
 
@@ -231,6 +237,12 @@ namespace Anachronism.UI
 
             _startButton.text = hasEnded ? "Rejouer" : "Lancer la partie";
             _startButton.SetEnabled(match != null);
+
+            // Hôte seul : partie de test, il choisit son rôle.
+            bool isSolo = _networkManager.IsServerStarted && _networkManager.ServerManager.Clients.Count == 1;
+            SetVisible(_soloRoleButton, isSolo);
+            if (isSolo)
+                _soloRoleButton.text = _soloRole == PlayerRole.Villain ? "Test solo : méchant" : "Test solo : gentil";
         }
 
         private void RefreshMatchBar()
@@ -263,6 +275,9 @@ namespace Anachronism.UI
             _steamLobby.JoinByCode(_codeField.value);
         }
 
+        private void OnSoloRoleClicked() =>
+            _soloRole = _soloRole == PlayerRole.Villain ? PlayerRole.Guardian : PlayerRole.Villain;
+
         private void OnLocalHostClicked()
         {
             SetStatus(string.Empty);
@@ -290,7 +305,7 @@ namespace Anachronism.UI
             if (match == null || !_networkManager.IsServerStarted)
                 return;
 
-            SetStatus(match.StartMatch() switch
+            SetStatus(match.StartMatch(_soloRole) switch
             {
                 MatchStartResult.NotEnoughPlayers => "Pas assez de joueurs pour lancer la partie.",
                 MatchStartResult.PlayersLoading => "Un joueur charge encore la map, réessaie dans un instant.",

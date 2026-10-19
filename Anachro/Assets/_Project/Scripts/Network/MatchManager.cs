@@ -102,9 +102,12 @@ namespace Anachronism.Network
 
         // ================= Déroulé de la partie =================
 
-        /// <summary>Démarre avec le préréglage correspondant au nombre de joueurs connectés.</summary>
+        /// <summary>
+        /// Démarre avec le préréglage correspondant au nombre de joueurs connectés.
+        /// Seul, c'est une partie de test : le minimum de joueurs ne s'applique pas et soloRole est son rôle.
+        /// </summary>
         [Server]
-        public MatchStartResult StartMatch()
+        public MatchStartResult StartMatch(PlayerRole soloRole = PlayerRole.Guardian)
         {
             if (_presets == null)
             {
@@ -112,11 +115,11 @@ namespace Anachronism.Network
                 return MatchStartResult.InvalidSettings;
             }
 
-            return StartMatch(_presets.GetFor(GetActivePlayers().Count));
+            return StartMatch(_presets.GetFor(GetActivePlayers().Count), soloRole);
         }
 
         [Server]
-        public MatchStartResult StartMatch(MatchSettings settings)
+        public MatchStartResult StartMatch(MatchSettings settings, PlayerRole soloRole = PlayerRole.Guardian)
         {
             if (_phase.Value != GamePhase.Lobby && _phase.Value != GamePhase.End)
                 return MatchStartResult.WrongPhase;
@@ -129,7 +132,8 @@ namespace Anachronism.Network
             }
 
             List<NetworkConnection> players = GetActivePlayers();
-            if (players.Count < _presets.MinPlayers)
+            bool isSolo = players.Count == 1;
+            if (players.Count < _presets.MinPlayers && !isSolo)
                 return MatchStartResult.NotEnoughPlayers;
 
             foreach (NetworkConnection player in players)
@@ -147,7 +151,10 @@ namespace Anachronism.Network
             int villainCount = Mathf.Clamp(settings.VillainCount, 1, players.Count - 1);
             for (int i = 0; i < players.Count; i++)
             {
-                PlayerRole role = i < villainCount ? PlayerRole.Villain : PlayerRole.Guardian;
+                // Seul : pas d'adversaire, la partie ne se gagne que par la dégradation. Sert à tester un rôle.
+                PlayerRole role = isSolo
+                    ? (soloRole == PlayerRole.Villain ? PlayerRole.Villain : PlayerRole.Guardian)
+                    : i < villainCount ? PlayerRole.Villain : PlayerRole.Guardian;
                 _roles[players[i]] = role;
                 TargetAssignRole(players[i], role);
             }
