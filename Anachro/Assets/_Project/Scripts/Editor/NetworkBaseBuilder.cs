@@ -35,6 +35,8 @@ namespace Anachronism.Editor
         private const string MatchManagerName = "MatchManager";
         private const string UiName = "UI";
         private const string LobbyMenuPath = "Assets/_Project/Prefabs/UI/Lobby/LobbyMenu.uxml";
+        private const string HudName = "UI_Hud";
+        private const string HudPrefabPath = "Assets/_Project/Prefabs/UI/Hud/UI_Hud.prefab";
         private const string PanelSettingsPath = "Assets/_Project/Prefabs/UI/AnachroPanelSettings.asset";
         private const string RuntimeThemePath = "Assets/_Project/Prefabs/UI/AnachroRuntimeTheme.tss";
         private const string NetworkManagerName = "NetworkManager";
@@ -122,6 +124,7 @@ namespace Anachronism.Editor
             DestroyRoot(scene, GroundName);
             DestroyRoot(scene, ServicesName);
             DestroyRoot(scene, UiName);
+            DestroyRoot(scene, HudName);
 
             GameObject managerObject = new GameObject(NetworkManagerName);
             NetworkManager networkManager = managerObject.AddComponent<NetworkManager>();
@@ -154,6 +157,7 @@ namespace Anachronism.Editor
 
             new GameObject(ServicesName).AddComponent<SteamService>();
             CreateLobbyMenu();
+            CreateHud();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -271,6 +275,18 @@ namespace Anachronism.Editor
             document.panelSettings = LoadOrCreatePanelSettings();
             document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(LobbyMenuPath);
             uiObject.AddComponent<LobbyMenu>();
+        }
+
+        private static void CreateHud()
+        {
+            GameObject hudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(HudPrefabPath);
+            if (hudPrefab == null)
+            {
+                Debug.LogError($"[NetworkBaseBuilder] {HudPrefabPath} introuvable : le HUD n'est pas ajouté à Boot.");
+                return;
+            }
+
+            PrefabUtility.InstantiatePrefab(hudPrefab);
         }
 
         private static PanelSettings LoadOrCreatePanelSettings()
