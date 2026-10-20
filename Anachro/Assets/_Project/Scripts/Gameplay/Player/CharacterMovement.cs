@@ -58,20 +58,16 @@ namespace Anachronism.Gameplay
                 return;
             }
 
-            _capsule.height = _settings.Height;
-            _capsule.radius = _settings.Radius;
-            _capsule.center = Vector3.zero;
+            // Taille de la capsule : celle du prefab, rien n'est imposé ici.
             // Trigger: nos propres requetes (qui ignorent les triggers) ne tapent jamais dans notre capsule
             _capsule.isTrigger = true;
 
             Camera cam = _body.GetComponentInChildren<Camera>();
             if (cam != null)
             {
-                // La capsule est centree sur le pivot: la camera est a CameraHeight depuis les pieds,
-                // et legerement en retrait (CameraBackOffset) pour ne pas voir a travers un mur contre lequel on se colle.
+                // Position de la caméra : celle du prefab. Le balancement de la marche part de là.
                 _cameraTransform = cam.transform;
-                _cameraBaseLocalPosition = new Vector3(0f, _settings.CameraHeight - _settings.Height * 0.5f, -_settings.CameraBackOffset);
-                _cameraTransform.localPosition = _cameraBaseLocalPosition;
+                _cameraBaseLocalPosition = _cameraTransform.localPosition;
             }
         }
 
