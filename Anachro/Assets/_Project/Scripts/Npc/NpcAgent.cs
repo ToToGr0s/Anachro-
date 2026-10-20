@@ -7,7 +7,7 @@ using UnityEditor;
 
 namespace Anachronism.Npc
 {
-    [RequireComponent(typeof(NavMeshAgent))]
+    // Sur l'enfant « Controller » du PNJ : il pilote le NavMeshAgent de la racine et le skin de l'enfant « Model ».
     public class NpcAgent : MonoBehaviour
     {
         private enum State { Idle, Reacting, Walking, Pausing }
@@ -16,7 +16,10 @@ namespace Anachronism.Npc
         private const float SlotRefreshDistance = 0.3f;
 
         public NavMeshAgent Agent { get; private set; }
+        /// <summary>Racine du PNJ : l'objet que le NavMeshAgent déplace et que le réseau synchronise.</summary>
+        public Transform Body => Agent.transform;
         public NpcProfile Profile { get; private set; }
+        public float BaseSpeed => _baseSpeed;
         public bool NeedsDestination => _state == State.Idle;
         public bool NeedsNextWaypoint => _state == State.Walking && !_isFinalWaypoint && !IsFollower
                                          && (_needsWaypointNow || (!Agent.pathPending && Agent.remainingDistance <= Profile.WaypointReachDistance));
@@ -51,19 +54,21 @@ namespace Anachronism.Npc
         private float _seed;
         private float _noiseTime;
 
-        private Animator _animator;
-        private int _speedHash;
-        private bool _hasSpeedParam;
+        private float _baseSpeed;
+        private NpcSkin _skin;
 
         private void Awake()
         {
-            Agent = GetComponent<NavMeshAgent>();
+            Agent = GetComponentInParent<NavMeshAgent>();
+            _skin = Agent.GetComponentInChildren<NpcSkin>(true);
             _seed = Random.value * 1000f;
         }
 
+        // Hors ligne ou côté serveur : IA complète + visuel.
         public void Init(NpcProfile profile)
         {
-            Profile = profile;
+            InitVisual(profile, profile.WalkSpeed);
+
             Agent.speed = profile.WalkSpeed;
             Agent.acceleration = profile.Acceleration;
             Agent.angularSpeed = profile.AngularSpeed;
@@ -71,35 +76,21 @@ namespace Anachronism.Npc
             Agent.stoppingDistance = profile.StoppingDistance;
             Agent.avoidancePriority = profile.AvoidancePriority;
             Agent.updateRotation = false;
-
-            SpawnModel();
         }
 
-        private void SpawnModel()
+        // Client en ligne : pas d'IA (le serveur déplace le PNJ), seulement le modèle et l'Animator.
+        // La vitesse de base sert à l'échelle de l'Animator, elle doit être celle envoyée par le serveur.
+        public void InitVisual(NpcProfile profile, float baseSpeed)
         {
-            if (Profile.ModelPrefab == null) return;
+            Profile = profile;
+            _baseSpeed = baseSpeed;
+            SetSkin(profile);
+        }
 
-            GameObject model = Instantiate(Profile.ModelPrefab, transform);
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
-            model.transform.localScale = Vector3.one * Profile.ModelScale;
-
-            _animator = model.GetComponentInChildren<Animator>();
-            if (_animator == null) return;
-
-            _animator.speed = Profile.AnimPlaybackSpeed;
-            _animator.applyRootMotion = false;   // c'est le NavMeshAgent qui déplace le PNJ
-            if (Profile.AnimatorController != null)
-                _animator.runtimeAnimatorController = Profile.AnimatorController;
-
-            _speedHash = Animator.StringToHash(Profile.SpeedParameter);
-            foreach (AnimatorControllerParameter parameter in _animator.parameters)
-            {
-                if (parameter.nameHash == _speedHash) { _hasSpeedParam = true; break; }
-            }
-
-            if (!_hasSpeedParam)
-                Debug.LogWarning($"Animator de {name} : paramètre '{Profile.SpeedParameter}' introuvable.", this);
+        // L'apparence peut venir d'un autre profil que le comportement (skins re-tirés par l'hôte).
+        public void SetSkin(NpcProfile skin)
+        {
+            _skin.Apply(skin, _baseSpeed, Profile.SprintSpeedMultiplier);
         }
 
         public void BeginWalk(Vector3 destination, Vector3 firstWaypoint, bool isFinalWaypoint)
@@ -253,7 +244,9 @@ namespace Anachronism.Npc
             }
 
             UpdateRotation(dt);
-            UpdateAnimator(dt);
+
+            Vector3 velocity = Agent.velocity; velocity.y = 0f;
+            UpdateAnimator(velocity.magnitude, dt);
         }
 
         private void UpdateStuck(float dt)
@@ -349,10 +342,10 @@ namespace Anachronism.Npc
         {
             if (_state == State.Pausing && _hasFaceTarget)
             {
-                Vector3 toTarget = _faceTarget - transform.position;
+                Vector3 toTarget = _faceTarget - Body.position;
                 toTarget.y = 0f;
                 if (toTarget.sqrMagnitude > 0.01f)
-                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toTarget), Profile.TurnSmoothing * dt);
+                    Body.rotation = Quaternion.Slerp(Body.rotation, Quaternion.LookRotation(toTarget), Profile.TurnSmoothing * dt);
                 return;
             }
 
@@ -361,26 +354,13 @@ namespace Anachronism.Npc
 
             float yawOffset = Noise(100f, Profile.WanderFrequency) * Profile.HeadingNoiseDegrees;
             Quaternion target = Quaternion.Euler(0f, yawOffset, 0f) * Quaternion.LookRotation(v);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Profile.TurnSmoothing * dt);
+            Body.rotation = Quaternion.Slerp(Body.rotation, target, Profile.TurnSmoothing * dt);
         }
 
-        private float ToAnimValue(float speed)
+        // Piloté par la seule vitesse horizontale (règle réseau 5) : un client la mesure sur le transform synchronisé.
+        public void UpdateAnimator(float horizontalSpeed, float dt)
         {
-            float halfWalk = Profile.WalkSpeed * 0.5f;
-            float walkMax = Profile.WalkSpeed * 1.05f;
-            float sprintSpeed = Profile.SprintSpeed;
-
-            if (speed < halfWalk) return speed / halfWalk;            // idle -> marche
-            if (speed <= walkMax || sprintSpeed <= walkMax) return 1f;   // plateau de marche
-            return 1f + Mathf.Clamp01((speed - walkMax) / (sprintSpeed - walkMax));   // marche -> course
-        }
-
-        private void UpdateAnimator(float dt)
-        {
-            if (_animator == null || !_hasSpeedParam) return;
-
-            Vector3 v = Agent.velocity; v.y = 0f;
-            _animator.SetFloat(_speedHash, ToAnimValue(v.magnitude), 0.1f, dt);
+            _skin.SetSpeed(horizontalSpeed, dt);
         }
 
         private bool HasArrived()
@@ -411,7 +391,7 @@ namespace Anachronism.Npc
             Vector3 lift = Vector3.up * GizmoLift;
 
             Gizmos.color = Color.yellow;
-            Gizmos.DrawLine(transform.position + lift, _pendingTarget + lift);
+            Gizmos.DrawLine(Body.position + lift, _pendingTarget + lift);
             Gizmos.DrawWireSphere(_pendingTarget + lift, 0.25f);
 
             Gizmos.color = Color.cyan;
@@ -425,7 +405,7 @@ namespace Anachronism.Npc
 
         private void DrawGroupGizmos()
         {
-            Vector3 head = transform.position + Vector3.up * GroupGizmoHeight;
+            Vector3 head = Body.position + Vector3.up * GroupGizmoHeight;
 
             if (Group == null)
             {
@@ -452,12 +432,12 @@ namespace Anachronism.Npc
                 Handles.Label(head + Vector3.up * 0.4f, $"Groupe : {Group.Count}{(Group.WillDiscuss ? " (discussion)" : string.Empty)}");
                 Vector3 point = Group.CommonPoint + Vector3.up * GizmoLift;
                 Handles.DrawWireDisc(point, Vector3.up, 0.8f);
-                Handles.DrawDottedLine(transform.position + Vector3.up * GizmoLift, point, 4f);
+                Handles.DrawDottedLine(Body.position + Vector3.up * GizmoLift, point, 4f);
                 return;
             }
 
             Gizmos.DrawSphere(head, 0.15f);
-            Gizmos.DrawLine(head, leader.transform.position + Vector3.up * GroupGizmoHeight);
+            Gizmos.DrawLine(head, leader.Body.position + Vector3.up * GroupGizmoHeight);
             Gizmos.DrawWireSphere(_pendingTarget + Vector3.up * GizmoLift, 0.3f);
         }
 #endif

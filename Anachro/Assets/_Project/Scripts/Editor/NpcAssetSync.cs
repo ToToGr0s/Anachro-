@@ -14,7 +14,7 @@ namespace Anachronism.Editor
     /// </summary>
     public sealed class NpcAssetSync : AssetPostprocessor
     {
-        public const string SkinTablePath = "Assets/_Project/ScriptableObjects/Npc/NpcSkins.asset";
+        public const string SkinTablePath = "Assets/_Project/Data/Npc/NpcSkins.asset";
         public const string NpcPrefabPath = "Assets/_Project/Prefabs/Npc/Npc_v0.prefab";
 
         private static bool _isSyncQueued;

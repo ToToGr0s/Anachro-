@@ -68,6 +68,7 @@ namespace Anachronism.Npc
         public PlayerControllerSettings PlayerMovement => _playerMovement;
         public float WalkSpeed => _playerMovement != null ? _playerMovement.WalkSpeed : 0f;
         public float SprintSpeed => _playerMovement != null ? _playerMovement.WalkSpeed * _playerMovement.SprintMultiplier : 0f;
+        public float SprintSpeedMultiplier => _playerMovement != null ? _playerMovement.SprintMultiplier : 1f;
         public float Acceleration => _acceleration;
         public float SpeedChangeRate => _speedChangeRate;
         public float SprintChance => _sprintChance;
