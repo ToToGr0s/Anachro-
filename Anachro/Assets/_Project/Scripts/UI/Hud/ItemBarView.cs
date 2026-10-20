@@ -3,8 +3,8 @@ using UnityEngine.UIElements;
 
 namespace Anachronism.UI
 {
-    // Hors Archi : vue de la barre d'items sortie de HudController pour l'alléger. Elle reçoit le restant de
-    // FugitivePlacer.CooldownChanged, en déduit la durée totale et décompte entre deux events.
+    // Hors Archi : vue de la barre d'items sortie de HudController pour l'alléger. Elle reçoit le restant et la durée
+    // totale de chaque recharge, puis décompte entre deux events.
     public sealed class ItemBarView
     {
         public const int SlotCount = 3;
@@ -25,6 +25,7 @@ namespace Anachronism.UI
 
         public void SetSelected(int index)
         {
+            index = Mathf.Clamp(index, 0, SlotCount - 1);
             if (index == _selectedIndex)
                 return;
 
@@ -33,10 +34,10 @@ namespace Anachronism.UI
                 _slots[i].SetSelected(i == index);
         }
 
-        public void SetCooldown(int index, float remainingSeconds)
+        public void SetCooldown(int index, float remainingSeconds, float totalSeconds)
         {
             if (index >= 0 && index < SlotCount)
-                _slots[index].SetCooldown(remainingSeconds);
+                _slots[index].SetCooldown(remainingSeconds, totalSeconds);
         }
 
         public void Tick(float deltaTime)
@@ -48,7 +49,7 @@ namespace Anachronism.UI
         public void ClearCooldowns()
         {
             foreach (Slot slot in _slots)
-                slot.SetCooldown(0f);
+                slot.SetCooldown(0f, 0f);
         }
 
         private sealed class Slot
@@ -77,13 +78,10 @@ namespace Anachronism.UI
 
             public void SetSelected(bool isSelected) => _root?.EnableInClassList(SelectedClass, isSelected);
 
-            public void SetCooldown(float remainingSeconds)
+            public void SetCooldown(float remainingSeconds, float totalSeconds)
             {
-                remainingSeconds = Mathf.Max(0f, remainingSeconds);
-                if (remainingSeconds > _remaining + 0.01f)
-                    _total = remainingSeconds;
-
-                _remaining = remainingSeconds;
+                _remaining = Mathf.Max(0f, remainingSeconds);
+                _total = Mathf.Max(_remaining, totalSeconds);
                 Refresh();
             }
 

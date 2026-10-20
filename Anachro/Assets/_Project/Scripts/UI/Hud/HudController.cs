@@ -16,15 +16,15 @@ namespace Anachronism.UI
 
         private static HudController _persistentHud;
 
-        [Tooltip("Seuils de couleur de la barre : vert au départ, puis jaune, orange et rouge à chaque seuil franchi.")]
         [SerializeField] private float[] _disruptionTierThresholds = { 0.25f, 0.5f, 0.75f };
 
         // TODO (Olivier) : [SerializeField] private FugitivePlacer _placer, abonné à CooldownChanged (Archi), quand
         // Célian l'aura créé (C04). Il manque aussi un moyen de savoir quelle taille est choisie : à demander à Célian
         // (event SelectedSizeChanged ou propriété SelectedSize), sinon le HUD ne peut pas surligner l'emplacement.
+        // CooldownChanged doit aussi donner la durée totale de la recharge (ou le HUD la lit dans l'AnachronismDefinition) :
+        // ItemBarView.SetCooldown(taille, restant, total) ne la devine plus.
 
         [Header("Aperçu sans réseau (menu ⋮ du composant, en Play)")]
-        [Tooltip("Recharges simulées par taille (petit, moyen, grand). Les vraies valeurs viennent des AnachronismDefinition.")]
         [SerializeField] private float[] _previewCooldowns = { 15f, 30f, 45f };
 
         private UIDocument _document;
@@ -206,6 +206,15 @@ namespace Anachronism.UI
 
             _isShown = isShown;
             _root.style.display = isShown ? DisplayStyle.Flex : DisplayStyle.None;
+            if (isShown)
+                return;
+
+            _itemBar.ClearCooldowns();
+            _itemBar.SetSelected(0);
+            _roleLabel.text = string.Empty;
+            _root.EnableInClassList(HunterClass, false);
+            _root.EnableInClassList(FugitiveClass, false);
+            ResetShownValues();
         }
 
         private void SetRole(PlayerRole role)
@@ -327,7 +336,7 @@ namespace Anachronism.UI
                 if (Time.time < _previewNextCooldownTimes[i])
                     continue;
 
-                _itemBar.SetCooldown(i, _previewCooldowns[i]);
+                _itemBar.SetCooldown(i, _previewCooldowns[i], _previewCooldowns[i]);
                 _previewNextCooldownTimes[i] = Time.time + _previewCooldowns[i] + 2f;
             }
 
