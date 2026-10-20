@@ -221,6 +221,7 @@ namespace Anachronism.Npc
             for (int i = 0; i < _npcs.Count; i++)
             {
                 NpcAgent npc = _npcs[i];
+                // Détruit sans passer par Despawn (arrêt du serveur, déchargement de la map).
                 if (npc == null)
                 {
                     _npcs.RemoveAt(i--);
