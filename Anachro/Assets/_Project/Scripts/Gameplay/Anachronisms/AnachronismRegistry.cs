@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Anachronism.Gameplay
@@ -5,27 +6,60 @@ namespace Anachronism.Gameplay
     [CreateAssetMenu(fileName = "AnachronismRegistry", menuName = "Anachronism/AnachronismRegistry")]
     public class AnachronismRegistry : ScriptableObject
     {
-        [SerializeField] private AnachronismDefinition[] _anachronisms;
-        public AnachronismDefinition[] Anachronisms => _anachronisms;
+        // Ne jamais reordonner ni supprimer : l'id reseau est l'index (un build different ne serait plus d'accord avec l'hote).
+        // Toujours ajouter a la fin.
+        [SerializeField] private AnachronismDefinition[] _anachronisms = new AnachronismDefinition[0];
 
-        public AnachronismDefinition Get(byte id) => id < _anachronisms.Length ? _anachronisms[id] : null;
+        public IReadOnlyList<AnachronismDefinition> Anachronisms => _anachronisms;
 
-        public byte IdOf(AnachronismDefinition definition)
+        // Hors limites ou case vide : null. L'id vient d'une RPC client (hostile), l'appelant serveur doit rejeter l'intention.
+        public AnachronismDefinition Get(byte id) =>
+            _anachronisms != null && id < _anachronisms.Length ? _anachronisms[id] : null;
+
+        public bool TryGetId(AnachronismDefinition definition, out byte id)
         {
+            id = 0;
+            if (definition == null || _anachronisms == null)
+                return false;
+
             int index = System.Array.IndexOf(_anachronisms, definition);
-            if (index < 0) { Debug.LogError("Anachronisme absent du registre.", this); return byte.MaxValue; }
-            return (byte)index;
+            if (index < 0 || index > byte.MaxValue)
+                return false;
+
+            id = (byte)index;
+            return true;
         }
 
         public AnachronismDefinition RandomOfSize(AnachronismSize size, EraDefinition era)
         {
-            var candidates = new System.Collections.Generic.List<AnachronismDefinition>();
+            var candidates = new List<AnachronismDefinition>();
             foreach (AnachronismDefinition definition in _anachronisms)
             {
+                if (definition == null)
+                    continue;
+
                 if (definition.Size == size && definition.IsAllowedIn(era))
                     candidates.Add(definition);
             }
             return candidates.Count == 0 ? null : candidates[Random.Range(0, candidates.Count)];
+        }
+
+        private void OnValidate()
+        {
+            if (_anachronisms == null)
+                return;
+
+            if (_anachronisms.Length > byte.MaxValue + 1)
+                Debug.LogError("Registre : 256 anachronismes maximum (l'id tient sur un byte).", this);
+
+            var seen = new HashSet<AnachronismDefinition>();
+            for (int i = 0; i < _anachronisms.Length; i++)
+            {
+                if (_anachronisms[i] == null)
+                    Debug.LogError($"Registre : la case {i} est vide.", this);
+                else if (!seen.Add(_anachronisms[i]))
+                    Debug.LogError($"Registre : doublon a la case {i} ({_anachronisms[i].name}).", this);
+            }
         }
     }
 }
