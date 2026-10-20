@@ -43,7 +43,6 @@ namespace Anachronism.Npc
             Agent.speed = _baseSpeed;
             Agent.acceleration = profile.Acceleration;
             Agent.angularSpeed = profile.AngularSpeed;
-            Agent.radius = profile.Radius;
             Agent.stoppingDistance = profile.StoppingDistance;
             Agent.avoidancePriority = profile.AvoidancePriority;
             Agent.updateRotation = false;

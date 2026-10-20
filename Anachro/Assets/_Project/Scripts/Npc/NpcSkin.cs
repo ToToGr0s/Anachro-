@@ -6,9 +6,13 @@ namespace Anachronism.Npc
     /// Apparence d'un PNJ : modèle et Animator piloté par la seule vitesse horizontale.
     /// Le même composant habille les joueurs : un joueur et un PNJ s'animent avec exactement le même code (règle réseau 5).
     /// </summary>
-    // Posé sur l'enfant « Model » : sa position et son échelle dans le prefab règlent la hauteur et la taille du mesh.
+    // Posé sur l'enfant « Model ». Tout se règle dans le prefab : le skin tiré prend la place de l'aperçu,
+    // avec sa position, sa rotation et son échelle. Le script n'impose aucune taille.
     public class NpcSkin : MonoBehaviour
     {
+        private Vector3 _modelPosition = Vector3.zero;
+        private Quaternion _modelRotation = Quaternion.identity;
+        private Vector3 _modelScale = Vector3.one;
 
         private GameObject _model;
         private Animator _animator;
@@ -23,7 +27,15 @@ namespace Anachronism.Npc
 
         private void Awake()
         {
-            // L'aperçu posé dans le prefab (pour régler la hauteur à l'œil) laisse la place au skin tiré.
+            // L'aperçu posé dans le prefab laisse la place au skin tiré, qui garde exactement son placement.
+            if (transform.childCount > 0)
+            {
+                Transform preview = transform.GetChild(0);
+                _modelPosition = preview.localPosition;
+                _modelRotation = preview.localRotation;
+                _modelScale = preview.localScale;
+            }
+
             for (int i = transform.childCount - 1; i >= 0; i--)
                 Destroy(transform.GetChild(i).gameObject);
         }
@@ -44,8 +56,8 @@ namespace Anachronism.Npc
                 return;
 
             _model = Instantiate(skin.ModelPrefab, transform);
-            _model.transform.localRotation = Quaternion.identity;
-            PlaceModel();
+            _model.transform.SetLocalPositionAndRotation(_modelPosition, _modelRotation);
+            _model.transform.localScale = _modelScale;
 
             _animator = _model.GetComponentInChildren<Animator>();
             if (_animator == null)
@@ -66,22 +78,6 @@ namespace Anachronism.Npc
             if (!_hasSpeedParam)
                 Debug.LogWarning($"Animator de {name} : paramètre '{skin.SpeedParameter}' introuvable.", this);
         }
-
-        // Hauteur et échelle viennent du profil : un même réglage vaut pour les PNJ et les joueurs qui portent ce skin.
-        private void PlaceModel()
-        {
-            _model.transform.localPosition = Vector3.up * _appliedSkin.ModelHeightOffset;
-            _model.transform.localScale = Vector3.one * _appliedSkin.ModelScale;
-        }
-
-#if UNITY_EDITOR
-        // Réglage en direct : changer la hauteur ou l'échelle du profil pendant le Play déplace le modèle tout de suite.
-        private void LateUpdate()
-        {
-            if (_model != null && _appliedSkin != null)
-                PlaceModel();
-        }
-#endif
 
         public void Clear()
         {
