@@ -29,7 +29,7 @@ namespace Anachronism.Gameplay
             id = (byte)index;
             return true;
         }
-
+        // Serveur uniquement : tirage de l'hote (UnityEngine.Random). Pas dans une boucle chaude.
         public AnachronismDefinition RandomOfSize(AnachronismSize size, EraDefinition era)
         {
             var candidates = new List<AnachronismDefinition>();

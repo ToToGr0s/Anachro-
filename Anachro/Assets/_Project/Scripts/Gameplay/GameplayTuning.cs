@@ -5,9 +5,13 @@ namespace Anachronism.Gameplay
     [CreateAssetMenu(fileName = "GameplayTuning", menuName = "Anachronism/GameplayTuning")]
     public class GameplayTuning : ScriptableObject
     {
+        // Durees en secondes dans l'asset ; le serveur les convertit en ticks (TimeManager), regle reseau 6.
+
+        [Tooltip("0,25 = 1 PNJ sur 4")]
         [SerializeField, Range(0f, 1f)] private float _carrierRatio = 0.25f;
         [SerializeField, Min(0f)] private float _placementDuration = 0.5f;
-        [SerializeField, Range(0f, 1f)] private float _wrongShotPenalty = 0.04f;
+        [Tooltip("Degradation ajoutee a un tir rate, en % de la barre (0-100). Meme unite que DisruptionPercent.")]
+        [SerializeField, Range(0f, 100f)] private float _wrongShotPenaltyPercent = 4f;
         [SerializeField, Min(0f)] private float _interactionDistance = 2f;
         [SerializeField, Min(0f)] private float _shootDistance = 5f;
         [SerializeField, Min(0f)] private float _finalCountdownSeconds = 60f;
@@ -19,7 +23,7 @@ namespace Anachronism.Gameplay
 
         public float CarrierRatio => _carrierRatio;
         public float PlacementDuration => _placementDuration;
-        public float WrongShotPenalty => _wrongShotPenalty;
+        public float WrongShotPenaltyPercent => _wrongShotPenaltyPercent;
         public float InteractionDistance => _interactionDistance;
         public float ShootDistance => _shootDistance;
         public float FinalCountdownSeconds => _finalCountdownSeconds;

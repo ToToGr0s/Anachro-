@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.GameplayTuning
   _carrierRatio: 0.25
   _placementDuration: 0.5
-  _wrongShotPenalty: 0.04
+  _wrongShotPenaltyPercent: 4
   _interactionDistance: 2
   _shootDistance: 5
   _finalCountdownSeconds: 60
