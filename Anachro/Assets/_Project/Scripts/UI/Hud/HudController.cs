@@ -1,5 +1,6 @@
 using Anachronism.Network;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
 namespace Anachronism.UI
@@ -12,6 +13,8 @@ namespace Anachronism.UI
         private const string CountdownVisibleClass = "end-countdown--visible";
 
         private static readonly string[] DisruptionTierClasses = { "disruption--tier-1", "disruption--tier-2", "disruption--tier-3" };
+
+        private static HudController _persistentHud;
 
         [Tooltip("Seuils de couleur de la barre : vert au départ, puis jaune, orange et rouge à chaque seuil franchi.")]
         [SerializeField] private float[] _disruptionTierThresholds = { 0.25f, 0.5f, 0.75f };
@@ -42,6 +45,7 @@ namespace Anachronism.UI
         private readonly float[] _previewNextCooldownTimes = new float[ItemBarView.SlotCount];
 
         private bool _isShown;
+        private bool _hasShownRole;
         private PlayerRole _shownRole;
         private int _shownPercent;
         private float _shownRatio;
@@ -50,14 +54,36 @@ namespace Anachronism.UI
 
         private bool IsPreviewing => _previewRole != PlayerRole.None;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => _persistentHud = null;
+
         private void Awake()
         {
+            if (_persistentHud != null && _persistentHud != this)
+            {
+                gameObject.SetActive(false);
+                Destroy(gameObject);
+                return;
+            }
+
+            _persistentHud = this;
+            if (transform.parent != null)
+                transform.SetParent(null, false);
             DontDestroyOnLoad(gameObject);
             _document = GetComponent<UIDocument>();
         }
 
+        private void OnDestroy()
+        {
+            if (_persistentHud == this)
+                _persistentHud = null;
+        }
+
         private void OnEnable()
         {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+
             VisualElement documentRoot = _document.rootVisualElement;
             _root = documentRoot.Q<VisualElement>("hud-root");
             _disruption = documentRoot.Q<VisualElement>("disruption");
@@ -80,8 +106,15 @@ namespace Anachronism.UI
             SetShown(false);
         }
 
+        private void Start()
+        {
+            TryBind();
+        }
+
         private void OnDisable()
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
             Unbind();
         }
 
@@ -93,7 +126,9 @@ namespace Anachronism.UI
                 return;
             }
 
-            UpdateBinding();
+            if (_isBound && _match == null)
+                Unbind();
+
             if (!_isBound)
                 return;
 
@@ -110,7 +145,15 @@ namespace Anachronism.UI
             _itemBar.Tick(Time.deltaTime);
         }
 
-        private void UpdateBinding()
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode) => TryBind();
+
+        private void OnSceneUnloaded(Scene scene)
+        {
+            if (_isBound && _match == null)
+                Unbind();
+        }
+
+        private void TryBind()
         {
             if (_isBound && _match == null)
                 Unbind();
@@ -147,8 +190,11 @@ namespace Anachronism.UI
         {
             _isPlayingPhase = phase != GamePhase.Lobby && phase != GamePhase.End;
 
-            if (!_isPlayingPhase)
-                _itemBar.ClearCooldowns();
+            if (_isPlayingPhase)
+                return;
+
+            _itemBar.ClearCooldowns();
+            _itemBar.SetSelected(0);
         }
 
         private void OnLocalRoleAssigned(PlayerRole role) => SetRole(role);
@@ -164,17 +210,15 @@ namespace Anachronism.UI
 
         private void SetRole(PlayerRole role)
         {
-            if (role == _shownRole)
+            if (_hasShownRole && role == _shownRole)
                 return;
 
+            _hasShownRole = true;
             _shownRole = role;
-            bool isFugitive = role == PlayerRole.Villain;
             _root.EnableInClassList(HunterClass, role == PlayerRole.Guardian);
-            _root.EnableInClassList(FugitiveClass, isFugitive);
+            _root.EnableInClassList(FugitiveClass, role == PlayerRole.Villain);
             _roleLabel.text = DescribeRole(role);
-
-            if (isFugitive)
-                _itemBar.SetSelected(0);
+            _itemBar.SetSelected(0);
         }
 
         private void SetDisruption(float ratio)
@@ -227,7 +271,7 @@ namespace Anachronism.UI
 
         private void ResetShownValues()
         {
-            _shownRole = (PlayerRole)255;
+            _hasShownRole = false;
             _shownPercent = -1;
             _shownRatio = -1f;
             _shownTier = -1;
@@ -256,6 +300,7 @@ namespace Anachronism.UI
             SetShown(false);
             ResetShownValues();
             Unbind();
+            TryBind();
         }
 
         private void StartPreview(PlayerRole role)

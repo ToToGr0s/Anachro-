@@ -62,11 +62,17 @@ namespace Anachronism.UI
             private int _shownSeconds = -1;
             private float _shownProgress = -1f;
 
+            private readonly bool _isValid;
+
             public Slot(VisualElement root)
             {
                 _root = root;
                 _gaugeFill = root?.Q<VisualElement>("item-gauge-fill");
                 _timer = root?.Q<Label>("item-timer");
+                _isValid = _root != null && _gaugeFill != null && _timer != null;
+
+                if (!_isValid)
+                    Debug.LogError($"[ItemBarView] Emplacement « {root?.name ?? "?"} » incomplet dans Hud.uxml : « item-gauge-fill » ou « item-timer » manquant.");
             }
 
             public void SetSelected(bool isSelected) => _root?.EnableInClassList(SelectedClass, isSelected);
@@ -92,7 +98,7 @@ namespace Anachronism.UI
 
             private void Refresh()
             {
-                if (_root == null)
+                if (!_isValid)
                     return;
 
                 float progress = _total > 0f ? 1f - Mathf.Clamp01(_remaining / _total) : 1f;
