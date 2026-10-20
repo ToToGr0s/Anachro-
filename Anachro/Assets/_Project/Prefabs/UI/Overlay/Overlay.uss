@@ -1,0 +1,31 @@
+/* Debug F1 et menu Échap, par-dessus le lobby et le jeu. Olivier : à reprendre librement, seuls les noms sont utilisés par le code. */
+
+.overlay-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.debug {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    padding: 12px 16px;
+    font-size: 18px;
+    color: rgb(233, 235, 241);
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+}
+
+.pause-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+}

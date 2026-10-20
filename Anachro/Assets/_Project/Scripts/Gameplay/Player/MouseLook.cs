@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Anachronism.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -31,7 +32,7 @@ namespace Anachronism.Gameplay
             _camera.fieldOfView = _settings.FieldOfView;
             // Plan proche plus petit que le rayon du joueur: sinon, colle a un mur, ses coins passent derriere et on voit a travers.
             _camera.nearClipPlane = _settings.NearClipPlane;
-            _movement = _playerBody.GetComponent<CharacterMovement>();
+            _movement = _playerBody.GetComponentInChildren<CharacterMovement>(true);
 
             // Les renderers sous la camera (future arme en main, GDD 2.3) restent visibles: c'est la vue du joueur.
             var bodyRenderers = new List<Renderer>();
@@ -80,14 +81,17 @@ namespace Anachronism.Gameplay
         {
             if (Mouse.current == null) return;
 
-            // Echap libere la souris (la pause du GDD 2.1 viendra du menu)
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            // Echap ouvre le menu (UI/PauseMenu), qui libere la souris : pas de regard tant qu'il est ouvert.
+            if (GameMenuState.IsOpen) return;
+
+            // Scene de test sans Boot, donc sans menu : Echap libere la souris lui-meme.
+            if (!GameMenuState.IsAvailable && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
             }
 
-            // Clic gauche pour recapturer la souris
+            // Clic gauche pour recapturer la souris (perdue en changeant de fenetre)
             if (Cursor.lockState != CursorLockMode.Locked && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 Cursor.lockState = CursorLockMode.Locked;
