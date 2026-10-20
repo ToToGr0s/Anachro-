@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e25d960fb80a996459c1d2a8c2247b7e, type: 3}
-  m_Name: HurriedNPC
+  m_Name: NpcType1
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Npc.NpcProfile
   _prefab: {fileID: 3774926175398149242, guid: 05a108ad3ea831a4eab7c241b585c139, type: 3}
   _modelPrefab: {fileID: 7478225697116208144, guid: 6fb37f825ee63264b9c2600bf1a52006, type: 3}
@@ -18,24 +18,25 @@ MonoBehaviour:
   _modelScale: 1
   _speedParameter: Speed
   _animPlaybackSpeed: 1
-  _walkSpeedRange: {x: 9, y: 10.5}
-  _acceleration: 50
-  _cornerSlowdown: 0.15
-  _speedChangeRate: 22
-  _sprintChance: 0.35
-  _sprintSpeedMultiplier: 1.3
-  _sprintBurstChancePerSecond: 0.04
-  _sprintBurstDuration: {x: 2, y: 5}
-  _angularSpeed: 540
-  _turnSmoothing: 16
-  _wanderAmount: 0.1
-  _wanderFrequency: 1
-  _headingNoiseDegrees: 4
-  _speedNoiseAmount: 0.08
-  _speedNoiseFrequency: 0.6
+  _playerMovement: {fileID: 11400000, guid: 277c5246d3431694ea154502c5a8d292, type: 2}
+  _acceleration: 28
+  _speedChangeRate: 12
+  _sprintChance: 0.1
+  _sprintBurstChancePerSecond: 0.02
+  _sprintBurstDuration: {x: 1, y: 3}
+  _angularSpeed: 360
+  _turnSmoothing: 10
+  _wanderAmount: 0.25
+  _wanderFrequency: 0.6
+  _headingNoiseDegrees: 8
   _radius: 0.65
   _avoidancePriority: 50
-  _reactionDelayRange: {x: 0.05, y: 0.2}
-  _pauseDurationRange: {x: 0.2, y: 1}
-  _stoppingDistance: 1.2
-  _walkDistanceRange: {x: 40, y: 100}
+  _reactionDelayRange: {x: 0.2, y: 0.6}
+  _pauseChance: 0.5
+  _pauseDurationRange: {x: 0.5, y: 2}
+  _stoppingDistance: 0.8
+  _walkDistanceRange: {x: 8, y: 25}
+  _waypointSpacingRange: {x: 2.5, y: 5}
+  _waypointMaxAngle: 55
+  _waypointReachDistance: 1.2
+  _stuckDuration: 1.5

@@ -1,5 +1,9 @@
 using UnityEngine;
 using UnityEngine.AI;
+using Random = UnityEngine.Random;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Anachronism.Npc
 {
@@ -8,14 +12,38 @@ namespace Anachronism.Npc
     {
         private enum State { Idle, Reacting, Walking, Pausing }
 
+        private const float StuckSpeedRatio = 0.2f;
+        private const float SlotRefreshDistance = 0.3f;
+
         public NavMeshAgent Agent { get; private set; }
         public NpcProfile Profile { get; private set; }
         public bool NeedsDestination => _state == State.Idle;
+        public bool NeedsNextWaypoint => _state == State.Walking && !_isFinalWaypoint && !IsFollower
+                                         && (_needsWaypointNow || (!Agent.pathPending && Agent.remainingDistance <= Profile.WaypointReachDistance));
+        public Vector3 Destination => _destination;
+        public bool IsWalking => _state == State.Walking;
+        public bool IsInGroup => Group != null;
+        public bool CanFormGroup => IsWalking && Group == null && _groupRetryTimer <= 0f;
+        public bool IsLeaderAtGroupPoint => Group != null && Group.Leader == this && IsWalking && _isFinalWaypoint
+                                            && !Agent.pathPending && Agent.remainingDistance <= Profile.WaypointReachDistance;
+
+        internal NpcGroup Group { get; private set; }
+        private bool IsFollower => Group != null && Group.Leader != this;
+
+        private bool _hasFaceTarget;
+        private Vector3 _faceTarget;
+        private float _pauseOverride;
+        private float _groupRetryTimer;
+        private bool _needsWaypointNow;
+        private float _stuckTimer;
 
         private State _state = State.Idle;
         private float _timer;
-        private float _baseSpeed;
         private Vector3 _pendingTarget;
+        private Vector3 _destination;
+        private bool _isFinalWaypoint;
+        private bool _willPauseAtDestination;
+        private bool _skipNextReaction;
 
         private bool _isSprinting;
         private float _burstTimer;
@@ -36,9 +64,7 @@ namespace Anachronism.Npc
         public void Init(NpcProfile profile)
         {
             Profile = profile;
-            _baseSpeed = Random.Range(profile.WalkSpeedRange.x, profile.WalkSpeedRange.y);
-
-            Agent.speed = _baseSpeed;
+            Agent.speed = profile.WalkSpeed;
             Agent.acceleration = profile.Acceleration;
             Agent.angularSpeed = profile.AngularSpeed;
             Agent.radius = profile.Radius;
@@ -76,20 +102,114 @@ namespace Anachronism.Npc
                 Debug.LogWarning($"Animator de {name} : paramètre '{Profile.SpeedParameter}' introuvable.", this);
         }
 
-        public void BeginWalk(Vector3 target)
+        public void BeginWalk(Vector3 destination, Vector3 firstWaypoint, bool isFinalWaypoint)
         {
-            _pendingTarget = target;
-            _timer = Random.Range(Profile.ReactionDelayRange.x, Profile.ReactionDelayRange.y);
-            Agent.isStopped = true;
-            _state = State.Reacting;
+            _destination = destination;
+            _pendingTarget = firstWaypoint;
+            _isFinalWaypoint = isFinalWaypoint;
+            _willPauseAtDestination = Random.value < Profile.PauseChance;
 
             // Tout le trajet en sprint ?
             _isSprinting = Random.value < Profile.SprintChance;
+            _stuckTimer = 0f;
             _burstTimer = -1f;
+            _hasFaceTarget = false;
+            _pauseOverride = 0f;
+
+            if (_skipNextReaction)
+            {
+                _skipNextReaction = false;
+                ApplyWaypoint();
+                _state = State.Walking;
+                return;
+            }
+
+            _timer = Random.Range(Profile.ReactionDelayRange.x, Profile.ReactionDelayRange.y);
+            Agent.isStopped = true;
+            _state = State.Reacting;
+        }
+
+        public void SetWaypoint(Vector3 waypoint, bool isFinalWaypoint)
+        {
+            _pendingTarget = waypoint;
+            _isFinalWaypoint = isFinalWaypoint;
+            _needsWaypointNow = false;
+            ApplyWaypoint();
+        }
+
+        public void DelayNextGroupAttempt(float seconds) => _groupRetryTimer = seconds;
+
+        internal void LeadGroup(NpcGroup group)
+        {
+            Group = group;
+            _destination = group.CommonPoint;
+            _willPauseAtDestination = false;
+            _isSprinting = false;
+            _isFinalWaypoint = false;
+            _needsWaypointNow = true;
+        }
+
+        internal void FollowGroup(NpcGroup group)
+        {
+            Group = group;
+            _destination = group.CommonPoint;
+            _isFinalWaypoint = false;
+            _needsWaypointNow = false;
+        }
+
+        internal void FollowSlot(Vector3 slot, bool isSprinting)
+        {
+            _isSprinting = isSprinting;
+            if (Agent.hasPath && (slot - _pendingTarget).sqrMagnitude < SlotRefreshDistance * SlotRefreshDistance)
+                return;
+
+            _pendingTarget = slot;
+            Agent.autoBraking = false;
+            Agent.SetDestination(slot);
+        }
+
+        internal void ContinueAlone()
+        {
+            Group = null;
+            _skipNextReaction = true;
+            _state = State.Idle;
+        }
+
+        internal void StartDiscussion(Vector3 spot, Vector3 centre, float duration)
+        {
+            Group = null;
+            _destination = spot;
+            _pendingTarget = spot;
+            _isFinalWaypoint = true;
+            _willPauseAtDestination = true;
+            _isSprinting = false;
+            _faceTarget = centre;
+            _hasFaceTarget = true;
+            _pauseOverride = duration;
+            ApplyWaypoint();
+            _state = State.Walking;
+        }
+
+        private void LeaveGroup()
+        {
+            Group?.Remove(this);
+            Group = null;
+        }
+
+        private void OnDestroy()
+        {
+            LeaveGroup();
+        }
+
+        private void ApplyWaypoint()
+        {
+            Agent.autoBraking = _isFinalWaypoint && _willPauseAtDestination;
+            Agent.SetDestination(_pendingTarget);
         }
 
         public void Wait(float seconds)
         {
+            LeaveGroup();
             _timer = seconds;
             _isSprinting = false;
             _state = State.Pausing;
@@ -98,6 +218,8 @@ namespace Anachronism.Npc
         public void Tick(float dt)
         {
             _noiseTime += dt;
+            if (_groupRetryTimer > 0f)
+                _groupRetryTimer -= dt;
 
             switch (_state)
             {
@@ -106,7 +228,7 @@ namespace Anachronism.Npc
                     if (_timer <= 0f)
                     {
                         Agent.isStopped = false;
-                        Agent.SetDestination(_pendingTarget);
+                        ApplyWaypoint();
                         _state = State.Walking;
                     }
                     break;
@@ -115,13 +237,18 @@ namespace Anachronism.Npc
                     UpdateSprint(dt);
                     UpdateSpeed(dt);
                     ApplyWander(dt);
-                    if (HasArrived())
-                        Wait(Random.Range(Profile.PauseDurationRange.x, Profile.PauseDurationRange.y));
+                    UpdateStuck(dt);
+                    if (_isFinalWaypoint)
+                        UpdateArrival();
                     break;
 
                 case State.Pausing:
                     _timer -= dt;
-                    if (_timer <= 0f) _state = State.Idle;
+                    if (_timer <= 0f)
+                    {
+                        _hasFaceTarget = false;
+                        _state = State.Idle;
+                    }
                     break;
             }
 
@@ -129,8 +256,54 @@ namespace Anachronism.Npc
             UpdateAnimator(dt);
         }
 
+        private void UpdateStuck(float dt)
+        {
+            float minSpeed = Profile.WalkSpeed * StuckSpeedRatio;
+            if (_state != State.Walking || Agent.pathPending || Agent.velocity.sqrMagnitude > minSpeed * minSpeed)
+            {
+                _stuckTimer = 0f;
+                return;
+            }
+
+            _stuckTimer += dt;
+            if (_stuckTimer < Profile.StuckDuration)
+                return;
+
+            _stuckTimer = 0f;
+            LeaveGroup();
+            _skipNextReaction = true;
+            _state = State.Idle;
+        }
+
+        private void UpdateArrival()
+        {
+            if (Group != null)
+                return;
+
+            if (_willPauseAtDestination)
+            {
+                if (HasArrived())
+                {
+                    float pause = _pauseOverride > 0f ? _pauseOverride : Random.Range(Profile.PauseDurationRange.x, Profile.PauseDurationRange.y);
+                    _pauseOverride = 0f;
+                    Wait(pause);
+                }
+                return;
+            }
+
+            if (!Agent.pathPending && Agent.remainingDistance <= Profile.WaypointReachDistance)
+            {
+                LeaveGroup();
+                _skipNextReaction = true;
+                _state = State.Idle;
+            }
+        }
+
         private void UpdateSprint(float dt)
         {
+            if (Group != null)
+                return;
+
             if (!_isSprinting)
             {
                 // Sprint ponctuel en plein trajet
@@ -154,20 +327,8 @@ namespace Anachronism.Npc
 
         private void UpdateSpeed(float dt)
         {
-            float mult = _isSprinting ? Profile.SprintSpeedMultiplier : 1f;
-
-            Vector3 desired = Agent.desiredVelocity; desired.y = 0f;
-            float factor = 1f;
-            if (desired.sqrMagnitude > 0.01f)
-            {
-                float angle = Vector3.Angle(transform.forward, desired);
-                factor = 1f - Profile.CornerSlowdown * Mathf.Clamp01(angle / 90f);
-            }
-
-            factor *= 1f + Noise(50f, Profile.SpeedNoiseFrequency) * Profile.SpeedNoiseAmount;
-
-            Agent.acceleration = Profile.Acceleration * mult;
-            Agent.speed = Mathf.MoveTowards(Agent.speed, _baseSpeed * mult * factor, Profile.SpeedChangeRate * mult * dt);
+            float targetSpeed = _isSprinting ? Profile.SprintSpeed : Profile.WalkSpeed;
+            Agent.speed = Mathf.MoveTowards(Agent.speed, targetSpeed, Profile.SpeedChangeRate * dt);
         }
 
         private void ApplyWander(float dt)
@@ -186,6 +347,15 @@ namespace Anachronism.Npc
 
         private void UpdateRotation(float dt)
         {
+            if (_state == State.Pausing && _hasFaceTarget)
+            {
+                Vector3 toTarget = _faceTarget - transform.position;
+                toTarget.y = 0f;
+                if (toTarget.sqrMagnitude > 0.01f)
+                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toTarget), Profile.TurnSmoothing * dt);
+                return;
+            }
+
             Vector3 v = Agent.velocity; v.y = 0f;
             if (v.sqrMagnitude < 0.05f) return;
 
@@ -196,9 +366,9 @@ namespace Anachronism.Npc
 
         private float ToAnimValue(float speed)
         {
-            float halfWalk = _baseSpeed * 0.5f;
-            float walkMax = _baseSpeed * 1.15f;                       // tolère le bruit de vitesse
-            float sprintSpeed = _baseSpeed * Profile.SprintSpeedMultiplier;
+            float halfWalk = Profile.WalkSpeed * 0.5f;
+            float walkMax = Profile.WalkSpeed * 1.05f;
+            float sprintSpeed = Profile.SprintSpeed;
 
             if (speed < halfWalk) return speed / halfWalk;            // idle -> marche
             if (speed <= walkMax || sprintSpeed <= walkMax) return 1f;   // plateau de marche
@@ -219,5 +389,77 @@ namespace Anachronism.Npc
             return Agent.remainingDistance <= Agent.stoppingDistance
                    && (!Agent.hasPath || Agent.velocity.sqrMagnitude < 0.01f);
         }
+
+#if UNITY_EDITOR
+        private const float GizmoLift = 0.1f;
+        private const float GroupGizmoHeight = 2.3f;
+
+        private void OnDrawGizmos()
+        {
+            if (!Application.isPlaying || Profile == null)
+                return;
+
+            DrawTripGizmos();
+            DrawGroupGizmos();
+        }
+
+        private void DrawTripGizmos()
+        {
+            if (_state != State.Walking && _state != State.Reacting)
+                return;
+
+            Vector3 lift = Vector3.up * GizmoLift;
+
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(transform.position + lift, _pendingTarget + lift);
+            Gizmos.DrawWireSphere(_pendingTarget + lift, 0.25f);
+
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireCube(_destination + lift, Vector3.one * 0.6f);
+            if (!_isFinalWaypoint)
+            {
+                Handles.color = Color.cyan;
+                Handles.DrawDottedLine(_pendingTarget + lift, _destination + lift, 4f);
+            }
+        }
+
+        private void DrawGroupGizmos()
+        {
+            Vector3 head = transform.position + Vector3.up * GroupGizmoHeight;
+
+            if (Group == null)
+            {
+                if (_state == State.Pausing && _hasFaceTarget)
+                {
+                    Gizmos.color = Color.white;
+                    Gizmos.DrawLine(head, _faceTarget + Vector3.up * GroupGizmoHeight);
+                    Handles.Label(head + Vector3.up * 0.3f, "discute");
+                }
+                return;
+            }
+
+            NpcAgent leader = Group.Leader;
+            if (leader == null)
+                return;
+
+            Color groupColor = Color.HSVToRGB(Mathf.Repeat(leader.GetEntityId().GetHashCode() * 0.618f, 1f), 0.85f, 1f);
+            Gizmos.color = groupColor;
+            Handles.color = groupColor;
+
+            if (leader == this)
+            {
+                Gizmos.DrawSphere(head, 0.3f);
+                Handles.Label(head + Vector3.up * 0.4f, $"Groupe : {Group.Count}{(Group.WillDiscuss ? " (discussion)" : string.Empty)}");
+                Vector3 point = Group.CommonPoint + Vector3.up * GizmoLift;
+                Handles.DrawWireDisc(point, Vector3.up, 0.8f);
+                Handles.DrawDottedLine(transform.position + Vector3.up * GizmoLift, point, 4f);
+                return;
+            }
+
+            Gizmos.DrawSphere(head, 0.15f);
+            Gizmos.DrawLine(head, leader.transform.position + Vector3.up * GroupGizmoHeight);
+            Gizmos.DrawWireSphere(_pendingTarget + Vector3.up * GizmoLift, 0.3f);
+        }
+#endif
     }
 }

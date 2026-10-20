@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56bce6a89eb9b5616faf029812ac7974, type: 3}
+  m_Name: NpcGroupSettings
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Npc.NpcGroupSettings
+  _maxGroupSize: 4
+  _awarenessRadius: 4
+  _destinationZoneRadius: 6
+  _joinChance: 0.3
+  _retryDelay: 5
+  _formationSpacing: 1.2
+  _catchUpDistance: 1.5
+  _discussChance: 0.5
+  _discussDurationRange: {x: 3, y: 8}
