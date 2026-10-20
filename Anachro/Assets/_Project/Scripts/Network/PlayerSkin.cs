@@ -42,8 +42,7 @@ namespace Anachronism.Network
             if (_skins != null && _skins.Count > 0)
                 _skinIndex.Value = (byte)Mathf.Min(_skins.RandomIndex(), byte.MaxValue);
 
-            // TODO (Théo) : la vitesse de marche du joueur est fixe alors que celle des PNJ est tirée dans WalkSpeedRange :
-            // l'Animator d'un joueur passe donc marche/course à d'autres seuils. Valeur de game design à trancher.
+            // Même vitesse de base que les PNJ (NpcProfile.WalkSpeed) : l'Animator passe marche/course aux mêmes seuils.
             if (_settings != null)
                 _baseSpeed.Value = _settings.WalkSpeed;
         }
