@@ -12,6 +12,8 @@ namespace Anachronism.Npc
         [SerializeField] private GameObject _modelPrefab;
         [SerializeField] private RuntimeAnimatorController _animatorController;   // optionnel : remplace celui du modèle
         [SerializeField] private float _modelScale = 1f;
+        [Tooltip("Monte (+) ou descend (−) le modèle, en mètres, si ses pieds ne touchent pas le sol. Réglable en Play : le modèle bouge en direct et la valeur reste après l'arrêt.")]
+        [SerializeField] private float _modelHeightOffset = 0f;
         [SerializeField] private string _speedParameter = "Speed";                // float de l'Animator
         [SerializeField] private float _animPlaybackSpeed = 1f;
 
@@ -54,6 +56,7 @@ namespace Anachronism.Npc
         public GameObject ModelPrefab => _modelPrefab;
         public RuntimeAnimatorController AnimatorController => _animatorController;
         public float ModelScale => _modelScale;
+        public float ModelHeightOffset => _modelHeightOffset;
         public string SpeedParameter => _speedParameter;
         public float AnimPlaybackSpeed => _animPlaybackSpeed;
         public Vector2 WalkSpeedRange => _walkSpeedRange;

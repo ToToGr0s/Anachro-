@@ -3,14 +3,17 @@ using UnityEngine.AI;
 
 namespace Anachronism.Npc
 {
-    [RequireComponent(typeof(NavMeshAgent))]
+    // Sur l'enfant « Controller » du PNJ : il pilote le NavMeshAgent de la racine et le skin de l'enfant « Model ».
     public class NpcAgent : MonoBehaviour
     {
         private enum State { Idle, Reacting, Walking, Pausing }
 
         public NavMeshAgent Agent { get; private set; }
+        /// <summary>Racine du PNJ : l'objet que le NavMeshAgent déplace et que le réseau synchronise.</summary>
+        public Transform Body => Agent.transform;
         public NpcProfile Profile { get; private set; }
         public bool NeedsDestination => _state == State.Idle;
+        public float BaseSpeed => _baseSpeed;
 
         private State _state = State.Idle;
         private float _timer;
@@ -23,57 +26,41 @@ namespace Anachronism.Npc
         private float _seed;
         private float _noiseTime;
 
-        private Animator _animator;
-        private int _speedHash;
-        private bool _hasSpeedParam;
+        private NpcSkin _skin;
 
         private void Awake()
         {
-            Agent = GetComponent<NavMeshAgent>();
+            Agent = GetComponentInParent<NavMeshAgent>();
+            _skin = Agent.GetComponentInChildren<NpcSkin>(true);
             _seed = Random.value * 1000f;
         }
 
+        // Hors ligne ou côté serveur : IA complète + visuel.
         public void Init(NpcProfile profile)
         {
-            Profile = profile;
-            _baseSpeed = Random.Range(profile.WalkSpeedRange.x, profile.WalkSpeedRange.y);
+            InitVisual(profile, Random.Range(profile.WalkSpeedRange.x, profile.WalkSpeedRange.y));
 
             Agent.speed = _baseSpeed;
             Agent.acceleration = profile.Acceleration;
             Agent.angularSpeed = profile.AngularSpeed;
-            Agent.radius = profile.Radius;
             Agent.stoppingDistance = profile.StoppingDistance;
             Agent.avoidancePriority = profile.AvoidancePriority;
             Agent.updateRotation = false;
-
-            SpawnModel();
         }
 
-        private void SpawnModel()
+        // Client en ligne : pas d'IA (le serveur déplace le PNJ), seulement le modèle et l'Animator.
+        // La vitesse de base sert à l'échelle de l'Animator, elle doit être celle tirée par le serveur.
+        public void InitVisual(NpcProfile profile, float baseSpeed)
         {
-            if (Profile.ModelPrefab == null) return;
+            Profile = profile;
+            _baseSpeed = baseSpeed;
+            SetSkin(profile);
+        }
 
-            GameObject model = Instantiate(Profile.ModelPrefab, transform);
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
-            model.transform.localScale = Vector3.one * Profile.ModelScale;
-
-            _animator = model.GetComponentInChildren<Animator>();
-            if (_animator == null) return;
-
-            _animator.speed = Profile.AnimPlaybackSpeed;
-            _animator.applyRootMotion = false;   // c'est le NavMeshAgent qui déplace le PNJ
-            if (Profile.AnimatorController != null)
-                _animator.runtimeAnimatorController = Profile.AnimatorController;
-
-            _speedHash = Animator.StringToHash(Profile.SpeedParameter);
-            foreach (AnimatorControllerParameter parameter in _animator.parameters)
-            {
-                if (parameter.nameHash == _speedHash) { _hasSpeedParam = true; break; }
-            }
-
-            if (!_hasSpeedParam)
-                Debug.LogWarning($"Animator de {name} : paramètre '{Profile.SpeedParameter}' introuvable.", this);
+        // L'apparence peut venir d'un autre profil que le comportement (skins re-tirés par l'hôte).
+        public void SetSkin(NpcProfile skin)
+        {
+            _skin.Apply(skin, _baseSpeed, Profile.SprintSpeedMultiplier);
         }
 
         public void BeginWalk(Vector3 target)
@@ -126,7 +113,9 @@ namespace Anachronism.Npc
             }
 
             UpdateRotation(dt);
-            UpdateAnimator(dt);
+
+            Vector3 velocity = Agent.velocity; velocity.y = 0f;
+            UpdateAnimator(velocity.magnitude, dt);
         }
 
         private void UpdateSprint(float dt)
@@ -160,7 +149,7 @@ namespace Anachronism.Npc
             float factor = 1f;
             if (desired.sqrMagnitude > 0.01f)
             {
-                float angle = Vector3.Angle(transform.forward, desired);
+                float angle = Vector3.Angle(Body.forward, desired);
                 factor = 1f - Profile.CornerSlowdown * Mathf.Clamp01(angle / 90f);
             }
 
@@ -191,26 +180,13 @@ namespace Anachronism.Npc
 
             float yawOffset = Noise(100f, Profile.WanderFrequency) * Profile.HeadingNoiseDegrees;
             Quaternion target = Quaternion.Euler(0f, yawOffset, 0f) * Quaternion.LookRotation(v);
-            transform.rotation = Quaternion.Slerp(transform.rotation, target, Profile.TurnSmoothing * dt);
+            Body.rotation = Quaternion.Slerp(Body.rotation, target, Profile.TurnSmoothing * dt);
         }
 
-        private float ToAnimValue(float speed)
+        // Piloté par la seule vitesse horizontale (règle réseau 5) : un client la mesure sur le transform synchronisé.
+        public void UpdateAnimator(float horizontalSpeed, float dt)
         {
-            float halfWalk = _baseSpeed * 0.5f;
-            float walkMax = _baseSpeed * 1.15f;                       // tolère le bruit de vitesse
-            float sprintSpeed = _baseSpeed * Profile.SprintSpeedMultiplier;
-
-            if (speed < halfWalk) return speed / halfWalk;            // idle -> marche
-            if (speed <= walkMax || sprintSpeed <= walkMax) return 1f;   // plateau de marche
-            return 1f + Mathf.Clamp01((speed - walkMax) / (sprintSpeed - walkMax));   // marche -> course
-        }
-
-        private void UpdateAnimator(float dt)
-        {
-            if (_animator == null || !_hasSpeedParam) return;
-
-            Vector3 v = Agent.velocity; v.y = 0f;
-            _animator.SetFloat(_speedHash, ToAnimValue(v.magnitude), 0.1f, dt);
+            _skin.SetSpeed(horizontalSpeed, dt);
         }
 
         private bool HasArrived()
