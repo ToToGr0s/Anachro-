@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49a2e33a2d4db6b4783b6fff7d874a79, type: 3}
+  m_Name: NpcSkins
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Npc.NpcSkinTable
+  _skins:
+  - {fileID: 11400000, guid: 5d8bb9271e63cf04c92fcb6e8d64d2dc, type: 2}
+  - {fileID: 11400000, guid: cbba01cf75bd9fe418826c3e87396c27, type: 2}
+  - {fileID: 11400000, guid: 2ea1e59bf618ad14d976a3d078945169, type: 2}
+  - {fileID: 11400000, guid: f8125aae86fe9e14d898a7a1b12b0fa1, type: 2}

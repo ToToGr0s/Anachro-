@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22115dd953e6f3a408be98652d0732c2, type: 3}
   m_Name: PlayerControllerSettings
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.PlayerControllerSettings
-  _height: 1.8
+  _height: 1.35
   _radius: 0.4
   _walkSpeed: 5
   _jumpSpeed: 5
@@ -21,7 +21,7 @@ MonoBehaviour:
   _maxSlopeAngle: 45
   _maxStepHeight: 0.3
   _stepSmoothing: 14
-  _cameraHeight: 1.75
+  _cameraHeight: 1.25
   _fieldOfView: 90
   _maxPitch: 70
   _lookSensitivity: 0.1

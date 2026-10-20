@@ -1,0 +1,160 @@
+.hud {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.hud-role {
+    left: auto;
+    right: 20px;
+}
+
+.hud--hunter .match-text--role {
+    color: rgb(92, 201, 148);
+}
+
+.hud--fugitive .match-text--role {
+    color: rgb(233, 188, 69);
+}
+
+.hud-disruption {
+    left: 50%;
+    width: 600px;
+    translate: -50% 0;
+    flex-direction: column;
+    padding: 10px 24px 16px 24px;
+}
+
+.hud-disruption__header {
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.hud-disruption__title {
+    margin: 0;
+}
+
+.hud-disruption__value {
+    margin: 0;
+    -unity-font-style: bold;
+}
+
+.hud-disruption__track {
+    height: 12px;
+    background-color: rgb(36, 40, 51);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.hud-disruption__fill {
+    height: 100%;
+    width: 0;
+    background-color: rgb(92, 201, 148);
+    border-radius: 6px;
+}
+
+.disruption--tier-1 .hud-disruption__fill {
+    background-color: rgb(233, 188, 69);
+}
+
+.disruption--tier-2 .hud-disruption__fill {
+    background-color: rgb(240, 138, 75);
+}
+
+.disruption--tier-3 .hud-disruption__fill {
+    background-color: rgb(240, 120, 120);
+}
+
+.hud-countdown {
+    top: 116px;
+    left: 50%;
+    translate: -50% 0;
+    display: none;
+}
+
+.end-countdown--visible {
+    display: flex;
+}
+
+.hud-countdown__text {
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(240, 120, 120);
+}
+
+.hud-items {
+    position: absolute;
+    bottom: 32px;
+    left: 0;
+    right: 0;
+    flex-direction: row;
+    justify-content: center;
+    display: none;
+}
+
+.hud--fugitive .hud-items {
+    display: flex;
+}
+
+.hud-slot {
+    width: 120px;
+    height: 120px;
+    margin: 0 8px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(18, 20, 26, 0.92);
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.item-slot--selected {
+    border-width: 2px;
+    border-color: rgb(240, 138, 75);
+}
+
+.hud-slot__gauge {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 8px;
+    justify-content: center;
+    background-color: rgb(36, 40, 51);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.hud-slot__gauge-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+    background-color: rgb(194, 65, 12);
+}
+
+.item-slot--cooling .hud-slot__gauge-fill {
+    background-color: rgba(194, 65, 12, 0.55);
+}
+
+.hud-slot__timer {
+    font-size: 26px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(233, 235, 241);
+}
+
+.hud-slot__name {
+    margin: 0;
+}
+
+.item-slot--selected .hud-slot__name {
+    color: rgb(240, 138, 75);
+}
+
+.item-slot--cooling .hud-slot__name {
+    opacity: 0.4;
+}
