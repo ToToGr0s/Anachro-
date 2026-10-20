@@ -11,6 +11,11 @@
                 <ui:TextField name="code-field" max-length="9" class="code-field" />
                 <ui:Button name="join-button" text="Rejoindre" class="button" />
             </ui:VisualElement>
+            <ui:Label text="Tester sur ce PC (sans Steam)" class="caption" />
+            <ui:VisualElement class="row">
+                <ui:Button name="local-host-button" text="Héberger en local" class="button" />
+                <ui:Button name="local-join-button" text="Rejoindre en local" class="button" />
+            </ui:VisualElement>
             <ui:Label name="steam-warning" text="Steam n'est pas lancé : ferme le jeu, ouvre Steam, puis relance." class="warning" />
             <ui:Button name="quit-button" text="Quitter le jeu" class="button button--ghost" />
         </ui:VisualElement>
@@ -28,6 +33,7 @@
             </ui:VisualElement>
             <ui:Label name="player-count" class="info" />
             <ui:Label name="result-label" class="result" />
+            <ui:Button name="solo-role-button" text="Test solo : gentil" class="button button--small" />
             <ui:Button name="start-button" text="Lancer la partie" class="button button--primary" />
             <ui:Label name="waiting-label" text="En attente de l'hôte…" class="info" />
             <ui:Button name="leave-button" text="Quitter la partie" class="button button--ghost" />

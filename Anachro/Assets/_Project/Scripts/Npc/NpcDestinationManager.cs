@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
+using Anachronism.Network;
+using FishNet;
+using FishNet.Managing;
+using FishNet.Object;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace Anachronism.Npc
 {
     // Fait apparaître les PNJ et leur choisit des destinations au hasard sur le NavMesh (tirage pondéré par l'aire).
-    // TODO (Théo) : passage en réseau (spawn et IA côté serveur, même synchro que le méchant).
+    // En ligne, seul l'hôte fait apparaître les PNJ et pilote leur IA ; les clients les reçoivent par le réseau (NetworkNpc).
     public class NpcDestinationManager : MonoBehaviour
     {
         [Serializable]
@@ -30,9 +34,20 @@ namespace Anachronism.Npc
         private NavMeshTriangulation _triangulation;
         private float[] _cumulativeAreas;
         private float _totalArea;
+        private NetworkManager _networkManager; // null hors ligne (scène de test lancée sans Boot)
+
+        private bool IsOnline => _networkManager != null && _networkManager.IsServerStarted;
 
         private void Start()
         {
+            // Instances d'abord : InstanceFinder écrit un message dans la console quand il n'en trouve aucun (scène de test).
+            _networkManager = NetworkManager.Instances.Count > 0 ? InstanceFinder.NetworkManager : null;
+            if (_networkManager != null && _networkManager.IsClientStarted && !_networkManager.IsServerStarted)
+            {
+                enabled = false;
+                return;
+            }
+
             BuildTriangleData();
             SpawnAll();
         }
@@ -74,17 +89,102 @@ namespace Anachronism.Npc
             if (profile == null || profile.Prefab == null) return null;
 
             Vector3 position = RandomPointOnNavMesh();
-            NpcAgent npc = Instantiate(profile.Prefab, position, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f), _npcParent);
+            Quaternion rotation = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
+            // En ligne, pas de parent : FishNet ne synchronise pas un parent qui n'est pas un objet réseau.
+            // Le profil pointe le NpcAgent de l'enfant « Controller » : on instancie tout le prefab (sa racine).
+            GameObject prefabRoot = profile.Prefab.transform.root.gameObject;
+            NpcAgent npc = IsOnline
+                ? Instantiate(prefabRoot, position, rotation).GetComponentInChildren<NpcAgent>()
+                : InstantiateOffline(prefabRoot, position, rotation);
+            // Désactivé dans le prefab : un client ne doit jamais déplacer un PNJ lui-même.
+            npc.Agent.enabled = true;
             npc.Agent.Warp(position);
             npc.Init(profile);
+
+            if (IsOnline)
+            {
+                NetworkNpc networkNpc = npc.Body.GetComponentInChildren<NetworkNpc>();
+                if (networkNpc != null)
+                    networkNpc.SetSpawnProfile(profile);
+                _networkManager.ServerManager.Spawn(npc.Body.gameObject, null, gameObject.scene);
+            }
+
             _npcs.Add(npc);
             return npc;
         }
 
+        // Hors ligne (scène de test lancée sans Boot) : FishNet signale en erreur puis désactive tout NetworkObject
+        // qui n'est pas spawné. On instancie sous un parent inactif (aucun Awake ne tourne) et on retire les composants
+        // réseau avant d'activer le PNJ.
+        private NpcAgent InstantiateOffline(GameObject prefabRoot, Vector3 position, Quaternion rotation)
+        {
+            GameObject holder = new GameObject("NpcOfflineSpawn");
+            holder.SetActive(false);
+
+            GameObject instance = Instantiate(prefabRoot, position, rotation, holder.transform);
+            foreach (NetworkBehaviour networkBehaviour in instance.GetComponentsInChildren<NetworkBehaviour>(true))
+                DestroyImmediate(networkBehaviour);
+            if (instance.TryGetComponent(out NetworkObject networkObject))
+                DestroyImmediate(networkObject);
+
+            instance.transform.SetParent(_npcParent, true);
+            Destroy(holder);
+            return instance.GetComponentInChildren<NpcAgent>();
+        }
+
+        /// <summary>Réglages de l'hôte : retire tous les PNJ et en refait apparaître de nouveaux (positions, skins).</summary>
+        public void RespawnAll()
+        {
+            if (!CanCommandNpcs())
+                return;
+
+            for (int i = _npcs.Count - 1; i >= 0; i--)
+            {
+                if (_npcs[i] != null)
+                    Despawn(_npcs[i]);
+            }
+
+            _npcs.Clear();
+            SpawnAll();
+        }
+
+        /// <summary>Réglages de l'hôte : chaque PNJ reçoit un nouveau skin au hasard, sans changer de comportement.</summary>
+        public void RerollSkins()
+        {
+            if (!IsOnline)
+                return;
+
+            foreach (NpcAgent npc in _npcs)
+            {
+                NetworkNpc networkNpc = npc != null ? npc.Body.GetComponentInChildren<NetworkNpc>() : null;
+                if (networkNpc != null)
+                    networkNpc.RerollSkin();
+            }
+        }
+
+        /// <summary>Point au hasard sur le NavMesh, tiré comme les PNJ (sert aussi à faire apparaître les joueurs).</summary>
+        public bool TryGetRandomPoint(out Vector3 point)
+        {
+            if (_totalArea <= 0f)
+            {
+                point = default;
+                return false;
+            }
+
+            point = RandomPointOnNavMesh();
+            return true;
+        }
+
+        // Désactivé chez un client pur (Start) : seuls l'hôte et la scène de test hors ligne pilotent les PNJ.
+        private bool CanCommandNpcs() => enabled && _totalArea > 0f;
+
         public void Despawn(NpcAgent npc)
         {
             _npcs.Remove(npc);
-            Destroy(npc.gameObject);
+            if (IsOnline)
+                _networkManager.ServerManager.Despawn(npc.Body.gameObject);
+            else
+                Destroy(npc.Body.gameObject);
         }
 
         // ---------- Boucle ----------
@@ -96,6 +196,13 @@ namespace Anachronism.Npc
             for (int i = 0; i < _npcs.Count; i++)
             {
                 NpcAgent npc = _npcs[i];
+                // Détruit sans passer par Despawn (arrêt du serveur, déchargement de la map).
+                if (npc == null)
+                {
+                    _npcs.RemoveAt(i--);
+                    continue;
+                }
+
                 npc.Tick(dt);
 
                 if (npc.NeedsDestination)
@@ -115,7 +222,7 @@ namespace Anachronism.Npc
         {
             NavMeshPath path = new NavMeshPath();
             Vector2 range = npc.Profile.WalkDistanceRange;
-            Vector3 origin = npc.transform.position;
+            Vector3 origin = npc.Body.position;
 
             for (int i = 0; i < _maxAttempts; i++)
             {

@@ -35,7 +35,26 @@ namespace Anachronism.Network
         private readonly Dictionary<NetworkConnection, PlayerRole> _roles = new Dictionary<NetworkConnection, PlayerRole>();
         // Méchants capturés (T06) ou déconnectés : ils restent dans _roles pour compter les méchants de la partie.
         private readonly HashSet<NetworkConnection> _neutralizedVillains = new HashSet<NetworkConnection>();
+        // Adresse de chaque joueur de la partie, lue au lancement : à la déconnexion, le transport ne la donne plus.
+        private readonly Dictionary<NetworkConnection, string> _addresses = new Dictionary<NetworkConnection, string>();
+        // Joueurs partis en pleine partie, par adresse : ils retrouvent leur rôle s'ils reviennent avant la fin.
+        private readonly Dictionary<string, AwayPlayer> _awayPlayers = new Dictionary<string, AwayPlayer>();
         private MatchSettings _settings;
+
+        private readonly struct AwayPlayer
+        {
+            public readonly NetworkConnection Connection;
+            public readonly PlayerRole Role;
+            // Faux pour un méchant déjà capturé avant de partir : revenir ne le libère pas.
+            public readonly bool WasActive;
+
+            public AwayPlayer(NetworkConnection connection, PlayerRole role, bool wasActive)
+            {
+                Connection = connection;
+                Role = role;
+                WasActive = wasActive;
+            }
+        }
 
         public GamePhase Phase => _phase.Value;
         public float Degradation => IsSpawned ? ComputeDegradation(TimeManager.Tick) : 0f;
@@ -61,6 +80,8 @@ namespace Anachronism.Network
 
         public event Action<GamePhase> PhaseChanged;
         public event Action<PlayerRole> LocalRoleAssigned;
+        /// <summary>Côté serveur : un joueur parti en pleine partie est revenu et a retrouvé son rôle.</summary>
+        public event Action<NetworkConnection> PlayerRejoined;
 
         private void Awake()
         {
@@ -81,6 +102,7 @@ namespace Anachronism.Network
             base.OnStartServer();
             TimeManager.OnTick += OnServerTick;
             ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
+            SceneManager.OnClientLoadedStartScenes += OnClientLoadedStartScenes;
         }
 
         public override void OnStopServer()
@@ -88,6 +110,7 @@ namespace Anachronism.Network
             base.OnStopServer();
             TimeManager.OnTick -= OnServerTick;
             ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
+            SceneManager.OnClientLoadedStartScenes -= OnClientLoadedStartScenes;
         }
 
         public override void OnStopClient()
@@ -100,11 +123,30 @@ namespace Anachronism.Network
         public PlayerRole GetRoleServer(NetworkConnection connection) =>
             connection != null && _roles.TryGetValue(connection, out PlayerRole role) ? role : PlayerRole.None;
 
+        /// <summary>Partie de test : un joueur seul, sans minimum de joueurs, qui choisit son rôle. Même règle pour l'UI et le lancement.</summary>
+        public static bool IsSoloTest(int activePlayerCount) => activePlayerCount == 1;
+
+        [Server]
+        public int CountActivePlayers()
+        {
+            int count = 0;
+            foreach (NetworkConnection connection in ServerManager.Clients.Values)
+            {
+                if (connection.IsActive)
+                    count++;
+            }
+
+            return count;
+        }
+
         // ================= Déroulé de la partie =================
 
-        /// <summary>Démarre avec le préréglage correspondant au nombre de joueurs connectés.</summary>
+        /// <summary>
+        /// Démarre avec le préréglage correspondant au nombre de joueurs connectés.
+        /// Seul, c'est une partie de test : le minimum de joueurs ne s'applique pas et soloRole est son rôle.
+        /// </summary>
         [Server]
-        public MatchStartResult StartMatch()
+        public MatchStartResult StartMatch(PlayerRole soloRole = PlayerRole.Guardian)
         {
             if (_presets == null)
             {
@@ -112,11 +154,11 @@ namespace Anachronism.Network
                 return MatchStartResult.InvalidSettings;
             }
 
-            return StartMatch(_presets.GetFor(GetActivePlayers().Count));
+            return StartMatch(_presets.GetFor(GetActivePlayers().Count), soloRole);
         }
 
         [Server]
-        public MatchStartResult StartMatch(MatchSettings settings)
+        public MatchStartResult StartMatch(MatchSettings settings, PlayerRole soloRole = PlayerRole.Guardian)
         {
             if (_phase.Value != GamePhase.Lobby && _phase.Value != GamePhase.End)
                 return MatchStartResult.WrongPhase;
@@ -129,7 +171,8 @@ namespace Anachronism.Network
             }
 
             List<NetworkConnection> players = GetActivePlayers();
-            if (players.Count < _presets.MinPlayers)
+            bool isSolo = IsSoloTest(players.Count);
+            if (players.Count < _presets.MinPlayers && !isSolo)
                 return MatchStartResult.NotEnoughPlayers;
 
             foreach (NetworkConnection player in players)
@@ -142,13 +185,19 @@ namespace Anachronism.Network
             _settings = settings;
             _roles.Clear();
             _neutralizedVillains.Clear();
+            _addresses.Clear();
+            _awayPlayers.Clear();
 
-            // Au moins un gentil : sinon la partie serait gagnée d'avance par les méchants.
-            int villainCount = Mathf.Clamp(settings.VillainCount, 1, players.Count - 1);
+            // Seul : pas d'adversaire, la partie ne se gagne que par la dégradation. Sert à tester un rôle.
+            // Sinon au moins un gentil : la partie serait gagnée d'avance par les méchants.
+            int villainCount = isSolo
+                ? (soloRole == PlayerRole.Villain ? 1 : 0)
+                : Mathf.Clamp(settings.VillainCount, 1, players.Count - 1);
             for (int i = 0; i < players.Count; i++)
             {
                 PlayerRole role = i < villainCount ? PlayerRole.Villain : PlayerRole.Guardian;
                 _roles[players[i]] = role;
+                _addresses[players[i]] = players[i].GetAddress();
                 TargetAssignRole(players[i], role);
             }
 
@@ -295,8 +344,14 @@ namespace Anachronism.Network
             if (_phase.Value == GamePhase.Lobby || _phase.Value == GamePhase.End)
             {
                 _roles.Remove(connection);
+                _addresses.Remove(connection);
                 return;
             }
+
+            // Gardé pour son retour : sans adresse (transport qui n'en donne pas), il ne pourra pas être reconnu.
+            // Tugboat (partie locale) donne la même adresse à toutes les instances du PC : le premier qui revient prend le rôle.
+            if (_addresses.Remove(connection, out string address) && !string.IsNullOrEmpty(address))
+                _awayPlayers[address] = new AwayPlayer(connection, role, !_neutralizedVillains.Contains(connection));
 
             // Un méchant qui quitte est neutralisé : quitter ne doit pas être un moyen de faire durer la partie.
             if (role == PlayerRole.Villain)
@@ -308,6 +363,29 @@ namespace Anachronism.Network
             _roles.Remove(connection);
             if (!_roles.ContainsValue(PlayerRole.Guardian))
                 EndMatch(Winner.Villains);
+        }
+
+        // Après le chargement de la map par le client : son avatar peut apparaître tout de suite.
+        private void OnClientLoadedStartScenes(NetworkConnection connection, bool asServer)
+        {
+            if (!asServer || _phase.Value == GamePhase.Lobby || _phase.Value == GamePhase.End)
+                return;
+
+            // Adresse donnée par le transport (SteamID avec Steam), jamais par le client : il ne peut pas prendre le rôle d'un autre.
+            string address = connection.GetAddress();
+            if (string.IsNullOrEmpty(address) || !_awayPlayers.Remove(address, out AwayPlayer away))
+                return;
+
+            // La nouvelle connexion remplace l'ancienne partout, pour que le décompte des méchants reste juste.
+            _roles.Remove(away.Connection);
+            bool wasNeutralized = _neutralizedVillains.Remove(away.Connection);
+            _roles[connection] = away.Role;
+            _addresses[connection] = address;
+            if (wasNeutralized && !away.WasActive)
+                _neutralizedVillains.Add(connection);
+
+            TargetAssignRole(connection, away.Role);
+            PlayerRejoined?.Invoke(connection);
         }
 
         private void OnPhaseChange(GamePhase previous, GamePhase next, bool asServer)

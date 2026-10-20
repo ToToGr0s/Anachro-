@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="../Lobby/LobbyMenu.uss" />
+    <Style src="Overlay.uss" />
+    <ui:VisualElement name="overlay-root" class="overlay-root" picking-mode="Ignore">
+
+        <ui:Label name="debug-label" class="debug" picking-mode="Ignore" />
+
+        <ui:VisualElement name="pause-panel" class="pause-backdrop">
+            <ui:VisualElement class="panel">
+                <ui:Label text="Pause" class="caption" />
+                <ui:Button name="resume-button" text="Reprendre" class="button button--primary" />
+                <ui:VisualElement name="host-section">
+                    <ui:Label text="Réglages de l'hôte" class="caption" />
+                    <ui:Button name="reload-npcs-button" text="Recharger les PNJ" class="button" />
+                    <ui:Button name="reroll-skins-button" text="Nouveaux skins pour les PNJ" class="button" />
+                </ui:VisualElement>
+                <ui:Label name="pause-status" class="info" />
+                <ui:Button name="pause-leave-button" text="Quitter la partie" class="button button--ghost" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>
