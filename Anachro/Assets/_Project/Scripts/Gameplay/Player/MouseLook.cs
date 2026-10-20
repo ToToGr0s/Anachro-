@@ -84,6 +84,13 @@ namespace Anachronism.Gameplay
             // Echap ouvre le menu (UI/PauseMenu), qui libere la souris : pas de regard tant qu'il est ouvert.
             if (GameMenuState.IsOpen) return;
 
+            // Scene de test sans Boot, donc sans menu : Echap libere la souris lui-meme.
+            if (!GameMenuState.IsAvailable && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+
             // Clic gauche pour recapturer la souris (perdue en changeant de fenetre)
             if (Cursor.lockState != CursorLockMode.Locked && Mouse.current.leftButton.wasPressedThisFrame)
             {

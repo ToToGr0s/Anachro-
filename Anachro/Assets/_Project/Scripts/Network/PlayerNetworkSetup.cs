@@ -9,6 +9,7 @@ namespace Anachronism.Network
     /// Branche le contrôleur de Célian sur le réseau. Le prefab est livré avec les entrées, la caméra et le déplacement
     /// désactivés : seul l'owner les allume. Les autres instances ne font que suivre le NetworkTransform (client-autoritaire,
     /// seul point accepté par la règle réseau 8).
+    /// Hors ligne (copie posée dans une scène de test, « Is Networked » décoché sur le NetworkObject) : la copie se pilote seule.
     /// </summary>
     public sealed class PlayerNetworkSetup : NetworkBehaviour
     {
@@ -19,19 +20,28 @@ namespace Anachronism.Network
         [SerializeField] private PlayerInput _playerInput;
 
         private GameObject _hiddenSceneCamera;
+        // Mémorisé plutôt que relu dans IsOwner : à l'arrêt (déconnexion, despawn), l'ownership peut déjà être retirée.
+        private bool _hasLocalControl;
+
+        private void Start()
+        {
+            // Jamais initialisée par FishNet : c'est la copie d'une scène de test hors ligne.
+            if (!GetIsNetworked())
+                EnableLocalControl();
+        }
 
         public override void OnStartClient()
         {
             base.OnStartClient();
 
+            // Écrit dans les deux sens : avec le pool, une même instance peut servir à un joueur distant puis à l'owner.
+            // L'owner garde sa capsule en trigger pour que ses propres requêtes l'ignorent (CharacterMovement). Un joueur
+            // distant doit au contraire bloquer l'owner, comme un PNJ : sinon traverser quelqu'un trahit que c'est un joueur.
+            if (_capsule != null)
+                _capsule.isTrigger = IsOwner;
+
             if (!IsOwner)
-            {
-                // CharacterMovement met sa capsule en trigger pour que ses propres requêtes l'ignorent. Un joueur distant
-                // doit au contraire bloquer l'owner, comme un PNJ : sinon traverser quelqu'un trahit que c'est un joueur.
-                if (_capsule != null)
-                    _capsule.isTrigger = false;
                 return;
-            }
 
             // La caméra de vue d'ensemble de la map rendrait par-dessus la nôtre et doublerait l'AudioListener.
             Camera sceneCamera = Camera.main;
@@ -41,22 +51,44 @@ namespace Anachronism.Network
                 _hiddenSceneCamera.SetActive(false);
             }
 
-            SetOwnerComponentsEnabled(true);
-            GameMenuState.OpenChanged += OnMenuOpenChanged;
-            OnMenuOpenChanged(GameMenuState.IsOpen);
+            EnableLocalControl();
         }
 
         public override void OnStopClient()
         {
             base.OnStopClient();
+            DisableLocalControl();
+        }
 
-            if (!IsOwner)
+        private void OnDestroy()
+        {
+            // Filet de sécurité : l'événement est statique, un abonnement oublié appellerait un objet détruit.
+            if (_hasLocalControl)
+                GameMenuState.OpenChanged -= OnMenuOpenChanged;
+        }
+
+        private void EnableLocalControl()
+        {
+            if (_hasLocalControl)
                 return;
 
+            _hasLocalControl = true;
+            SetOwnerComponentsEnabled(true);
+            GameMenuState.OpenChanged += OnMenuOpenChanged;
+            OnMenuOpenChanged(GameMenuState.IsOpen);
+        }
+
+        private void DisableLocalControl()
+        {
+            if (!_hasLocalControl)
+                return;
+
+            _hasLocalControl = false;
             GameMenuState.OpenChanged -= OnMenuOpenChanged;
             SetOwnerComponentsEnabled(false);
             if (_hiddenSceneCamera != null)
                 _hiddenSceneCamera.SetActive(true);
+            _hiddenSceneCamera = null;
 
             // MouseLook verrouille la souris : de retour au menu, il faut pouvoir cliquer.
             Cursor.lockState = CursorLockMode.None;

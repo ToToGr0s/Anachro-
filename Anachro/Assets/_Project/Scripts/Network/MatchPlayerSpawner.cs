@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Anachronism.Npc;
 using FishNet.Connection;
 using FishNet.Object;
+using FishNet.Transporting;
 using UnityEngine;
 
 namespace Anachronism.Network
@@ -9,7 +10,11 @@ namespace Anachronism.Network
     /// <summary>
     /// Pas de joueur au lobby : les avatars apparaissent au lancement de la partie et disparaissent à la fin,
     /// pour que le menu du lobby (et « Rejouer ») reste cliquable, souris libre, sur la vue d'ensemble de la map.
+    /// Un joueur qui revient en pleine partie avec son rôle (MatchManager.PlayerRejoined) réapparaît aussitôt.
     /// </summary>
+    // TODO (Théo) : un client modifié distingue encore un avatar de joueur d'un PNJ (owner dans le message de spawn,
+    // prefab et composants différents). PR suivante : avatar sans owner, même prefab que les PNJ, déplacé par l'hôte
+    // d'après la position envoyée par le client.
     [RequireComponent(typeof(MatchManager))]
     public sealed class MatchPlayerSpawner : NetworkBehaviour
     {
@@ -25,6 +30,8 @@ namespace Anachronism.Network
         private readonly Dictionary<NetworkConnection, NetworkObject> _players = new Dictionary<NetworkConnection, NetworkObject>();
         private readonly List<NetworkConnection> _toSpawn = new List<NetworkConnection>();
         private MatchManager _match;
+        // Compté sur toute la partie : un joueur qui réapparaît ne reprend pas le point d'un autre.
+        private int _spawnCount;
 
         private void Awake()
         {
@@ -35,12 +42,16 @@ namespace Anachronism.Network
         {
             base.OnStartServer();
             _match.PhaseChanged += OnPhaseChanged;
+            _match.PlayerRejoined += OnPlayerRejoined;
+            ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
             _match.PhaseChanged -= OnPhaseChanged;
+            _match.PlayerRejoined -= OnPlayerRejoined;
+            ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
             _players.Clear();
         }
 
@@ -56,8 +67,36 @@ namespace Anachronism.Network
                 SpawnMissingPlayers();
         }
 
+        private void OnPlayerRejoined(NetworkConnection connection)
+        {
+            if (connection.IsActive && !HasAvatar(connection))
+                SpawnPlayer(connection);
+        }
+
+        // FishNet despawn déjà l'avatar d'un joueur qui part (il en est l'owner) : on oublie juste l'entrée.
+        private void OnRemoteConnectionState(NetworkConnection connection, RemoteConnectionStateArgs args)
+        {
+            if (args.ConnectionState == RemoteConnectionState.Stopped)
+                _players.Remove(connection);
+        }
+
         [Server]
         private void SpawnMissingPlayers()
+        {
+            // Seuls les joueurs qui ont reçu un rôle jouent : quelqu'un qui rejoint en cours de partie reste au lobby.
+            _toSpawn.Clear();
+            foreach (NetworkConnection connection in ServerManager.Clients.Values)
+            {
+                if (connection.IsActive && _match.GetRoleServer(connection) != PlayerRole.None && !HasAvatar(connection))
+                    _toSpawn.Add(connection);
+            }
+
+            foreach (NetworkConnection connection in _toSpawn)
+                SpawnPlayer(connection);
+        }
+
+        [Server]
+        private void SpawnPlayer(NetworkConnection connection)
         {
             if (_playerPrefab == null)
             {
@@ -65,23 +104,14 @@ namespace Anachronism.Network
                 return;
             }
 
-            // Seuls les joueurs qui ont reçu un rôle jouent : quelqu'un qui rejoint en cours de partie reste au lobby.
-            _toSpawn.Clear();
-            foreach (NetworkConnection connection in ServerManager.Clients.Values)
-            {
-                if (connection.IsActive && _match.GetRoleServer(connection) != PlayerRole.None
-                    && !(_players.TryGetValue(connection, out NetworkObject existing) && existing != null && existing.IsSpawned))
-                    _toSpawn.Add(connection);
-            }
-
-            for (int i = 0; i < _toSpawn.Count; i++)
-            {
-                GetSpawn(i, out Vector3 position, out Quaternion rotation);
-                NetworkObject player = NetworkManager.GetPooledInstantiated(_playerPrefab, position, rotation, true);
-                ServerManager.Spawn(player, _toSpawn[i], gameObject.scene);
-                _players[_toSpawn[i]] = player;
-            }
+            GetSpawn(_spawnCount++, out Vector3 position, out Quaternion rotation);
+            NetworkObject player = NetworkManager.GetPooledInstantiated(_playerPrefab, position, rotation, true);
+            ServerManager.Spawn(player, connection, gameObject.scene);
+            _players[connection] = player;
         }
+
+        private bool HasAvatar(NetworkConnection connection) =>
+            _players.TryGetValue(connection, out NetworkObject player) && player != null && player.IsSpawned;
 
         private void GetSpawn(int index, out Vector3 position, out Quaternion rotation)
         {
@@ -100,7 +130,6 @@ namespace Anachronism.Network
         [Server]
         private void DespawnPlayers()
         {
-            // Un joueur déconnecté a déjà été retiré par FishNet (objet possédé) : on ne despawn que ce qui existe encore.
             foreach (NetworkObject player in _players.Values)
             {
                 if (player != null && player.IsSpawned)
@@ -108,6 +137,7 @@ namespace Anachronism.Network
             }
 
             _players.Clear();
+            _spawnCount = 0;
         }
     }
 }

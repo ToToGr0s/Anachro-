@@ -1,3 +1,4 @@
+using Anachronism.Network;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -7,6 +8,7 @@ namespace Anachronism.UI
     /// Affichage : F11 bascule plein écran ↔ fenêtre (le jeu démarre fenêtré pour lancer deux instances côte à côte),
     /// et cadence limitée. Sans limite, une scène légère (lobby) tourne à des centaines d'images par seconde
     /// et sature CPU et GPU, surtout avec deux instances qui tournent même sans le focus (runInBackground).
+    /// Fenêtre en arrière-plan : cadence réduite, sauf chez l'hôte.
     /// </summary>
     public sealed class DisplayController : MonoBehaviour
     {
@@ -29,9 +31,12 @@ namespace Anachronism.UI
 
         private void ApplyFrameRate(bool hasFocus)
         {
+            // L'hôte n'est jamais ralenti : ses PNJ et ses ticks saccaderaient chez tous les clients.
+            bool isThrottled = !hasFocus && !HostTools.IsHost;
+
             // targetFrameRate n'est pris en compte que synchro verticale coupée.
-            QualitySettings.vSyncCount = hasFocus ? _focusedVSyncCount : 0;
-            Application.targetFrameRate = hasFocus ? -1 : _backgroundFrameRate;
+            QualitySettings.vSyncCount = isThrottled ? 0 : _focusedVSyncCount;
+            Application.targetFrameRate = isThrottled ? _backgroundFrameRate : -1;
         }
 
         private void Update()

@@ -1,6 +1,5 @@
 using Anachronism.Core;
 using Anachronism.Network;
-using Anachronism.Npc;
 using FishNet;
 using FishNet.Managing;
 using UnityEngine;
@@ -11,7 +10,7 @@ namespace Anachronism.UI
 {
     /// <summary>
     /// Menu Échap en ligne : reprendre, quitter, et pour l'hôte les réglages des PNJ (recharger, re-tirer les skins).
-    /// L'hôte est le serveur : ses boutons appellent directement le gameplay serveur, comme « Lancer la partie ».
+    /// Ces réglages passent par HostTools, qui vérifie que ce poste est l'hôte : le menu ne touche pas lui-même au réseau.
     /// </summary>
     // TODO (Olivier) : version provisoire posée par Théo, à reprendre (UXML/USS).
     [RequireComponent(typeof(UIDocument))]
@@ -54,6 +53,7 @@ namespace Anachronism.UI
             _leaveButton.clicked += OnLeaveClicked;
 
             SetVisible(_pausePanel, false);
+            GameMenuState.SetAvailable(true);
         }
 
         private void OnDisable()
@@ -62,7 +62,7 @@ namespace Anachronism.UI
             _reloadNpcsButton.clicked -= OnReloadNpcsClicked;
             _rerollSkinsButton.clicked -= OnRerollSkinsClicked;
             _leaveButton.clicked -= OnLeaveClicked;
-            GameMenuState.SetOpen(false);
+            GameMenuState.SetAvailable(false);
         }
 
         private void Start()
@@ -102,7 +102,7 @@ namespace Anachronism.UI
         private void Open()
         {
             SetVisible(_pausePanel, true);
-            SetVisible(_hostSection, _networkManager.IsServerStarted);
+            SetVisible(_hostSection, HostTools.IsHost);
             _statusLabel.text = string.Empty;
 
             // Au lobby, aucun joueur local n'écoute le menu : on libère la souris ici aussi.
@@ -118,37 +118,11 @@ namespace Anachronism.UI
             GameMenuState.SetOpen(false);
         }
 
-        private void OnReloadNpcsClicked()
-        {
-            NpcDestinationManager npcs = FindHostNpcs();
-            if (npcs == null)
-                return;
+        private void OnReloadNpcsClicked() =>
+            _statusLabel.text = HostTools.TryRespawnNpcs() ? "PNJ rechargés." : "Pas de PNJ dans cette map.";
 
-            npcs.RespawnAll();
-            _statusLabel.text = "PNJ rechargés.";
-        }
-
-        private void OnRerollSkinsClicked()
-        {
-            NpcDestinationManager npcs = FindHostNpcs();
-            if (npcs == null)
-                return;
-
-            npcs.RerollSkins();
-            _statusLabel.text = "Nouveaux skins tirés.";
-        }
-
-        // Cherché au clic (jamais dans Update) : les PNJ vivent dans la map, le menu dans Boot.
-        private NpcDestinationManager FindHostNpcs()
-        {
-            if (!_networkManager.IsServerStarted)
-                return null;
-
-            NpcDestinationManager npcs = FindAnyObjectByType<NpcDestinationManager>();
-            if (npcs == null)
-                _statusLabel.text = "Pas de PNJ dans cette map.";
-            return npcs;
-        }
+        private void OnRerollSkinsClicked() =>
+            _statusLabel.text = HostTools.TryRerollNpcSkins() ? "Nouveaux skins tirés." : "Pas de PNJ dans cette map.";
 
         private void OnLeaveClicked()
         {

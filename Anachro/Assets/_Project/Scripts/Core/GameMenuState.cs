@@ -11,7 +11,17 @@ namespace Anachronism.Core
     {
         public static bool IsOpen { get; private set; }
 
+        /// <summary>Un menu Échap existe (Boot chargé). Sinon, dans une scène de test, le joueur libère la souris lui-même.</summary>
+        public static bool IsAvailable { get; private set; }
+
         public static event Action<bool> OpenChanged;
+
+        public static void SetAvailable(bool isAvailable)
+        {
+            IsAvailable = isAvailable;
+            if (!isAvailable)
+                SetOpen(false);
+        }
 
         public static void SetOpen(bool isOpen)
         {
@@ -28,6 +38,7 @@ namespace Anachronism.Core
         private static void ResetOnPlay()
         {
             IsOpen = false;
+            IsAvailable = false;
             OpenChanged = null;
         }
     }

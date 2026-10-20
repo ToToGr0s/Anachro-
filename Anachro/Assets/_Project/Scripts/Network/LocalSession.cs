@@ -45,9 +45,15 @@ namespace Anachronism.Network
             if (!_networkManager.StartServerOn<Tugboat>())
                 return false;
 
-            IsLocal = true;
+            // Un hôte sans son propre client ne servirait à rien : on referme le serveur.
             _networkManager.UseClientTransport<Tugboat>();
-            _networkManager.ClientManager.StartConnection(LocalAddress);
+            if (!_networkManager.ClientManager.StartConnection(LocalAddress))
+            {
+                _networkManager.ServerManager.StopConnection(true);
+                return false;
+            }
+
+            IsLocal = true;
             return true;
         }
 
@@ -57,9 +63,13 @@ namespace Anachronism.Network
             if (!_networkManager.IsOffline)
                 return false;
 
-            IsLocal = true;
+            // Posé seulement si la connexion démarre : sinon aucun « Stopped » ne viendrait le remettre à faux.
             _networkManager.UseClientTransport<Tugboat>();
-            return _networkManager.ClientManager.StartConnection(LocalAddress);
+            if (!_networkManager.ClientManager.StartConnection(LocalAddress))
+                return false;
+
+            IsLocal = true;
+            return true;
         }
 
         private void OnClientConnectionState(ClientConnectionStateArgs args)

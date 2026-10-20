@@ -238,8 +238,8 @@ namespace Anachronism.UI
             _startButton.text = hasEnded ? "Rejouer" : "Lancer la partie";
             _startButton.SetEnabled(match != null);
 
-            // Hôte seul : partie de test, il choisit son rôle.
-            bool isSolo = _networkManager.IsServerStarted && _networkManager.ServerManager.Clients.Count == 1;
+            // Hôte seul : partie de test, il choisit son rôle. Même règle que celle appliquée au lancement par MatchManager.
+            bool isSolo = match != null && match.IsServerInitialized && MatchManager.IsSoloTest(match.CountActivePlayers());
             SetVisible(_soloRoleButton, isSolo);
             if (isSolo)
                 _soloRoleButton.text = _soloRole == PlayerRole.Villain ? "Test solo : méchant" : "Test solo : gentil";

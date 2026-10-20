@@ -144,7 +144,7 @@ Transform:
   m_GameObject: {fileID: 126289499}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.92387956, z: -0, w: 0.38268346}
-  m_LocalPosition: {x: -2.828427, y: 1, z: 2.828427}
+  m_LocalPosition: {x: -2.828427, y: 4, z: 2.828427}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -175,7 +175,7 @@ Transform:
   m_GameObject: {fileID: 185700714}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 4, y: 1, z: 0}
+  m_LocalPosition: {x: 4, y: 4, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -206,7 +206,7 @@ Transform:
   m_GameObject: {fileID: 415154710}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.3826836, z: -0, w: 0.9238795}
-  m_LocalPosition: {x: 2.828428, y: 1, z: -2.8284261}
+  m_LocalPosition: {x: 2.828428, y: 4, z: -2.8284261}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -329,7 +329,7 @@ Transform:
   m_GameObject: {fileID: 660329805}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.0000000059624403, z: -0, w: 1}
-  m_LocalPosition: {x: 0.000000047699523, y: 1, z: -4}
+  m_LocalPosition: {x: 0.000000047699523, y: 4, z: -4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -345,6 +345,7 @@ GameObject:
   m_Component:
   - component: {fileID: 818033369}
   - component: {fileID: 818033368}
+  - component: {fileID: 818033370}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -432,6 +433,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!114 &818033370
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 818033367}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &882637709
 GameObject:
   m_ObjectHideFlags: 0
@@ -631,7 +661,7 @@ Transform:
   m_GameObject: {fileID: 1555630725}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.92387956, z: -0, w: -0.38268346}
-  m_LocalPosition: {x: 2.828427, y: 1, z: 2.828427}
+  m_LocalPosition: {x: 2.828427, y: 4, z: 2.828427}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -787,7 +817,7 @@ Transform:
   m_GameObject: {fileID: 1766315799}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071067, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -4, y: 1, z: -0.0000003496911}
+  m_LocalPosition: {x: -4, y: 4, z: -0.0000003496911}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -937,7 +967,7 @@ Transform:
   m_GameObject: {fileID: 1967848388}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.38268337, z: -0, w: 0.92387956}
-  m_LocalPosition: {x: -2.8284266, y: 1, z: -2.8284276}
+  m_LocalPosition: {x: -2.8284266, y: 4, z: -2.8284276}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -968,7 +998,7 @@ Transform:
   m_GameObject: {fileID: 2114931291}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 1, z: -0, w: 0.000000021855694}
-  m_LocalPosition: {x: -0.00000017484555, y: 1, z: 4}
+  m_LocalPosition: {x: -0.00000017484555, y: 4, z: 4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
