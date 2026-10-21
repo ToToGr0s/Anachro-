@@ -13,9 +13,11 @@ MonoBehaviour:
   m_Name: Anachro_Desk
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.AnachronismDefinition
   _size: 2
-  _prefab: {fileID: 0}
+  _prefab: {fileID: 2647125884785557772, guid: 09388a4998aa58846b39e18627052c19, type: 3}
   _displayName: Desk
   _icon: {fileID: 0}
   _disruptionPercent: 21
   _allowedEras:
   - {fileID: 11400000, guid: c91422a9d33a1934190e73d7b97df1c7, type: 2}
+  _allowedSurfaces: 1
+  _dimensions: {x: 1.2, y: 0.75, z: 0.6}
