@@ -19,7 +19,8 @@ namespace Anachronism.World
         public Vector3 RandomTopPoint()
         {
             var local = new Vector3(Random.Range(-0.5f, 0.5f) * _size.x, _size.y * 0.5f, Random.Range(-0.5f, 0.5f) * _size.z);
-            return transform.TransformPoint(local);
+            // Position et rotation seulement : l'échelle du transform est ignorée partout, la taille vient de _size.
+            return transform.position + transform.rotation * local;
         }
 
         /// <summary>Vrai si l'empreinte de l'objet (rectangle centré, tourné) reste entièrement dans la zone.</summary>
@@ -30,7 +31,7 @@ namespace Anachronism.World
                 for (int z = -1; z <= 1; z += 2)
                 {
                     Vector3 corner = center + rotation * new Vector3(x * halfSize.x, 0f, z * halfSize.y);
-                    Vector3 local = transform.InverseTransformPoint(corner);
+                    Vector3 local = Quaternion.Inverse(transform.rotation) * (corner - transform.position);
                     if (Mathf.Abs(local.x) > _size.x * 0.5f || Mathf.Abs(local.z) > _size.z * 0.5f)
                         return false;
                 }

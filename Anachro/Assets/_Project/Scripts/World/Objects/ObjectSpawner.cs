@@ -22,6 +22,8 @@ namespace Anachronism.World
 
         // L'objet est posé un peu au-dessus de la surface pour le test de chevauchement : sinon il toucherait son propre support.
         private const float SurfaceClearance = 0.02f;
+        // Surface assez horizontale pour y poser un objet : 0,9 ≈ pente de 25° au plus.
+        private const float MinSurfaceUp = 0.9f;
 
         private readonly List<WorldObject> _spawned = new List<WorldObject>();
         private readonly List<AnachronismDefinition> _valid = new List<AnachronismDefinition>();
@@ -186,8 +188,9 @@ namespace Anachronism.World
             Vector3 top = zone.RandomTopPoint();
             if (!Physics.Raycast(top, Vector3.down, out RaycastHit hit, zone.Height, _settings.SurfaceLayers, QueryTriggerInteraction.Ignore))
                 return false;
-            // Pas d'empilement : un objet ne se pose pas sur un autre objet généré.
-            if (hit.collider.GetComponentInParent<WorldObject>() != null)
+            // Seulement sur le décor : pas sur un objet déjà posé, un PNJ ou un joueur (tous des objets réseau),
+            // ni sur une pente ou l'arête d'un mur.
+            if (hit.normal.y < MinSurfaceUp || hit.collider.GetComponentInParent<NetworkObject>() != null)
                 return false;
 
             // Le bas du mesh sur la surface, quel que soit son pivot.
@@ -211,7 +214,10 @@ namespace Anachronism.World
             foreach (WorldObject worldObject in _spawned)
             {
                 if (worldObject != null && worldObject.IsSpawned)
+                {
+                    worldObject.DisableCollision();
                     ServerManager.Despawn(worldObject.NetworkObject);
+                }
             }
             _spawned.Clear();
         }

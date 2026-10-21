@@ -74,6 +74,13 @@ namespace Anachronism.World
             Apply(definition);
         }
 
+        /// <summary>Appelé juste avant ServerManager.Despawn : Unity ne détruit l'objet qu'en fin de frame, et un nouveau
+        /// tirage lancé dans la même frame (« Rejouer » depuis l'écran de fin) buterait sur son collider.</summary>
+        public void DisableCollision()
+        {
+            _collider.enabled = false;
+        }
+
         public override void OnStopNetwork()
         {
             base.OnStopNetwork();
@@ -93,8 +100,9 @@ namespace Anachronism.World
                 return;
             }
 
-            // Boîte calée sur le mesh : suffit pour viser et poser.
+            // Boîte calée sur le mesh : suffit pour viser et poser. Réactivée ici pour un objet réutilisé (pooling).
             Bounds bounds = definition.Mesh.bounds;
+            _collider.enabled = true;
             _collider.center = bounds.center;
             _collider.size = bounds.size;
             _obstacle.center = bounds.center;
