@@ -3,10 +3,9 @@ namespace Anachronism.Network
     public enum GamePhase : byte
     {
         Lobby,
-        Briefing,
-        Hiding,
+        Scouting,
         Searching,
-        Portal,
+        LastChance,
         End
     }
 }

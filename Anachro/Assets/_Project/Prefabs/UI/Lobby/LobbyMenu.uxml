@@ -33,7 +33,7 @@
             </ui:VisualElement>
             <ui:Label name="player-count" class="info" />
             <ui:Label name="result-label" class="result" />
-            <ui:Button name="solo-role-button" text="Test solo : gentil" class="button button--small" />
+            <ui:Button name="solo-role-button" text="Test solo : chasseur" class="button button--small" />
             <ui:Button name="start-button" text="Lancer la partie" class="button button--primary" />
             <ui:Label name="waiting-label" text="En attente de l'hôte…" class="info" />
             <ui:Button name="leave-button" text="Quitter la partie" class="button button--ghost" />
@@ -41,7 +41,6 @@
 
         <ui:VisualElement name="match-bar" class="match-bar" picking-mode="Ignore">
             <ui:Label name="match-phase" class="match-text" picking-mode="Ignore" />
-            <ui:Label name="match-role" class="match-text match-text--role" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <ui:Label name="status-label" class="status" picking-mode="Ignore" />

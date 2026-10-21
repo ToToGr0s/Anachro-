@@ -17,7 +17,6 @@ MonoBehaviour:
   _wrongShotPenalty: 0.04
   _interactionDistance: 2
   _shootDistance: 5
-  _finalCountdownSeconds: 60
   _maxPhotos: 5
   _smallReloadSeconds: 15
   _mediumReloadSeconds: 30
