@@ -42,11 +42,11 @@ namespace Anachronism.World
         {
             base.OnStartServer();
 
+            // L'appelant teste CanDisplay avant le spawn (ObjectSpawner) : ce cas signale un oubli de ce test.
+            // TODO (Célian / Théo) : la pose des fugitifs (T07) doit aussi tester CanDisplay avant ServerManager.Spawn.
             if (!_registry.TryGetId(_pendingDefinition, out byte id))
             {
-                // Sans id valide, les clients afficheraient l'objet 0 du registre : on retire l'objet plutôt que de le montrer faux.
-                Debug.LogError($"[WorldObject] {(_pendingDefinition != null ? _pendingDefinition.name : "null")} absent du registre : objet retiré.", this);
-                ServerManager.Despawn(NetworkObject);
+                Debug.LogError($"[WorldObject] {(_pendingDefinition != null ? _pendingDefinition.name : "null")} absent du registre : les clients afficheront un mauvais objet.", this);
                 return;
             }
 

@@ -24,6 +24,7 @@ namespace Anachronism.World
         private const float SurfaceClearance = 0.02f;
 
         private readonly List<WorldObject> _spawned = new List<WorldObject>();
+        private readonly List<AnachronismDefinition> _valid = new List<AnachronismDefinition>();
         private MatchManager _match;
 
         public override void OnStartServer()
@@ -64,7 +65,7 @@ namespace Anachronism.World
             Debug.Log($"[ObjectSpawner] {_zones.Length} zone(s) référencée(s).", this);
         }
 
-        // PhaseChanged n'est levé qu'une fois sur l'hôte (côté client) : on revérifie qu'on est bien le serveur.
+        // Ne réagit que sur le serveur : l'hôte, qui est aussi client, reçoit l'event côté client.
         private void OnPhaseChanged(GamePhase phase)
         {
             if (!IsServerInitialized)
@@ -101,6 +102,14 @@ namespace Anachronism.World
                 return;
             }
 
+            // Tri une seule fois par partie : un objet mal configuré donne une erreur, pas une par tirage.
+            CollectValidDefinitions();
+            if (_valid.Count == 0)
+            {
+                Debug.LogError("[ObjectSpawner] Aucun objet valide pour cette époque : aucun objet généré.", this);
+                return;
+            }
+
             // TODO (Olivier) : avec T09, calculer le nombre selon la densité choisie par l'hôte au lobby (GDD 2.6)
             // et la surface des zones, la plage min / max servant de garde-fou.
             int target = Random.Range(_settings.MinCount, _settings.MaxCount + 1);
@@ -119,13 +128,7 @@ namespace Anachronism.World
             for (int attempt = 0; attempt < _settings.AttemptsPerObject; attempt++)
             {
                 ObjectSpawnZone zone = PickZone(totalArea);
-                AnachronismDefinition definition = _era.SpawnedObjects[Random.Range(0, _era.SpawnedObjects.Count)];
-                if (definition == null || definition.Mesh == null || !_prefab.CanDisplay(definition))
-                {
-                    Debug.LogError($"[ObjectSpawner] {(definition != null ? definition.name : "case vide")} : sans mesh ou absent du registre, ignoré.", this);
-                    continue;
-                }
-
+                AnachronismDefinition definition = _valid[Random.Range(0, _valid.Count)];
                 if (!TryFindPlace(zone, definition.Mesh.bounds, out Vector3 position, out Quaternion rotation))
                     continue;
 
@@ -138,6 +141,24 @@ namespace Anachronism.World
                 return true;
             }
             return false;
+        }
+
+        // Objets de l'époque que les clients sauront afficher : sans mesh ou hors registre, ils seraient vides ou faux.
+        private void CollectValidDefinitions()
+        {
+            _valid.Clear();
+            for (int i = 0; i < _era.SpawnedObjects.Count; i++)
+            {
+                AnachronismDefinition definition = _era.SpawnedObjects[i];
+                if (definition == null)
+                    Debug.LogError($"[ObjectSpawner] {_era.name} : case {i} vide, ignorée.", this);
+                else if (definition.Mesh == null)
+                    Debug.LogError($"[ObjectSpawner] {definition.name} n'a pas de mesh, ignoré.", this);
+                else if (!_prefab.CanDisplay(definition))
+                    Debug.LogError($"[ObjectSpawner] {definition.name} absent du registre des anachronismes, ignoré.", this);
+                else
+                    _valid.Add(definition);
+            }
         }
 
         // Plus une zone est grande, plus elle reçoit d'objets.
@@ -185,7 +206,8 @@ namespace Anachronism.World
         [Server]
         private void DespawnAll()
         {
-            // TODO (Olivier) : passer en DespawnType.Pool (et GetPooledInstantiated) si recréer les objets à chaque partie coûte trop.
+            // TODO (Olivier) : pooling FishNet (DespawnType.Pool + GetPooledInstantiated) une fois la pose des fugitifs
+            // et le tir des chasseurs faits : ils créeront et détruiront aussi des WorldObject pendant la partie.
             foreach (WorldObject worldObject in _spawned)
             {
                 if (worldObject != null && worldObject.IsSpawned)
