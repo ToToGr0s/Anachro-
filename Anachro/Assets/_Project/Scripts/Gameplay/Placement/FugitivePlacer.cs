@@ -37,8 +37,10 @@ namespace Anachronism.Gameplay
 
         // size = taille de l'objet pose (elle fixe la duree), duration = duree totale de la recharge ; le HUD (Olivier) decompte lui-meme.
         public event Action<AnachronismSize, float> CooldownChanged;
-        // L'intention de pose : NetworkPlacement (Theo) l'enverra au serveur.
-        public event Action<PlacementRequest, AnachronismDefinition> PlacementRequested;
+        // L'intention de pose : NetworkPlacement (Theo) l'enverra au serveur. Taille + point + normale, jamais l'objet.
+        public event Action<PlacementRequest> PlacementRequested;
+        // Local seulement : l'objet tenu au moment de la pose (spawner de test, HUD). Ne pas l'envoyer au serveur.
+        public event Action<PlacementRequest, AnachronismDefinition> ItemPlaced;
         public event Action<AnachronismSize> SizeSelected;
 
         private void Awake()
@@ -78,7 +80,8 @@ namespace Anachronism.Gameplay
 
             // La demande part au debut du clic (le serveur fait apparaitre l'objet tout de suite) ;
             // la recharge ne demarre qu'a la fin de la pose.
-            PlacementRequested?.Invoke(_currentRequest, _heldItems[(int)_selectedSize]);
+            PlacementRequested?.Invoke(_currentRequest);
+            ItemPlaced?.Invoke(_currentRequest, _heldItems[(int)_selectedSize]);
             StartPlacing(_selectedSize);
             return true;
         }
@@ -144,10 +147,8 @@ namespace Anachronism.Gameplay
 
             _currentRequest = new PlacementRequest(_selectedSize, hit.point, hit.normal);
             _hasTarget = true;
-            // Un objet deja pose n'est pas une surface : on ne pose pas dessus.
-            bool isOnPlacedObject = (_tuning.PlacedObjectsMask.value & (1 << hit.collider.gameObject.layer)) != 0;
-            _isTargetValid = !isOnPlacedObject
-                && PlacementRules.IsValid(_currentRequest, item.AllowedSurfaces, view.position, _tuning, out _)
+            // Poser sur un objet deja pose est refuse par PlacementSpace.Check (il ne compte pas comme appui), donc aussi par le serveur.
+            _isTargetValid = PlacementRules.IsValid(_currentRequest, item.AllowedSurfaces, view.position, _tuning, out _)
                 && PlacementSpace.Check(_currentRequest, item.Dimensions, _tuning, view.position, _tuning.PlacementMask, _tuning.PlacedObjectsMask, out _);
             _ghost.transform.SetPositionAndRotation(
                 PlacementRules.PositionFor(hit.point, hit.normal, item.Dimensions, _tuning),

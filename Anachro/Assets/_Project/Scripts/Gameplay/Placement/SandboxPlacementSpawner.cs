@@ -21,15 +21,16 @@ namespace Anachronism.Gameplay
 
         private void OnEnable()
         {
-            _placer.PlacementRequested += OnPlacementRequested;
+            _placer.ItemPlaced += OnItemPlaced;
         }
 
         private void OnDisable()
         {
-            _placer.PlacementRequested -= OnPlacementRequested;
+            _placer.ItemPlaced -= OnItemPlaced;
         }
 
-        private void OnPlacementRequested(PlacementRequest request, AnachronismDefinition definition)
+
+        private void OnItemPlaced(PlacementRequest request, AnachronismDefinition definition)
         {
             if (definition == null || definition.Prefab == null)
             {
