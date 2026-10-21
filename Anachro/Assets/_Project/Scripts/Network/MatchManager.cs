@@ -265,7 +265,7 @@ namespace Anachronism.Network
             // TODO (Théo) : avec T07, placer automatiquement les objets que les fugitifs n'ont pas posés à temps.
             if (phase == GamePhase.Scouting)
                 EnterSearching();
-            // Barre censée être pleine à la fin du chrono : une destruction pendant la dernière chance a pu la retarder.
+            // Filet de sécurité : la barre est recalée sur le chrono, mais un arrondi de tick peut la laisser juste sous 100 %.
             else if (phase == GamePhase.LastChance)
                 EndMatch(Winner.Villains);
         }
@@ -296,6 +296,10 @@ namespace Anachronism.Network
             uint now = TimeManager.Tick;
             _degradationBase.Value = Mathf.Clamp01(ComputeDegradation(now) + amount);
             _degradationBaseTick.Value = now;
+
+            // La barre doit rester calée sur le chrono : après un ajout ou un retrait, elle repart pour finir pile à 0:00.
+            if (_phase.Value == GamePhase.LastChance)
+                _degradationPerSecond.Value = (1f - _degradationBase.Value) / Mathf.Max(RemainingTime, (float)TimeManager.TickDelta);
 
             if (_degradationBase.Value >= 1f)
                 EndMatch(Winner.Villains);

@@ -21,6 +21,8 @@ namespace Anachronism.Network
 
         public int MinPlayers => _minPlayers;
 
+        // Le nombre de fugitifs ne dépend plus du nombre de joueurs : c'est l'hôte qui le choisit.
+        // TODO (Théo) : playerCount est gardé pour T09-2 (réglages selon le lobby) ; le retirer si T09 n'en a pas besoin.
         public MatchSettings GetFor(int playerCount)
         {
             return _baseSettings;

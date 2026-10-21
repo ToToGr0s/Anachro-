@@ -138,9 +138,9 @@ namespace Anachronism.UI
                 return;
 
             SetDisruption(_match.Degradation);
-            
+
             SetEndCountdown(_match.Phase == GamePhase.LastChance, _match.RemainingTime);
-            
+
             _itemBar.Tick(Time.deltaTime);
         }
 
