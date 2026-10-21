@@ -13,7 +13,6 @@ namespace Anachronism.Gameplay
 
         // obstacleMask : tout ce qui est solide (sert de surface et d'obstacle). placedObjectsMask : objets deja poses.
         // viewerPosition : la camera du joueur (client) ou sa position connue du serveur.
-        // obstacleMask : tout ce qui est solide (sert de surface et d'obstacle). placedObjectsMask : objets deja poses.
         public static bool Check(PlacementRequest request, Vector3 dimensions, GameplayTuning tuning,
             Vector3 viewerPosition, int obstacleMask, int placedObjectsMask, out PlacementError error)
         {

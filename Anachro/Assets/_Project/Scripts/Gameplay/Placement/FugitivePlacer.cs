@@ -5,6 +5,7 @@ namespace Anachronism.Gameplay
 {
     // Cote client du fugitif : vise une surface, pilote l'apercu et prepare l'intention de pose.
     // Le serveur (NetworkPlacement, Theo) revalide tout : ici on ne decide rien de definitif.
+    // TODO (Theo) : a l'integration, activer ce composant seulement pour le proprietaire fugitif (PlayerNetworkSetup, regle reseau 7).
     public class FugitivePlacer : MonoBehaviour
     {
         private const int SizeCount = 3;
@@ -151,8 +152,8 @@ namespace Anachronism.Gameplay
             _ghost.transform.SetPositionAndRotation(
                 PlacementRules.PositionFor(hit.point, hit.normal, item.Dimensions, _tuning),
                 PlacementRules.RotationFor(hit.normal, _tuning));
-            _ghost.Show(item);
             _ghost.SetValid(_isTargetValid);
+            _ghost.Show(item);
         }
 
         // step > 0 : taille suivante, step < 0 : precedente. On boucle : apres Gros, retour a Petit.

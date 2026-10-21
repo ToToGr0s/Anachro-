@@ -10,6 +10,15 @@ namespace Anachronism.Gameplay
         [SerializeField] private FugitivePlacer _placer;
         [SerializeField] private GameplayTuning _tuning;
 
+        private void Awake()
+        {
+            if (_placer == null || _tuning == null)
+            {
+                Debug.LogError("SandboxPlacementSpawner : placer ou reglages manquant.", this);
+                enabled = false;
+            }
+        }
+
         private void OnEnable()
         {
             _placer.PlacementRequested += OnPlacementRequested;
