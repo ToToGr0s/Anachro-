@@ -120,8 +120,11 @@ namespace Anachronism.World
             {
                 ObjectSpawnZone zone = PickZone(totalArea);
                 AnachronismDefinition definition = _era.SpawnedObjects[Random.Range(0, _era.SpawnedObjects.Count)];
-                if (definition == null || definition.Mesh == null)
+                if (definition == null || definition.Mesh == null || !_prefab.CanDisplay(definition))
+                {
+                    Debug.LogError($"[ObjectSpawner] {(definition != null ? definition.name : "case vide")} : sans mesh ou absent du registre, ignoré.", this);
                     continue;
+                }
 
                 if (!TryFindPlace(zone, definition.Mesh.bounds, out Vector3 position, out Quaternion rotation))
                     continue;
@@ -174,7 +177,8 @@ namespace Anachronism.World
 
             float spacing = _settings.MinSpacing;
             Vector3 center = position + rotation * bounds.center + Vector3.up * SurfaceClearance;
-            var halfExtents = new Vector3(bounds.extents.x + spacing, bounds.extents.y - SurfaceClearance, bounds.extents.z + spacing);
+            // Mesh très fin (bague, timbre) : la demi-hauteur ne doit pas devenir négative une fois la marge retirée.
+            var halfExtents = new Vector3(bounds.extents.x + spacing, Mathf.Max(0.001f, bounds.extents.y - SurfaceClearance), bounds.extents.z + spacing);
             return !Physics.CheckBox(center, halfExtents, rotation, ~0, QueryTriggerInteraction.Ignore);
         }
 

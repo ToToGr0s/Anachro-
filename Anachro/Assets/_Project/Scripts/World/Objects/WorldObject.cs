@@ -35,13 +35,18 @@ namespace Anachronism.World
             _pendingDefinition = definition;
         }
 
+        /// <summary>Vrai si les clients sauront afficher cet objet (présent dans le registre). À tester avant le spawn.</summary>
+        public bool CanDisplay(AnachronismDefinition definition) => _registry.TryGetId(definition, out _);
+
         public override void OnStartServer()
         {
             base.OnStartServer();
 
             if (!_registry.TryGetId(_pendingDefinition, out byte id))
             {
-                Debug.LogError($"[WorldObject] {(_pendingDefinition != null ? _pendingDefinition.name : "null")} absent du registre : les clients ne sauront pas quoi afficher.", this);
+                // Sans id valide, les clients afficheraient l'objet 0 du registre : on retire l'objet plutôt que de le montrer faux.
+                Debug.LogError($"[WorldObject] {(_pendingDefinition != null ? _pendingDefinition.name : "null")} absent du registre : objet retiré.", this);
+                ServerManager.Despawn(NetworkObject);
                 return;
             }
 
@@ -82,15 +87,18 @@ namespace Anachronism.World
             _meshFilter.sharedMesh = definition.Mesh;
             _meshRenderer.sharedMaterial = definition.Material;
 
-            // Boîte calée sur le mesh : suffit pour viser et poser.
-            if (definition.Mesh != null)
+            if (definition.Mesh == null)
             {
-                Bounds bounds = definition.Mesh.bounds;
-                _collider.center = bounds.center;
-                _collider.size = bounds.size;
-                _obstacle.center = bounds.center;
-                _obstacle.size = bounds.size;
+                Debug.LogError($"[WorldObject] {definition.name} n'a pas de mesh : collider et obstacle gardent la taille du prefab.", this);
+                return;
             }
+
+            // Boîte calée sur le mesh : suffit pour viser et poser.
+            Bounds bounds = definition.Mesh.bounds;
+            _collider.center = bounds.center;
+            _collider.size = bounds.size;
+            _obstacle.center = bounds.center;
+            _obstacle.size = bounds.size;
         }
     }
 }
