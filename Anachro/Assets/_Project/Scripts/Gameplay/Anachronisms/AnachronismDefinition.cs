@@ -1,31 +1,30 @@
-using FishNet.Object;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Anachronism.Gameplay
 {
+    /// <summary>
+    /// Un objet du jeu, qu'il apparaisse avec la map ou qu'un fugitif le pose : c'est l'époque de la map qui décide
+    /// s'il est normal ou anachronique (EraRules). Tous les objets partagent le même prefab réseau (WorldObject),
+    /// qui prend le mesh et le matériau d'ici : ajouter un objet = créer cet asset et l'ajouter au registre.
+    /// </summary>
     [CreateAssetMenu(fileName = "AnachronismDefinition", menuName = "Anachronism/AnachronismDefinition")]
     public class AnachronismDefinition : ScriptableObject
     {
-        [SerializeField] private AnachronismSize _size;
-        [SerializeField] private NetworkObject _prefab;
         [SerializeField] private string _displayName;
+        // Époque à laquelle l'objet appartient (celle de son onglet dans le tableau des objets).
+        [SerializeField] private Era _era;
+        // Donne le % de barre et la recharge de pose (GameplayTuning), pas la taille affichée.
+        [SerializeField] private AnachronismSize _size;
         [SerializeField] private Sprite _icon;
-        [SerializeField][Range(0, 100)] private float _disruptionPercent;
-        [SerializeField] private EraDefinition[] _allowedEras;
-        public AnachronismSize Size => _size;
-        public NetworkObject Prefab => _prefab;
+        [SerializeField] private Mesh _mesh;
+        // Le mesh est importé à sa taille réelle : aucune échelle à régler ici.
+        [SerializeField] private Material _material;
+
         public string DisplayName => _displayName;
+        public Era Era => _era;
+        public AnachronismSize Size => _size;
         public Sprite Icon => _icon;
-        public float DisruptionPercent => _disruptionPercent;
-        public IReadOnlyList<EraDefinition> AllowedEras => _allowedEras;
-
-        public bool IsAllowedIn(EraDefinition era)
-        {
-            if (_allowedEras == null || _allowedEras.Length == 0)
-                return true;   // liste vide = permis dans toutes les epoques
-
-            return System.Array.IndexOf(_allowedEras, era) >= 0;
-        }
+        public Mesh Mesh => _mesh;
+        public Material Material => _material;
     }
 }

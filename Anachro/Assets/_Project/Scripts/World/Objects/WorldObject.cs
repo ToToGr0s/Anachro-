@@ -1,0 +1,91 @@
+using Anachronism.Gameplay;
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
+using UnityEngine;
+
+namespace Anachronism.World
+{
+    /// <summary>
+    /// Prefab réseau commun à tous les objets (générés avec la map ou posés par un fugitif) : seul l'id de
+    /// l'AnachronismDefinition voyage, chaque machine applique le mesh, le matériau et le collider.
+    /// Prêt pour le pooling FishNet : tout est réappliqué à chaque spawn, rien ne reste d'une vie à l'autre.
+    /// </summary>
+    public sealed class WorldObject : NetworkBehaviour
+    {
+        [SerializeField] private AnachronismRegistry _registry;
+        [SerializeField] private MeshFilter _meshFilter;
+        [SerializeField] private MeshRenderer _meshRenderer;
+        [SerializeField] private BoxCollider _collider;
+
+        // Pas un secret : le mesh montre déjà au joueur de quel objet il s'agit, donc son époque.
+        // « Posé par un fugitif » ou « généré avec la map » reste côté serveur.
+        private readonly SyncVar<byte> _definitionId = new SyncVar<byte>();
+
+        private AnachronismDefinition _pendingDefinition;
+
+        /// <summary>Objet affiché (null tant que l'objet n'est pas réseau ou si l'id est invalide).</summary>
+        public AnachronismDefinition Definition { get; private set; }
+
+        /// <summary>Appelé par le serveur juste avant ServerManager.Spawn (l'objet n'est pas encore réseau).</summary>
+        public void SetSpawnDefinition(AnachronismDefinition definition)
+        {
+            _pendingDefinition = definition;
+        }
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+
+            if (!_registry.TryGetId(_pendingDefinition, out byte id))
+            {
+                Debug.LogError($"[WorldObject] {(_pendingDefinition != null ? _pendingDefinition.name : "null")} absent du registre : les clients ne sauront pas quoi afficher.", this);
+                return;
+            }
+
+            // Posé dans OnStartServer : l'id part avec le message de spawn, le client l'a dès OnStartClient.
+            _definitionId.Value = id;
+            // Le serveur applique aussi : il a besoin du collider pour valider les tirs, même sans affichage.
+            Apply(_pendingDefinition);
+            _pendingDefinition = null;
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            // L'hôte a déjà appliqué côté serveur.
+            if (IsServerInitialized)
+                return;
+
+            AnachronismDefinition definition = _registry.Get(_definitionId.Value);
+            if (definition == null)
+            {
+                Debug.LogError($"[WorldObject] id {_definitionId.Value} absent du registre : build différent de l'hôte ?", this);
+                return;
+            }
+            Apply(definition);
+        }
+
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+            // Un objet remis dans la réserve ne doit pas garder l'identité de sa vie précédente.
+            Definition = null;
+        }
+
+        private void Apply(AnachronismDefinition definition)
+        {
+            Definition = definition;
+            _meshFilter.sharedMesh = definition.Mesh;
+            _meshRenderer.sharedMaterial = definition.Material;
+
+            // Boîte calée sur le mesh : suffit pour viser et poser.
+            if (definition.Mesh != null)
+            {
+                Bounds bounds = definition.Mesh.bounds;
+                _collider.center = bounds.center;
+                _collider.size = bounds.size;
+            }
+        }
+    }
+}

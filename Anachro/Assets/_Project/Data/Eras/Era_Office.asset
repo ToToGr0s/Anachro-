@@ -13,7 +13,9 @@ MonoBehaviour:
   m_Name: Era_Office
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.EraDefinition
   _displayName: Office
+  _era: 4
   _npcs: {fileID: 11400000, guid: 0de02c0d456cda74f8a7d16f69ca8e64, type: 2}
-  _eraProps: []
+  _spawnedObjects: []
+  _placeableObjects: []
   _music: {fileID: 0}
   _mapScene: 

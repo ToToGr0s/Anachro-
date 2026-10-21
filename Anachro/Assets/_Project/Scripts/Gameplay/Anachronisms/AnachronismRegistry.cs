@@ -30,20 +30,6 @@ namespace Anachronism.Gameplay
             return true;
         }
 
-        public AnachronismDefinition RandomOfSize(AnachronismSize size, EraDefinition era)
-        {
-            var candidates = new List<AnachronismDefinition>();
-            foreach (AnachronismDefinition definition in _anachronisms)
-            {
-                if (definition == null)
-                    continue;
-
-                if (definition.Size == size && definition.IsAllowedIn(era))
-                    candidates.Add(definition);
-            }
-            return candidates.Count == 0 ? null : candidates[Random.Range(0, candidates.Count)];
-        }
-
         private void OnValidate()
         {
             if (_anachronisms == null)
