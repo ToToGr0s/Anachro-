@@ -101,6 +101,8 @@ namespace Anachronism.World
                 return;
             }
 
+            // TODO (Olivier) : avec T09, calculer le nombre selon la densité choisie par l'hôte au lobby (GDD 2.6)
+            // et la surface des zones, la plage min / max servant de garde-fou.
             int target = Random.Range(_settings.MinCount, _settings.MaxCount + 1);
             for (int i = 0; i < target; i++)
                 TrySpawnOne(totalArea);
