@@ -10,6 +10,7 @@ namespace Anachronism.Gameplay
         TooFar,
         CountdownStarted,
         Floating,
-        Occupied
+        Occupied,
+        Invalid
     }
 }

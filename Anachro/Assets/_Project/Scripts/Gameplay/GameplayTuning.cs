@@ -17,6 +17,10 @@ namespace Anachronism.Gameplay
         [SerializeField, Range(0f, 1f)] private float _wallMaxAbsNormalY = 0.3f;
         [Tooltip("Part minimale (0-1) de la face posee qui doit reposer sur la surface ; en dessous l'objet flotte et la pose est refusee.")]
         [SerializeField, Range(0f, 1f)] private float _minSupportRatio = 0.7f;
+        [Tooltip("Couches visees par le rayon de pose ; sert aussi d'obstacles. Meme valeur pour le client et le serveur.")]
+        [SerializeField] private LayerMask _placementMask = ~0;
+        [Tooltip("Couche des objets deja poses : ils ne sont ni une surface valide ni un appui.")]
+        [SerializeField] private LayerMask _placedObjectsMask;
         [SerializeField, Min(0f)] private float _smallReloadSeconds = 15f;
         [SerializeField, Min(0f)] private float _mediumReloadSeconds = 30f;
         [SerializeField, Min(0f)] private float _largeReloadSeconds = 45f;
@@ -30,6 +34,8 @@ namespace Anachronism.Gameplay
         public float FloorMinNormalY => _floorMinNormalY;
         public float WallMaxAbsNormalY => _wallMaxAbsNormalY;
         public float MinSupportRatio => _minSupportRatio;
+        public LayerMask PlacementMask => _placementMask;
+        public LayerMask PlacedObjectsMask => _placedObjectsMask;
         public float GetReloadSeconds(AnachronismSize size)
         {
             switch (size)

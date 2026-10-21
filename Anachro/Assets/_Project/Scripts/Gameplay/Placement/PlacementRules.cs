@@ -12,6 +12,12 @@ namespace Anachronism.Gameplay
         public static bool IsValid(PlacementRequest request, PlacementSurfaceType allowedSurfaces,
             Vector3 viewerPosition, GameplayTuning tuning, out PlacementError error)
         {
+            if (!IsFinite(request.Position) || !IsFinite(request.Normal))
+            {
+                error = PlacementError.Invalid;
+                return false;
+            }
+
             if (Vector3.Distance(viewerPosition, request.Position) > tuning.InteractionDistance)
             {
                 error = PlacementError.TooFar;
@@ -38,6 +44,12 @@ namespace Anachronism.Gameplay
                 return PlacementSurfaceType.Wall;
 
             return PlacementSurfaceType.None;
+        }
+
+        // Un client modifie peut envoyer NaN : toute comparaison avec NaN vaut false, donc la validation passerait.
+        private static bool IsFinite(Vector3 v)
+        {
+            return float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
         }
 
         // TODO (Celian) : completer avec PlacementSurface (C05) quand l'outil de surfaces existera.

@@ -13,8 +13,6 @@ namespace Anachronism.Gameplay
         [SerializeField] private PlacementGhost _ghost;
         [SerializeField] private AnachronismRegistry _registry;
         [SerializeField] private GameplayTuning _tuning;
-        [Tooltip("Surfaces visables. Exclure la couche du joueur.")]
-        [SerializeField] private LayerMask _placementMask = ~0;
         // TODO (Celian) : l'epoque viendra de la map (EraDefinition de la partie) ; en local on la donne a la main.
         [SerializeField] private EraDefinition _era;
 
@@ -28,8 +26,7 @@ namespace Anachronism.Gameplay
         private bool _isPlacing;
         private float _placingEndTime;
         private AnachronismSize _placingSize;
-        [Tooltip("Couche des objets deja poses : une surface valide ne peut pas etre un autre objet.")]
-        [SerializeField] private LayerMask _placedObjectsMask;
+
 
         public bool IsPlacing => _isPlacing;
         // true au debut de la pose, false a la fin : InputManager s'en sert pour immobiliser le joueur.
@@ -50,6 +47,9 @@ namespace Anachronism.Gameplay
                 Debug.LogError("FugitivePlacer : camera, fantome, registre ou reglages manquant.", this);
                 enabled = false;
             }
+
+            if (_era == null)
+                Debug.LogError("FugitivePlacer : epoque non assignee, aucun objet ne sera tire.", this);
         }
 
         private void Start()
@@ -82,6 +82,7 @@ namespace Anachronism.Gameplay
             return true;
         }
 
+        // TODO (Celian) : temps de jeu en ticks (TimeManager) pour la duree de pose, comme pour la recharge (regle reseau 6).
         private void StartPlacing(AnachronismSize size)
         {
             _isPlacing = true;
@@ -131,7 +132,7 @@ namespace Anachronism.Gameplay
             Transform view = _camera.transform;
 
             if (item == null || !Physics.Raycast(view.position, view.forward, out RaycastHit hit,
-                    _tuning.InteractionDistance, _placementMask, QueryTriggerInteraction.Ignore))
+                    _tuning.InteractionDistance, _tuning.PlacementMask, QueryTriggerInteraction.Ignore))
             {
                 _hasTarget = false;
                 _ghost.Hide();
@@ -141,20 +142,15 @@ namespace Anachronism.Gameplay
             _currentRequest = new PlacementRequest(_selectedSize, hit.point, hit.normal);
             _hasTarget = true;
             // Un objet deja pose n'est pas une surface : on ne pose pas dessus.
-            bool isOnPlacedObject = (_placedObjectsMask.value & (1 << hit.collider.gameObject.layer)) != 0;
+            bool isOnPlacedObject = (_tuning.PlacedObjectsMask.value & (1 << hit.collider.gameObject.layer)) != 0;
             _isTargetValid = !isOnPlacedObject
                 && PlacementRules.IsValid(_currentRequest, item.AllowedSurfaces, view.position, _tuning, out _)
-                && PlacementSpace.Check(_currentRequest, item.Dimensions, _tuning, _placementMask, _placedObjectsMask, out _);
+                && PlacementSpace.Check(_currentRequest, item.Dimensions, _tuning, _tuning.PlacementMask, _tuning.PlacedObjectsMask, out _);
             _ghost.transform.SetPositionAndRotation(
                 PlacementRules.PositionFor(hit.point, hit.normal, item.Dimensions, _tuning),
                 PlacementRules.RotationFor(hit.normal, _tuning));
             _ghost.Show(item);
             _ghost.SetValid(_isTargetValid);
-        }
-
-        public void SelectSize(AnachronismSize size)
-        {
-            SetSelectedSize(size);
         }
 
         // step > 0 : taille suivante, step < 0 : precedente. On boucle : apres Gros, retour a Petit.
@@ -164,10 +160,10 @@ namespace Anachronism.Gameplay
                 return;
 
             int next = ((int)_selectedSize + (step > 0 ? 1 : -1) + SizeCount) % SizeCount;
-            SetSelectedSize((AnachronismSize)next);
+            SelectSize((AnachronismSize)next);
         }
 
-        private void SetSelectedSize(AnachronismSize size)
+        public void SelectSize(AnachronismSize size)
         {
             if (size == _selectedSize)
                 return;
@@ -187,6 +183,7 @@ namespace Anachronism.Gameplay
             CooldownChanged?.Invoke(size, duration);
         }
 
+        // TODO (Theo) : le serveur tire les 3 objets et les envoie en TargetRpc ; le client n'envoie que la taille choisie (regle reseau 1).
         private void DrawItem(AnachronismSize size)
         {
             _heldItems[(int)size] = _registry.RandomOfSize(size, _era);
