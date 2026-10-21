@@ -8,7 +8,8 @@ namespace Anachronism.Gameplay
     public static class PlacementRules
     {
 
-        // viewerPosition : la camera du joueur (client) ou sa position connue du serveur.
+        // viewerPosition : la camera du joueur (client) ; cote serveur, la position connue du joueur + hauteur d'oeil fixe.
+        // La distance tolere PlacementDistanceMargin (latence, mouvement client-autoritaire).
         public static bool IsValid(PlacementRequest request, PlacementSurfaceType allowedSurfaces,
             Vector3 viewerPosition, GameplayTuning tuning, out PlacementError error)
         {
@@ -25,7 +26,7 @@ namespace Anachronism.Gameplay
                 return false;
             }
 
-            if (Vector3.Distance(viewerPosition, request.Position) > tuning.InteractionDistance)
+            if (Vector3.Distance(viewerPosition, request.Position) > tuning.InteractionDistance + tuning.PlacementDistanceMargin)
             {
                 error = PlacementError.TooFar;
                 return false;
@@ -78,7 +79,6 @@ namespace Anachronism.Gameplay
             float thickness = isWall ? dimensions.z : dimensions.y;
             return contactPoint + normal * (thickness * 0.5f);
         }
-
 
         // Orientation de l'objet pose : debout au sol, face a la piece contre un mur. Le serveur fera apparaitre l'objet avec la meme.
         public static Quaternion RotationFor(Vector3 normal, GameplayTuning tuning)

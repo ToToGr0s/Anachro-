@@ -10,6 +10,8 @@ namespace Anachronism.Gameplay
         [SerializeField, Range(0f, 1f)] private float _wrongShotPenalty = 0.04f;
         [SerializeField, Min(0f)] private float _interactionDistance = 2f;
         [SerializeField, Min(0f)] private float _shootDistance = 5f;
+        [Tooltip("Marge ajoutee a la distance de pose pour la validation : le mouvement est client-autoritaire (latence) et le serveur ne connait pas la camera.")]
+        [SerializeField, Min(0f)] private float _placementDistanceMargin = 0.5f;
         [SerializeField, Min(1)] private int _maxPhotos = 5;
         [Tooltip("Une surface est un sol si sa normale.y est au moins cette valeur (1 = sol parfaitement plat).")]
         [SerializeField, Range(0f, 1f)] private float _floorMinNormalY = 0.7f;
@@ -30,6 +32,7 @@ namespace Anachronism.Gameplay
         public float WrongShotPenalty => _wrongShotPenalty;
         public float InteractionDistance => _interactionDistance;
         public float ShootDistance => _shootDistance;
+        public float PlacementDistanceMargin => _placementDistanceMargin;
         public int MaxPhotos => _maxPhotos;
         public float FloorMinNormalY => _floorMinNormalY;
         public float WallMaxAbsNormalY => _wallMaxAbsNormalY;

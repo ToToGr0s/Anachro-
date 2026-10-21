@@ -22,6 +22,10 @@ namespace Anachronism.Gameplay
         {
             if (_placer != null)
                 _placer.PlacingChanged -= OnPlacingChanged;
+
+            // Desabonne : on ne recevra plus PlacingChanged(false), donc le joueur ne doit pas rester bloque.
+            if (_characterMovement != null)
+                _characterMovement.SetMovementLocked(false);
         }
 
         public void OnPlace(InputAction.CallbackContext context)

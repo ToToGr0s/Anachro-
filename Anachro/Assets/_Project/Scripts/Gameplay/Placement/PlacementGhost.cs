@@ -95,14 +95,16 @@ namespace Anachronism.Gameplay
             foreach (Transform child in definition.Prefab.transform)
                 Instantiate(child.gameObject, root.transform, false);
 
-            foreach (Collider collider in root.GetComponentsInChildren<Collider>(true))
-            {
-                collider.enabled = false;
-                Destroy(collider);
-            }
-
-            foreach (MonoBehaviour behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
-                Destroy(behaviour);
+            // DestroyImmediate sur la copie encore inactive : un Destroy differe laisserait tourner Awake/OnEnable
+            // des composants copies des que la racine est activee. Ordre : les scripts d'abord (RequireComponent).
+            RemoveAll<MonoBehaviour>(root);
+            RemoveAll<Joint>(root);
+            RemoveAll<Rigidbody>(root);
+            RemoveAll<Collider>(root);
+            RemoveAll<Animator>(root);
+            RemoveAll<AudioSource>(root);
+            RemoveAll<ParticleSystem>(root);
+            RemoveAll<Light>(root);
 
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             GhostVisual visual = new GhostVisual
@@ -122,6 +124,12 @@ namespace Anachronism.Gameplay
             }
 
             return visual;
+        }
+
+        private static void RemoveAll<T>(GameObject root) where T : Component
+        {
+            foreach (T component in root.GetComponentsInChildren<T>(true))
+                DestroyImmediate(component);
         }
 
         private static Material[] FilledArray(Material material, int count)

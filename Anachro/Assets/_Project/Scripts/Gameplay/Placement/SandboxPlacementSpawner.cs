@@ -29,7 +29,6 @@ namespace Anachronism.Gameplay
             _placer.ItemPlaced -= OnItemPlaced;
         }
 
-
         private void OnItemPlaced(PlacementRequest request, AnachronismDefinition definition)
         {
             if (definition == null || definition.Prefab == null)

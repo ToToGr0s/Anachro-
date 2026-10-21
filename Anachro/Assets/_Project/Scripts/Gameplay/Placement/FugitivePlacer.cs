@@ -28,7 +28,6 @@ namespace Anachronism.Gameplay
         private float _placingEndTime;
         private AnachronismSize _placingSize;
 
-
         public bool IsPlacing => _isPlacing;
         // true au debut de la pose, false a la fin : InputManager s'en sert pour immobiliser le joueur.
         public event Action<bool> PlacingChanged;
@@ -183,7 +182,7 @@ namespace Anachronism.Gameplay
             float duration = _tuning.GetReloadSeconds(size);
             _readyTime = Time.time + duration;
             _isCoolingDown = true;
-            System.Array.Clear(_heldItems, 0, _heldItems.Length);
+            Array.Clear(_heldItems, 0, _heldItems.Length);
             CooldownChanged?.Invoke(size, duration);
         }
 
