@@ -110,10 +110,10 @@ namespace Anachronism.Gameplay
             if (!_isPlacing)
                 return;
 
-            // Pas de recharge ici : la demande est deja partie, c'est le serveur (NetworkPlacement) qui impose la cadence.
-
             _isPlacing = false;
             PlacingChanged?.Invoke(false);
+            // La demande est deja partie : sans recharge, reactiver le composant permettrait de reposer le meme objet.
+            StartCooldown(_placingSize);
         }
 
         // Fin de la recharge : trois nouveaux objets aleatoires, un par taille.

@@ -12,6 +12,13 @@ namespace Anachronism.Gameplay
         public static bool IsValid(PlacementRequest request, PlacementSurfaceType allowedSurfaces,
             Vector3 viewerPosition, GameplayTuning tuning, out PlacementError error)
         {
+            // La taille vient du client : une valeur hors enum (ex. 99) ferait sortir d'un tableau indexe par taille.
+            if ((uint)request.Size > (uint)AnachronismSize.Large)
+            {
+                error = PlacementError.Invalid;
+                return false;
+            }
+
             if (!IsFinite(request.Position) || !IsFinite(request.Normal))
             {
                 error = PlacementError.Invalid;
