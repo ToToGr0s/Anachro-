@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Anachronism.Gameplay
 {
     // Intention du client : le serveur la revalide avec PlacementRules, il ne fait jamais confiance au resultat du client.
-    public struct PlacementRequest
+    public readonly struct PlacementRequest
     {
         public AnachronismSize Size { get; }
         public Vector3 Position { get; }

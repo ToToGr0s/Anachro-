@@ -592,7 +592,7 @@ GameObject:
   m_Component:
   - component: {fileID: 794989477}
   - component: {fileID: 794989478}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Placement
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1174,7 +1174,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6612915489777926951}
   - component: {fileID: 3182202378834474842}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Player_Local
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1213,7 +1213,7 @@ GameObject:
   - component: {fileID: 265806587767405000}
   - component: {fileID: 7141980073023772806}
   - component: {fileID: 21344268297451248}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Camera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
@@ -1231,7 +1231,7 @@ GameObject:
   - component: {fileID: 357424498735896787}
   - component: {fileID: 2591264395965492700}
   - component: {fileID: 2043134887362578313}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Input
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1292,7 +1292,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5157430302890174044}
   - component: {fileID: 3057827828453491486}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Controller
   m_TagString: Untagged
   m_Icon: {fileID: 0}

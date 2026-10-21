@@ -12,6 +12,18 @@ namespace Anachronism.Gameplay
 
         [SerializeField] private FugitivePlacer _placer;   // optionnel : seul le fugitif en a un
 
+        private void OnEnable()
+        {
+            if (_placer != null)
+                _placer.PlacingChanged += OnPlacingChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (_placer != null)
+                _placer.PlacingChanged -= OnPlacingChanged;
+        }
+
         public void OnPlace(InputAction.CallbackContext context)
         {
             // Le clic qui reprend la souris (MouseLook) ne doit pas poser un objet.
@@ -78,21 +90,10 @@ namespace Anachronism.Gameplay
             }
         }
 
-        private void OnEnable()
-        {
-            if (_placer != null)
-                _placer.PlacingChanged += OnPlacingChanged;
-        }
-
-        private void OnDisable()
-        {
-            if (_placer != null)
-                _placer.PlacingChanged -= OnPlacingChanged;
-        }
-
         private void OnPlacingChanged(bool isPlacing)
         {
-            _characterMovement.SetMovementLocked(isPlacing);
+            if (_characterMovement != null)
+                _characterMovement.SetMovementLocked(isPlacing);
         }
     }
 }

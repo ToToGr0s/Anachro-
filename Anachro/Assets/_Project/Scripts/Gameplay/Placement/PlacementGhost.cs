@@ -27,6 +27,9 @@ namespace Anachronism.Gameplay
         private void Awake()
         {
             transform.localScale = Vector3.one;   // les dimensions viennent du modele, plus d'un cube mis a l'echelle
+
+            if (_validMaterial == null || _invalidMaterial == null)
+                Debug.LogError("PlacementGhost : materiau vert ou rouge manquant.", this);
         }
 
         public void Show(AnachronismDefinition definition)

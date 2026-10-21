@@ -62,6 +62,7 @@ namespace Anachronism.Gameplay
             PlacementSurfaceType kind = ClassifySurface(request.Normal, tuning);
             return kind != PlacementSurfaceType.None && (allowedSurfaces & kind) != 0;
         }
+
         // Centre de l'objet pose : le point vise est le centre de la face posee (pivot du prefab au centre),
         // l'objet depasse donc de la moitie de son epaisseur (hauteur au sol, profondeur au mur).
         public static Vector3 PositionFor(Vector3 contactPoint, Vector3 normal, Vector3 dimensions, GameplayTuning tuning)
