@@ -336,6 +336,7 @@ namespace Anachronism.UI
         private static void SetVisible(VisualElement element, bool isVisible) =>
             element.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
 
+        // Rien à 0 : pendant la chasse le chrono est caché (RemainingTime vaut 0), seule la phase s'affiche.
         private static string FormatTime(int seconds) =>
             seconds <= 0 ? string.Empty : $"{seconds / 60}:{seconds % 60:00}";
 

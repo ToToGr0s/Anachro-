@@ -44,6 +44,7 @@ namespace Anachronism.Network
         public bool IsValid(out string error)
         {
             error = _villainCount < 1 ? "au moins un méchant"
+                : _objectsPerVillain < 1 ? "au moins un objet par méchant"
                 : _scoutingDuration <= 0f ? "durée de repérage nulle"
                 : _searchingDuration <= 0f ? "durée de chasse nulle"
                 : _lastChanceDuration <= 0f ? "durée de dernière chance nulle"

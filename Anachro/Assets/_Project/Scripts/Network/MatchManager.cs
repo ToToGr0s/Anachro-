@@ -227,7 +227,7 @@ namespace Anachronism.Network
 
             // La barre ne monte seule qu'en dernière chance : de sa valeur actuelle à 100 % pendant la durée du chrono.
             float degradationRate = phase == GamePhase.LastChance
-                ? (1f - ComputeDegradation(TimeManager.Tick)) / _settings.LastChanceDuration
+                ? LastChanceRate(ComputeDegradation(TimeManager.Tick), _settings.LastChanceDuration, (float)TimeManager.TickDelta)
                 : 0f;
             if (!Mathf.Approximately(degradationRate, _degradationPerSecond.Value))
                 SetDegradationRate(degradationRate);
@@ -236,7 +236,7 @@ namespace Anachronism.Network
                 ? TimeManager.Tick + TimeManager.TimeToTicks(duration, TickRounding.RoundUp)
                 : 0;
 
-            // Réévalue les conditions d'observation (T05 : méchants et objets cachés aux gentils pendant la cache).
+            // Réévalue les conditions d'observation (T05 : fugitifs et objets cachés aux chasseurs pendant le repérage).
             ServerManager.Objects.RebuildObservers();
         }
 
@@ -299,7 +299,7 @@ namespace Anachronism.Network
 
             // La barre doit rester calée sur le chrono : après un ajout ou un retrait, elle repart pour finir pile à 0:00.
             if (_phase.Value == GamePhase.LastChance)
-                _degradationPerSecond.Value = (1f - _degradationBase.Value) / Mathf.Max(RemainingTime, (float)TimeManager.TickDelta);
+                _degradationPerSecond.Value = LastChanceRate(_degradationBase.Value, RemainingTime, (float)TimeManager.TickDelta);
 
             if (_degradationBase.Value >= 1f)
                 EndMatch(Winner.Villains);
@@ -313,6 +313,11 @@ namespace Anachronism.Network
             _degradationBaseTick.Value = now;
             _degradationPerSecond.Value = perSecond;
         }
+
+        /// <summary>Vitesse pour aller de la valeur actuelle à 100 % pile à la fin du chrono. Même calcul à l'entrée en dernière chance et après chaque ajout.</summary>
+        // minTime évite la division par zéro si l'ajout arrive pendant le dernier tick.
+        private static float LastChanceRate(float degradation, float remainingTime, float minTime) =>
+            (1f - degradation) / Mathf.Max(remainingTime, minTime);
 
         private float ComputeDegradation(uint tick)
         {
