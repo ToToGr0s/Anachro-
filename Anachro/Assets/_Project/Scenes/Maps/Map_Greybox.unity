@@ -927,6 +927,7 @@ MonoBehaviour:
     _count: 5
   _npcParent: {fileID: 0}
   _maxAttempts: 15
+  _groupSettings: {fileID: 11400000, guid: 111b01b09d15912552ae4417ea34609b, type: 2}
 --- !u!4 &1793267843
 Transform:
   m_ObjectHideFlags: 0
