@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 8004910116952687458}
   - component: {fileID: 1408790291901032416}
   - component: {fileID: 4124189884971985615}
+  - component: {fileID: 8383467527177439228}
   m_Layer: 0
   m_Name: WorldObject
   m_TagString: Untagged
@@ -190,3 +191,20 @@ MonoBehaviour:
   _meshFilter: {fileID: 4330352988143017179}
   _meshRenderer: {fileID: 8004910116952687458}
   _collider: {fileID: 1408790291901032416}
+  _obstacle: {fileID: 8383467527177439228}
+--- !u!208 &8383467527177439228
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3104188279845340513}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.5, y: 0.5, z: 0.5}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0, z: 0}
+  m_TimeToStationary: 0.5

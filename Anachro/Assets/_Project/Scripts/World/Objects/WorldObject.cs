@@ -2,6 +2,7 @@ using Anachronism.Gameplay;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Anachronism.World
 {
@@ -16,6 +17,8 @@ namespace Anachronism.World
         [SerializeField] private MeshFilter _meshFilter;
         [SerializeField] private MeshRenderer _meshRenderer;
         [SerializeField] private BoxCollider _collider;
+        // Découpe le NavMesh : les PNJ contournent l'objet. « Carve only stationary » : calculé une fois, l'objet ne bouge pas.
+        [SerializeField] private NavMeshObstacle _obstacle;
 
         // Pas un secret : le mesh montre déjà au joueur de quel objet il s'agit, donc son époque.
         // « Posé par un fugitif » ou « généré avec la map » reste côté serveur.
@@ -85,6 +88,8 @@ namespace Anachronism.World
                 Bounds bounds = definition.Mesh.bounds;
                 _collider.center = bounds.center;
                 _collider.size = bounds.size;
+                _obstacle.center = bounds.center;
+                _obstacle.size = bounds.size;
             }
         }
     }
