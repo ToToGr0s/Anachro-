@@ -147,7 +147,7 @@ namespace Anachronism.Gameplay
             bool isOnPlacedObject = (_tuning.PlacedObjectsMask.value & (1 << hit.collider.gameObject.layer)) != 0;
             _isTargetValid = !isOnPlacedObject
                 && PlacementRules.IsValid(_currentRequest, item.AllowedSurfaces, view.position, _tuning, out _)
-                && PlacementSpace.Check(_currentRequest, item.Dimensions, _tuning, _tuning.PlacementMask, _tuning.PlacedObjectsMask, out _);
+                && PlacementSpace.Check(_currentRequest, item.Dimensions, _tuning, view.position, _tuning.PlacementMask, _tuning.PlacedObjectsMask, out _);
             _ghost.transform.SetPositionAndRotation(
                 PlacementRules.PositionFor(hit.point, hit.normal, item.Dimensions, _tuning),
                 PlacementRules.RotationFor(hit.normal, _tuning));

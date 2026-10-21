@@ -56,7 +56,7 @@ namespace Anachronism.Gameplay
         private static bool IsSurfaceValid(PlacementRequest request, PlacementSurfaceType allowedSurfaces, GameplayTuning tuning)
         {
             // La normale vient du client (donc hostile) : une normale pas unitaire est refusee.
-            if (Mathf.Abs(request.Normal.sqrMagnitude - 1f) > 0.05f)
+            if (Mathf.Abs(request.Normal.sqrMagnitude - 1f) > 0.01f)
                 return false;
 
             PlacementSurfaceType kind = ClassifySurface(request.Normal, tuning);

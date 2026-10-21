@@ -1,4 +1,5 @@
 using UnityEngine;
+#if UNITY_EDITOR || DEBUG
 
 namespace Anachronism.Gameplay
 {
@@ -38,3 +39,4 @@ namespace Anachronism.Gameplay
         }
     }
 }
+#endif

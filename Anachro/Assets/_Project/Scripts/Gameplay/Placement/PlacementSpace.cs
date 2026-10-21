@@ -12,9 +12,19 @@ namespace Anachronism.Gameplay
         private const float OverlapMargin = 0.01f;
 
         // obstacleMask : tout ce qui est solide (sert de surface et d'obstacle). placedObjectsMask : objets deja poses.
+        // viewerPosition : la camera du joueur (client) ou sa position connue du serveur.
+        // obstacleMask : tout ce qui est solide (sert de surface et d'obstacle). placedObjectsMask : objets deja poses.
         public static bool Check(PlacementRequest request, Vector3 dimensions, GameplayTuning tuning,
-            int obstacleMask, int placedObjectsMask, out PlacementError error)
+            Vector3 viewerPosition, int obstacleMask, int placedObjectsMask, out PlacementError error)
         {
+            // Ligne de vue : sans elle, un client modifie pourrait viser a travers un mur (point a moins de
+            // InteractionDistance, mais de l'autre cote). Le bout du segment reste juste devant la surface.
+            if (Physics.Linecast(viewerPosition, request.Position + request.Normal * SurfaceTolerance, obstacleMask, QueryTriggerInteraction.Ignore))
+            {
+                error = PlacementError.Obstructed;
+                return false;
+            }
+
             Quaternion rotation = PlacementRules.RotationFor(request.Normal, tuning);
 
             if (SupportRatio(request, dimensions, rotation, tuning, obstacleMask, placedObjectsMask) < tuning.MinSupportRatio)

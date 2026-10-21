@@ -18,7 +18,7 @@ namespace Anachronism.Gameplay
         [Tooltip("Part minimale (0-1) de la face posee qui doit reposer sur la surface ; en dessous l'objet flotte et la pose est refusee.")]
         [SerializeField, Range(0f, 1f)] private float _minSupportRatio = 0.7f;
         [Tooltip("Geometrie statique (Default) + objets poses : surfaces visees et obstacles. Les personnages (couche Character) n'en font pas partie.")]
-        [SerializeField] private LayerMask _placementMask = ~0;
+        [SerializeField] private LayerMask _placementMask = 1;
         [Tooltip("Couche des objets deja poses : ils ne sont ni une surface valide ni un appui.")]
         [SerializeField] private LayerMask _placedObjectsMask;
         [SerializeField, Min(0f)] private float _smallReloadSeconds = 15f;

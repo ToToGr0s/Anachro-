@@ -11,6 +11,7 @@ namespace Anachronism.Gameplay
         CountdownStarted,
         Floating,
         Occupied,
-        Invalid
+        Invalid,
+        Obstructed
     }
 }

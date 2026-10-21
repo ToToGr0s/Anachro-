@@ -38,7 +38,7 @@ namespace Anachronism.Gameplay
 
             return System.Array.IndexOf(_allowedEras, era) >= 0;
         }
-
+#if UNITY_EDITOR
         private void OnValidate()
         {
             if (_prefab == null)
@@ -59,6 +59,9 @@ namespace Anachronism.Gameplay
         {
             if (_prefab == null)
                 return;
+
+            if (_prefab.GetComponent<Renderer>() != null)
+                Debug.LogWarning($"{name} : un Renderer sur la racine du prefab n'apparait pas dans le fantome ; mets le visuel dans un enfant.", this);
 
             bool hasBounds = false;
             Bounds bounds = default;
@@ -95,5 +98,6 @@ namespace Anachronism.Gameplay
             if (bounds.center.magnitude > 0.05f)
                 Debug.LogWarning($"{name} : le pivot du prefab n'est pas au centre du modele (decalage {bounds.center}).", this);
         }
+#endif
     }
 }
