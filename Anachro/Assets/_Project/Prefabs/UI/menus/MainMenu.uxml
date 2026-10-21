@@ -1,0 +1,13 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:Template name="SettingsMenu" src="project://database/Assets/_Project/Prefabs/UI/menus/SettingsMenu.uxml?fileID=9197481963319205126&amp;guid=4a29e62c0f2175f46ba53e25ac010e93&amp;type=3#SettingsMenu"/>
+    <ui:VisualElement name="MainMenuGroup" style="flex-grow: 1;">
+        <ui:Image tint-color="rgb(55, 55, 55)" style="justify-content: flex-start; align-items: center;"/>
+        <ui:Label text="titre du jeu" name="titre" parse-escape-sequences="true" style="justify-content: space-between; align-items: flex-start; align-content: flex-start; align-self: center; flex-direction: column;"/>
+        <ui:GroupBox style="position: absolute; top: 20%; left: 535px; height: 224px; width: 832px; bottom: 631px; right: auto; align-self: center; align-items: stretch; justify-content: space-between; align-content: flex-end;">
+            <ui:Button text="commencer" name="startButton" style="justify-content: space-between; align-content: stretch; align-self: stretch; align-items: stretch; height: 56px;"/>
+            <ui:Button text="options" name="settingsButton" style="height: 56px;"/>
+            <ui:Button text="quitter" name="quitButton" style="height: 64px;"/>
+        </ui:GroupBox>
+    </ui:VisualElement>
+    <ui:Instance template="SettingsMenu" name="SettingsMenuGroup" style="position: absolute; height: 1076px; width: 1913px;"/>
+</ui:UXML>

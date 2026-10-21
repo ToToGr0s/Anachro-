@@ -1,0 +1,9 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:GroupBox style="position: absolute; height: 482px; width: 571px; top: 158px; left: 637px;">
+        <ui:Label text="équipe gagnante :" style="align-self: center;"/>
+        <ui:Label text="" name="winningTeamText"/>
+        <ui:Label text="" name="timelineText"/>
+    </ui:GroupBox>
+    <ui:Label text="" name="winLossText" style="align-self: center;"/>
+    <ui:Button text="menu principal" name="mainMenuButton" style="position: absolute; top: 994px; left: 812px; width: 252px;"/>
+</ui:UXML>
