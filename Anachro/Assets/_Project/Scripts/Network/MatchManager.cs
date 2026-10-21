@@ -289,7 +289,8 @@ namespace Anachronism.Network
         [Server]
         private void AddDegradation(float amount)
         {
-            // N'a de sens qu'en jeu : hors manche, elle modifierait l'état de la partie suivante.
+            // En jeu seulement : hors manche, elle modifierait l'état de la partie suivante.
+            // Le repérage est inclus pour les poses ; elles ne peuvent pas remplir la barre avant la chasse (20 % max et délai entre deux poses).
             if (_phase.Value != GamePhase.Scouting && _phase.Value != GamePhase.Searching && _phase.Value != GamePhase.LastChance)
                 return;
 
@@ -299,7 +300,7 @@ namespace Anachronism.Network
 
             // La barre doit rester calée sur le chrono : après un ajout ou un retrait, elle repart pour finir pile à 0:00.
             if (_phase.Value == GamePhase.LastChance)
-                _degradationPerSecond.Value = LastChanceRate(_degradationBase.Value, RemainingTime, (float)TimeManager.TickDelta);
+                SetDegradationRate(LastChanceRate(_degradationBase.Value, RemainingTime, (float)TimeManager.TickDelta));
 
             if (_degradationBase.Value >= 1f)
                 EndMatch(Winner.Villains);

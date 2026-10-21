@@ -9,8 +9,12 @@ namespace Anachronism.Network
     [Serializable]
     public struct MatchSettings
     {
-        [SerializeField, Range(1f, 7f)] private byte _villainCount;
-        [SerializeField, Range(1f, 12f)] private byte _objectsPerVillain;
+        // Bornes partagées par l'inspecteur et IsValid, pour ne les écrire qu'une fois.
+        public const byte MaxVillains = 7;
+        public const byte MaxObjectsPerVillain = 12;
+
+        [SerializeField, Range(1f, MaxVillains)] private byte _villainCount;
+        [SerializeField, Range(1f, MaxObjectsPerVillain)] private byte _objectsPerVillain;
         [SerializeField, Min(1f)] private float _scoutingDuration;
         [SerializeField, Min(1f)] private float _searchingDuration;
         // Durée de la dernière chance : chrono visible, la barre va seule de sa valeur actuelle à 100 % pendant ce temps.
@@ -37,14 +41,16 @@ namespace Anachronism.Network
         public float WrongShotPenalty => _wrongShotPenalty;
 
         /// <summary>
-        /// [Min] ne protège que l'inspecteur : les réglages peuvent aussi venir du code ou de l'hôte (T09).
+        /// [Range] et [Min] ne protègent que l'inspecteur : les réglages peuvent aussi venir du code ou de l'hôte (T09).
         /// Une durée de chasse nulle passerait directement à la dernière chance.
         /// Une durée de dernière chance nulle ferait gagner les méchants dès son début (division par zéro de la montée).
         /// </summary>
         public bool IsValid(out string error)
         {
             error = _villainCount < 1 ? "au moins un méchant"
+                : _villainCount > MaxVillains ? $"au plus {MaxVillains} méchants"
                 : _objectsPerVillain < 1 ? "au moins un objet par méchant"
+                : _objectsPerVillain > MaxObjectsPerVillain ? $"au plus {MaxObjectsPerVillain} objets par méchant"
                 : _scoutingDuration <= 0f ? "durée de repérage nulle"
                 : _searchingDuration <= 0f ? "durée de chasse nulle"
                 : _lastChanceDuration <= 0f ? "durée de dernière chance nulle"
