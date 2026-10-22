@@ -1,34 +1,29 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
-namespace Anachronism
+namespace Anachronism.UI
 {
-    public class TitleScreenScript : Menus_base_functions
+    public sealed class TitleScreenScript : MenuBase
     {
-        public string scene;
-        private Button _button;    
-        
-        void Start()
-        {
-            initialize();
-            _button = root.Q<Button>("playButton");
-        }
+        [SerializeField] private string _nextScene;
+
+        private Button _playButton;
 
         private void OnEnable()
         {
-            _button.RegisterCallback<ClickEvent>(OnClicked);
+            _playButton = Root.Q<Button>("playButton");
+            _playButton.RegisterCallback<ClickEvent>(OnPlayClicked);
         }
 
         private void OnDisable()
         {
-            _button.UnregisterCallback<ClickEvent>(OnClicked);
+            _playButton.UnregisterCallback<ClickEvent>(OnPlayClicked);
         }
 
-        private void OnClicked(ClickEvent clicked)
+        private void OnPlayClicked(ClickEvent clicked)
         {
-            SceneManager.LoadScene(scene);
+            SceneManager.LoadScene(_nextScene);
         }
     }
 }

@@ -33,6 +33,7 @@
         <ui:GroupBox style="opacity: 1; flex-direction: row; justify-content: space-evenly;">
             <ui:Button text="menu principal" name="mainMenuButton"/>
             <ui:Button text="quitter" name="quitQuitButton"/>
+            <ui:Button text="annuler" name="cancelButton"/>
         </ui:GroupBox>
     </ui:VisualElement>
     <ui:Instance template="SettingsMenu" name="settingsGroup" style="position: absolute; height: 1088px; width: 1979px;"/>

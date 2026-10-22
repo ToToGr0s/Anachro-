@@ -1,131 +1,100 @@
-using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
-namespace Anachronism
+namespace Anachronism.UI
 {
-    public class MainMenuScript : Menus_base_functions
+    public sealed class MainMenuScript : MenuBase
     {
-        public string playScene;
-        
+        [SerializeField] private string _playScene;
+
         //main
-        private VisualElement Main;
-        private Button startButton;
-        private Button settingsButton;
-        private Button quitButton;
-        
+        private VisualElement _mainGroup;
+        private Button _startButton;
+        private Button _settingsButton;
+        private Button _quitButton;
+
         //settings
-        private VisualElement Settings;
-        private Slider masterVolumeSlider;
-        private Toggle fullScreenToggle;
-        private Button closeButton;
-
-        private void Awake()
-        {
-            initialize();
-
-            //main
-            Main = root.Q<VisualElement>("MainMenuGroup");
-            startButton = root.Q<Button>("startButton");
-            settingsButton = root.Q<Button>("settingsButton");
-            quitButton = root.Q<Button>("quitButton");
-            
-            //settings
-            Settings = root.Q<VisualElement>("SettingsMenuGroup");
-            masterVolumeSlider = root.Q<Slider>("masterVolumeSlider");
-            fullScreenToggle = root.Q<Toggle>("fullScreenToggle");
-            closeButton = root.Q<Button>("closeButton");
-            
-            OpenMenu(Main);
-            CloseMenu(Settings);
-
-        }
+        private VisualElement _settingsGroup;
+        private Slider _masterVolumeSlider;
+        private Toggle _fullScreenToggle;
+        private Button _closeButton;
 
         private void OnEnable()
         {
             //main
-            startButton.RegisterCallback<ClickEvent>(OnSartClicked);
-            settingsButton.RegisterCallback<ClickEvent>(OnSettingsClicked);
-            quitButton.RegisterCallback<ClickEvent>(OnQuitClicked);
-            
+            _mainGroup = Root.Q<VisualElement>("MainMenuGroup");
+            _startButton = Root.Q<Button>("startButton");
+            _settingsButton = Root.Q<Button>("settingsButton");
+            _quitButton = Root.Q<Button>("quitButton");
+
             //settings
-            masterVolumeSlider.RegisterCallback<ChangeEvent<float>>(OnMasterVolumeChanged);
-            fullScreenToggle.RegisterCallback<ChangeEvent<bool>>(OnFullScreenToggleChanged);
-            closeButton.RegisterCallback<ClickEvent>(OnClose);
+            _settingsGroup = Root.Q<VisualElement>("SettingsMenuGroup");
+            _masterVolumeSlider = Root.Q<Slider>("masterVolumeSlider");
+            _fullScreenToggle = Root.Q<Toggle>("fullScreenToggle");
+            _closeButton = Root.Q<Button>("closeButton");
+
+            OpenMenu(_mainGroup);
+            CloseMenu(_settingsGroup);
+
+            //main
+            _startButton.RegisterCallback<ClickEvent>(OnStartClicked);
+            _settingsButton.RegisterCallback<ClickEvent>(OnSettingsClicked);
+            _quitButton.RegisterCallback<ClickEvent>(OnQuitClicked);
+
+            //settings
+            _masterVolumeSlider.RegisterCallback<ChangeEvent<float>>(OnMasterVolumeChanged);
+            _fullScreenToggle.RegisterCallback<ChangeEvent<bool>>(OnFullScreenToggleChanged);
+            _closeButton.RegisterCallback<ClickEvent>(OnClose);
         }
 
         private void OnDisable()
         {
             //main
-            startButton.UnregisterCallback<ClickEvent>(OnSartClicked);
-            settingsButton.UnregisterCallback<ClickEvent>(OnSettingsClicked);
-            quitButton.UnregisterCallback<ClickEvent>(OnQuitClicked);
-            
+            _startButton.UnregisterCallback<ClickEvent>(OnStartClicked);
+            _settingsButton.UnregisterCallback<ClickEvent>(OnSettingsClicked);
+            _quitButton.UnregisterCallback<ClickEvent>(OnQuitClicked);
+
             //settings
-            masterVolumeSlider.UnregisterCallback<ChangeEvent<float>>(OnMasterVolumeChanged);
-            fullScreenToggle.UnregisterCallback<ChangeEvent<bool>>(OnFullScreenToggleChanged);
-            closeButton.UnregisterCallback<ClickEvent>(OnClose);
+            _masterVolumeSlider.UnregisterCallback<ChangeEvent<float>>(OnMasterVolumeChanged);
+            _fullScreenToggle.UnregisterCallback<ChangeEvent<bool>>(OnFullScreenToggleChanged);
+            _closeButton.UnregisterCallback<ClickEvent>(OnClose);
         }
 
         //events--------------------------------------------------------------------------------------------------------
         //main
-        private void OnSartClicked(ClickEvent click)
+        private void OnStartClicked(ClickEvent clicked)
         {
-            LoadScene();
+            // TODO (Hana) : passer par LobbyMenu / SteamLobby (créer ou rejoindre une partie) au lieu de charger la scène en local.
+            SceneManager.LoadScene(_playScene);
         }
 
-        private void OnSettingsClicked(ClickEvent click)
+        private void OnSettingsClicked(ClickEvent clicked)
         {
-            OpenMenu(Settings);
-            CloseMenu(Main);
+            OpenMenu(_settingsGroup);
+            CloseMenu(_mainGroup);
         }
-        
-        private void OnQuitClicked(ClickEvent click)
+
+        private void OnQuitClicked(ClickEvent clicked)
         {
             ExitGame();
         }
-        
+
         //settings
         private void OnMasterVolumeChanged(ChangeEvent<float> changed)
         {
-            ChangeVolume(masterVolumeSlider);
+            ChangeVolume(changed.newValue);
         }
 
         private void OnFullScreenToggleChanged(ChangeEvent<bool> changed)
         {
-            FullScreen(fullScreenToggle.value);
+            SetFullScreen(changed.newValue);
         }
 
         private void OnClose(ClickEvent clicked)
         {
-            OpenMenu(Main);
-            CloseMenu(Settings);
-        }
-        
-        //functions-----------------------------------------------------------------------------------------------------
-        //main
-        protected void LoadScene()
-        {
-            SceneManager.LoadScene(playScene);
-        }
-
-        protected void ExitGame()
-        {
-            Application.Quit();
-        }
-        
-        //settings
-        private void FullScreen(bool fullscreen)
-        {
-            Screen.fullScreen = fullscreen;
-        }
-
-        private void ChangeVolume(Slider volumeSlider) //might add a parameter for the associated volume producer
-        {
-            float volume = volumeSlider.value;
-            //complete function below
-            
+            OpenMenu(_mainGroup);
+            CloseMenu(_settingsGroup);
         }
     }
 }

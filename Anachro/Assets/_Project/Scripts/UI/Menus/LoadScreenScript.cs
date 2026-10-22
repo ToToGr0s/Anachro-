@@ -1,34 +1,35 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Random = UnityEngine.Random;
 
-
-namespace Anachronism
+namespace Anachronism.UI
 {
-    public class LoadScreenScript : Menus_base_functions
+    public sealed class LoadScreenScript : MenuBase
     {
-        [SerializeField] private TextAsset tipsFile;
-        private string tipsString;
-        private string[] tips;
-        private Label tipsLabel;
+        [SerializeField] private TextAsset _tipsFile;
+
+        private string[] _tips;
+        private Label _tipLabel;
         private ProgressBar _progressBar;
 
-        private void Awake()
+        protected override void Awake()
         {
-            initialize();
-            tipsString = tipsFile.ToString();
-            tips = tipsString.Split('\n');
-            tipsLabel = root.Q<Label>("tip");
-            _progressBar = root.Q<ProgressBar>("ProgressBar");
+            base.Awake();
+            // \r aussi : un fichier enregistré sous Windows laisserait un retour chariot en fin de chaque astuce.
+            _tips = _tipsFile.text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private void OnEnable()
+        {
+            _tipLabel = Root.Q<Label>("tip");
+            _progressBar = Root.Q<ProgressBar>("loadingBar");
             PickTip();
         }
 
         private void PickTip()
         {
-            string txt = tips[Random.Range(0, tips.Length)];
-            tipsLabel.text = txt;
+            _tipLabel.text = _tips.Length > 0 ? _tips[Random.Range(0, _tips.Length)] : string.Empty;
         }
 
         public void UpdateBar(float factor)
