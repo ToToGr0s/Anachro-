@@ -1,5 +1,5 @@
 using UnityEngine;
-#if UNITY_EDITOR || DEBUG
+#if UNITY_EDITOR
 
 namespace Anachronism.Gameplay
 {
