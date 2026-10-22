@@ -19,6 +19,9 @@ namespace Anachronism.Gameplay
         [SerializeField, Range(0f, 1f)] private float _smallDisruption = 0.07f;
         [SerializeField, Range(0f, 1f)] private float _mediumDisruption = 0.14f;
         [SerializeField, Range(0f, 1f)] private float _largeDisruption = 0.21f;
+        // Une surface est un sol si sa normale.y est au moins cette valeur (1 = sol parfaitement plat).
+        // Même seuil pour les objets de la map et pour la pose des fugitifs.
+        [SerializeField, Range(0f, 1f)] private float _floorMinNormalY = 0.7f;
 
 
         public float CarrierRatio => _carrierRatio;
@@ -27,6 +30,7 @@ namespace Anachronism.Gameplay
         public float InteractionDistance => _interactionDistance;
         public float ShootDistance => _shootDistance;
         public int MaxPhotos => _maxPhotos;
+        public float FloorMinNormalY => _floorMinNormalY;
         public float GetReloadSeconds(AnachronismSize size)
         {
             switch (size)

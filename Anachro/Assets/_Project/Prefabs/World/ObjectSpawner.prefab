@@ -107,5 +107,6 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   _era: {fileID: 0}
   _settings: {fileID: 0}
+  _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
   _prefab: {fileID: 4124189884971985615, guid: 9374b528c08aa314ca72f69012c7f544, type: 3}
   _zones: []

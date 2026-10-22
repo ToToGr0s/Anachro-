@@ -17,13 +17,13 @@ namespace Anachronism.World
         // TODO (Théo) : V0 = époque fixée dans la scène. À lire depuis la carte choisie au lobby (T09).
         [SerializeField] private EraDefinition _era;
         [SerializeField] private ObjectSpawnSettings _settings;
+        // Seuil « sol » partagé avec la pose des fugitifs.
+        [SerializeField] private GameplayTuning _tuning;
         [SerializeField] private WorldObject _prefab;
         [SerializeField] private ObjectSpawnZone[] _zones = new ObjectSpawnZone[0];
 
         // L'objet est posé un peu au-dessus de la surface pour le test de chevauchement : sinon il toucherait son propre support.
         private const float SurfaceClearance = 0.02f;
-        // Surface assez horizontale pour y poser un objet : 0,9 ≈ pente de 25° au plus.
-        private const float MinSurfaceUp = 0.9f;
 
         private readonly List<WorldObject> _spawned = new List<WorldObject>();
         private readonly List<AnachronismDefinition> _valid = new List<AnachronismDefinition>();
@@ -86,16 +86,16 @@ namespace Anachronism.World
         [Server]
         private void SpawnAll()
         {
-            if (_era == null || _settings == null || _prefab == null || _era.SpawnedObjects.Count == 0)
+            if (_era == null || _settings == null || _tuning == null || _prefab == null || _era.SpawnedObjects.Count == 0)
             {
-                Debug.LogError("[ObjectSpawner] Époque, réglages, prefab ou objets de l'époque manquants : aucun objet généré.", this);
+                Debug.LogError("[ObjectSpawner] Époque, réglages, GameplayTuning, prefab ou objets de l'époque manquants : aucun objet généré.", this);
                 return;
             }
 
             float totalArea = 0f;
             foreach (ObjectSpawnZone zone in _zones)
             {
-                if (zone != null)
+                if (zone != null && zone.Area > 0f)
                     totalArea += zone.Area;
             }
             if (totalArea <= 0f)
@@ -170,7 +170,8 @@ namespace Anachronism.World
             ObjectSpawnZone last = null;
             foreach (ObjectSpawnZone zone in _zones)
             {
-                if (zone == null)
+                // Une zone de surface nulle pourrait sortir quand le tirage vaut 0 : son point de départ serait dégénéré.
+                if (zone == null || zone.Area <= 0f)
                     continue;
                 last = zone;
                 pick -= zone.Area;
@@ -190,7 +191,8 @@ namespace Anachronism.World
                 return false;
             // Seulement sur le décor : pas sur un objet déjà posé, un PNJ ou un joueur (tous des objets réseau),
             // ni sur une pente ou l'arête d'un mur.
-            if (hit.normal.y < MinSurfaceUp || hit.collider.GetComponentInParent<NetworkObject>() != null)
+            // TODO (Olivier) : passer à PlacementRules.ClassifySurface une fois la pose de Célian (#30) mergée.
+            if (hit.normal.y < _tuning.FloorMinNormalY || hit.collider.GetComponentInParent<NetworkObject>() != null)
                 return false;
 
             // Le bas du mesh sur la surface, quel que soit son pivot.

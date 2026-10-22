@@ -36,7 +36,15 @@ namespace Anachronism.World
         }
 
         /// <summary>Vrai si les clients sauront afficher cet objet (présent dans le registre). À tester avant le spawn.</summary>
-        public bool CanDisplay(AnachronismDefinition definition) => _registry.TryGetId(definition, out _);
+        public bool CanDisplay(AnachronismDefinition definition)
+        {
+            if (_registry == null)
+            {
+                Debug.LogError("[WorldObject] Aucun AnachronismRegistry assigné sur le prefab.", this);
+                return false;
+            }
+            return _registry.TryGetId(definition, out _);
+        }
 
         public override void OnStartServer()
         {
@@ -107,6 +115,8 @@ namespace Anachronism.World
             _collider.size = bounds.size;
             _obstacle.center = bounds.center;
             _obstacle.size = bounds.size;
+            // Un petit objet (bague, timbre) ne gêne pas les PNJ : le découper creuserait un trou inutile dans le NavMesh.
+            _obstacle.enabled = definition.Size != AnachronismSize.Small;
         }
     }
 }

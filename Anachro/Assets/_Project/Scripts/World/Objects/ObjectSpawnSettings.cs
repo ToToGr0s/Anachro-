@@ -6,7 +6,7 @@ namespace Anachronism.World
     /// Réglages de la répartition des objets d'époque sur une map (un asset par map), modifiables sans toucher au code.
     /// </summary>
     [CreateAssetMenu(fileName = "ObjectSpawnSettings", menuName = "Anachronism/ObjectSpawnSettings")]
-    public class ObjectSpawnSettings : ScriptableObject
+    public sealed class ObjectSpawnSettings : ScriptableObject
     {
         // Nombre d'objets tiré au hasard à chaque partie, doublons compris (un même objet peut apparaître plusieurs fois).
         [SerializeField, Min(0)] private int _minCount = 15;
