@@ -5,7 +5,6 @@ namespace Anachronism.Gameplay
 {
     // Cote client du fugitif : vise une surface, pilote l'apercu et prepare l'intention de pose.
     // Le serveur (NetworkPlacement, Theo) revalide tout : ici on ne decide rien de definitif.
-    // TODO (Theo) : a l'integration, activer ce composant seulement pour le proprietaire fugitif (PlayerNetworkSetup, regle reseau 7).
     public class FugitivePlacer : MonoBehaviour
     {
         private const int SizeCount = 3;
@@ -38,9 +37,9 @@ namespace Anachronism.Gameplay
 
         // size = taille de l'objet pose (elle fixe la duree), duration = duree totale de la recharge ; le HUD (Olivier) decompte lui-meme.
         public event Action<AnachronismSize, float> CooldownChanged;
-        // L'intention de pose : NetworkPlacement (Theo) l'enverra au serveur. Taille + point + normale, jamais l'objet.
+        // L'intention de pose, sans l'objet tenu.
         public event Action<PlacementRequest> PlacementRequested;
-        // Local seulement : l'objet tenu au moment de la pose (spawner de test, HUD). Ne pas l'envoyer au serveur.
+        // L'intention avec l'objet tenu : NetworkPlacement l'envoie a l'hote, qui verifie qu'il est posable dans cette epoque.
         public event Action<PlacementRequest, AnachronismDefinition> ItemPlaced;
         public event Action<AnachronismSize> SizeSelected;
         // Le HUD (persistant, hors scene) ne peut pas porter de reference vers le joueur : il suit le placer qui s'active.
@@ -214,7 +213,7 @@ namespace Anachronism.Gameplay
             CooldownChanged?.Invoke(size, duration);
         }
 
-        // TODO (Theo) : le serveur tire les 3 objets et les envoie en TargetRpc ; le client n'envoie que la taille choisie (regle reseau 1).
+        // Tirage local (choix de Theo) : l'hote verifie seulement que l'objet envoye est posable dans l'epoque (NetworkPlacement).
         private void DrawItem(AnachronismSize size)
         {
             // Les objets posables de l'epoque sont deja d'une autre epoque (EraDefinition le verifie a la saisie).
