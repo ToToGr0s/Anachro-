@@ -7,7 +7,7 @@ using UnityEngine.AI;
 namespace Anachronism.Gameplay
 {
     // TEST LOCAL SEULEMENT (scenes Sandbox) : fait apparaitre l'objet pose, comme le fera le serveur en ligne.
-    // En ligne, c'est NetworkPlacement (Theo) qui valide puis spawne : pas sur un prefab joueur.
+    // En ligne, c'est NetworkPlacement (Theo) qui valide puis spawne : ce composant ne fait alors plus rien.
     public class SandboxPlacementSpawner : MonoBehaviour
     {
         [SerializeField] private FugitivePlacer _placer;
@@ -15,6 +15,7 @@ namespace Anachronism.Gameplay
         [SerializeField] private WorldObject _worldObjectPrefab;
 
         private Transform _inactiveParent;
+        private NetworkObject _networkObject;
 
         private void Awake()
         {
@@ -24,6 +25,8 @@ namespace Anachronism.Gameplay
                 enabled = false;
                 return;
             }
+
+            _networkObject = GetComponentInParent<NetworkObject>();
 
             // Parent inactif : une copie du prefab y reste sans Awake tant qu'on n'a pas retire ses composants reseau.
             _inactiveParent = new GameObject("Parent inactif (copies de test)").transform;
@@ -43,6 +46,10 @@ namespace Anachronism.Gameplay
 
         private void OnItemPlaced(PlacementRequest request, AnachronismDefinition definition)
         {
+            // Joueur spawne en reseau : l'objet viendra de l'hote, une copie locale le doublerait.
+            if (_networkObject != null && _networkObject.IsSpawned)
+                return;
+
             if (definition == null || definition.Mesh == null)
             {
                 Debug.LogWarning("SandboxPlacementSpawner : pas de mesh a faire apparaitre.", this);

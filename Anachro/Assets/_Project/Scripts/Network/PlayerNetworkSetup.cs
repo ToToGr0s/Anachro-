@@ -15,6 +15,8 @@ namespace Anachronism.Network
     {
         [Tooltip("Composants actifs seulement chez l'owner : PlayerInput, InputManager, CharacterMovement, MouseLook, Camera, AudioListener.")]
         [SerializeField] private Behaviour[] _ownerOnlyComponents = new Behaviour[0];
+        [Tooltip("Composants actifs seulement chez l'owner fugitif (FugitivePlacer). Hors ligne : toujours actifs, pour tester la pose.")]
+        [SerializeField] private Behaviour[] _fugitiveOnlyComponents = new Behaviour[0];
         [SerializeField] private CapsuleCollider _capsule;
         [SerializeField] private Camera _camera;
         [SerializeField] private PlayerInput _playerInput;
@@ -22,6 +24,8 @@ namespace Anachronism.Network
         private GameObject _hiddenSceneCamera;
         // Mémorisé plutôt que relu dans IsOwner : à l'arrêt (déconnexion, despawn), l'ownership peut déjà être retirée.
         private bool _hasLocalControl;
+        // Mémorisé : MatchManager.Instance peut déjà être détruit quand on se désabonne (fin de partie, retour au menu).
+        private MatchManager _match;
 
         private void Start()
         {
@@ -65,6 +69,8 @@ namespace Anachronism.Network
             // Filet de sécurité : l'événement est statique, un abonnement oublié appellerait un objet détruit.
             if (_hasLocalControl)
                 GameMenuState.OpenChanged -= OnMenuOpenChanged;
+            if (_match != null)
+                _match.LocalRoleAssigned -= OnLocalRoleAssigned;
         }
 
         private void EnableLocalControl()
@@ -73,9 +79,27 @@ namespace Anachronism.Network
                 return;
 
             _hasLocalControl = true;
-            SetOwnerComponentsEnabled(true);
+            SetComponentsEnabled(_ownerOnlyComponents, true);
             GameMenuState.OpenChanged += OnMenuOpenChanged;
             OnMenuOpenChanged(GameMenuState.IsOpen);
+
+            // Hors ligne il n'y a pas de rôle : la copie de test peut toujours poser.
+            if (!GetIsNetworked())
+            {
+                SetComponentsEnabled(_fugitiveOnlyComponents, true);
+                return;
+            }
+
+            // Le rôle arrive par TargetRpc, avant ou après le spawn du joueur, et change d'une partie à l'autre.
+            _match = MatchManager.Instance;
+            if (_match == null)
+            {
+                Debug.LogWarning("[PlayerNetworkSetup] Pas de MatchManager : les composants du fugitif restent éteints.", this);
+                return;
+            }
+
+            _match.LocalRoleAssigned += OnLocalRoleAssigned;
+            OnLocalRoleAssigned(_match.LocalRole);
         }
 
         private void DisableLocalControl()
@@ -85,7 +109,11 @@ namespace Anachronism.Network
 
             _hasLocalControl = false;
             GameMenuState.OpenChanged -= OnMenuOpenChanged;
-            SetOwnerComponentsEnabled(false);
+            if (_match != null)
+                _match.LocalRoleAssigned -= OnLocalRoleAssigned;
+            _match = null;
+            SetComponentsEnabled(_fugitiveOnlyComponents, false);
+            SetComponentsEnabled(_ownerOnlyComponents, false);
             if (_hiddenSceneCamera != null)
                 _hiddenSceneCamera.SetActive(true);
             _hiddenSceneCamera = null;
@@ -111,9 +139,13 @@ namespace Anachronism.Network
             Cursor.visible = isOpen;
         }
 
-        private void SetOwnerComponentsEnabled(bool isEnabled)
+        // Côté client seulement, pour l'affichage et les entrées : l'hôte revérifie le rôle à chaque pose.
+        private void OnLocalRoleAssigned(PlayerRole role) =>
+            SetComponentsEnabled(_fugitiveOnlyComponents, role == PlayerRole.Villain);
+
+        private static void SetComponentsEnabled(Behaviour[] components, bool isEnabled)
         {
-            foreach (Behaviour component in _ownerOnlyComponents)
+            foreach (Behaviour component in components)
             {
                 if (component != null)
                     component.enabled = isEnabled;

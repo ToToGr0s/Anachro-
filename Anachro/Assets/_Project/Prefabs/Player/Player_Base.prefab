@@ -637,6 +637,7 @@ MonoBehaviour:
   - {fileID: 4839028056385098332}
   - {fileID: 5595452329960202124}
   - {fileID: 4673662947706412388}
+  _fugitiveOnlyComponents:
   - {fileID: 952805693337423203}
   _capsule: {fileID: 8017830287955416054}
   _camera: {fileID: 5595452329960202124}
