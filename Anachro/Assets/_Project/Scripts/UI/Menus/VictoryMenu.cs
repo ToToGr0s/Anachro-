@@ -27,12 +27,12 @@ namespace Anachronism.UI
             _timelineLabel = Root.Q<Label>("timelineText");
             _mainMenuButton = Root.Q<Button>("mainMenuButton");
 
-            _mainMenuButton.RegisterCallback<ClickEvent>(OnMainMenu);
+            _mainMenuButton.clicked += OnMainMenu;
         }
 
         private void OnDisable()
         {
-            _mainMenuButton.UnregisterCallback<ClickEvent>(OnMainMenu);
+            _mainMenuButton.clicked -= OnMainMenu;
         }
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace Anachronism.UI
         }
 
         //events--------------------------------------------------------------------------------------------------------
-        private void OnMainMenu(ClickEvent clicked)
+        private void OnMainMenu()
         {
             // TODO (Hana) : passer par SteamLobby pour quitter la partie (arrêt de FishNet) au lieu de charger la scène.
             SceneManager.LoadScene(_mainMenuScene);

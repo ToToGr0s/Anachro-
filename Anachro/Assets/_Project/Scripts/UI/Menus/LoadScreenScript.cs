@@ -34,7 +34,7 @@ namespace Anachronism.UI
 
         public void UpdateBar(float factor)
         {
-            _progressBar.value = factor;
+            SetProgress(_progressBar, factor);
         }
     }
 }

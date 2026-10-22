@@ -15,6 +15,14 @@ namespace Anachronism.UI
         private bool _isFugitive;
         private bool _isPopUpOpen;
 
+        // Dernières valeurs affichées : les Update* peuvent être appelées à chaque frame,
+        // on ne reconstruit le texte (allocation) que quand il change.
+        private int _timerSeconds = -1;
+        private int _deregulationPercent = -1;
+        private int _bigToolPercent = -1;
+        private int _mediumToolPercent = -1;
+        private int _smallToolPercent = -1;
+
         //in game
         private VisualElement _inGameGroup;
         private ProgressBar _deregulationProgressBar;
@@ -41,11 +49,7 @@ namespace Anachronism.UI
         private Button _quitQuitButton;
         private Button _cancelButton;
 
-        //settings
-        private VisualElement _settingsGroup;
-        private Slider _masterVolumeSlider;
-        private Toggle _fullScreenToggle;
-        private Button _closeButton;
+        private SettingsPanel _settings;
 
         private void OnEnable()
         {
@@ -75,83 +79,66 @@ namespace Anachronism.UI
             _quitQuitButton = Root.Q<Button>("quitQuitButton");
             _cancelButton = Root.Q<Button>("cancelButton");
 
-            //settings
-            _settingsGroup = Root.Q<VisualElement>("settingsGroup");
-            _masterVolumeSlider = Root.Q<Slider>("masterVolumeSlider");
-            _fullScreenToggle = Root.Q<Toggle>("fullScreenToggle");
-            _closeButton = Root.Q<Button>("closeButton");
+            _settings = new SettingsPanel(Root, "settingsGroup");
+
+            // Arbre neuf : les textes sont à reconstruire au prochain Update*.
+            _timerSeconds = _deregulationPercent = _bigToolPercent = _mediumToolPercent = _smallToolPercent = -1;
+            _isPopUpOpen = false;
 
             OpenMenu(_inGameGroup);
             SetIsFugitive(_isFugitive);
             CloseMenu(_pauseGroup);
             CloseMenu(_popUpGroup);
-            CloseMenu(_settingsGroup);
-            _isPopUpOpen = false;
+            CloseMenu(_settings.Group);
 
-            //deregulation tools
-            _bigTool.RegisterCallback<ClickEvent>(OnBigToolClicked);
-            _mediumTool.RegisterCallback<ClickEvent>(OnMediumToolClicked);
-            _smallTool.RegisterCallback<ClickEvent>(OnSmallToolClicked);
-
-            //pause
-            _resumeButton.RegisterCallback<ClickEvent>(OnResume);
-            _settingsButton.RegisterCallback<ClickEvent>(OnSettings);
-            _quitButton.RegisterCallback<ClickEvent>(OnQuit);
-
-            //pop up
-            _mainMenuButton.RegisterCallback<ClickEvent>(OnMainMenu);
-            _quitQuitButton.RegisterCallback<ClickEvent>(OnQuitQuit);
-            _cancelButton.RegisterCallback<ClickEvent>(OnCancel);
-
-            //settings
-            _masterVolumeSlider.RegisterCallback<ChangeEvent<float>>(OnMasterVolumeChanged);
-            _fullScreenToggle.RegisterCallback<ChangeEvent<bool>>(OnFullScreenToggleChanged);
-            _closeButton.RegisterCallback<ClickEvent>(OnClose);
+            _bigTool.clicked += OnBigToolClicked;
+            _mediumTool.clicked += OnMediumToolClicked;
+            _smallTool.clicked += OnSmallToolClicked;
+            _resumeButton.clicked += OnResume;
+            _settingsButton.clicked += OnSettings;
+            _quitButton.clicked += OnQuit;
+            _mainMenuButton.clicked += OnMainMenu;
+            _quitQuitButton.clicked += ExitGame;
+            _cancelButton.clicked += OnCancel;
+            _settings.Closed += OnSettingsClosed;
+            _settings.Register();
         }
 
         private void OnDisable()
         {
-            //deregulation tools
-            _bigTool.UnregisterCallback<ClickEvent>(OnBigToolClicked);
-            _mediumTool.UnregisterCallback<ClickEvent>(OnMediumToolClicked);
-            _smallTool.UnregisterCallback<ClickEvent>(OnSmallToolClicked);
-
-            //pause
-            _resumeButton.UnregisterCallback<ClickEvent>(OnResume);
-            _settingsButton.UnregisterCallback<ClickEvent>(OnSettings);
-            _quitButton.UnregisterCallback<ClickEvent>(OnQuit);
-
-            //pop up
-            _mainMenuButton.UnregisterCallback<ClickEvent>(OnMainMenu);
-            _quitQuitButton.UnregisterCallback<ClickEvent>(OnQuitQuit);
-            _cancelButton.UnregisterCallback<ClickEvent>(OnCancel);
-
-            //settings
-            _masterVolumeSlider.UnregisterCallback<ChangeEvent<float>>(OnMasterVolumeChanged);
-            _fullScreenToggle.UnregisterCallback<ChangeEvent<bool>>(OnFullScreenToggleChanged);
-            _closeButton.UnregisterCallback<ClickEvent>(OnClose);
+            _bigTool.clicked -= OnBigToolClicked;
+            _mediumTool.clicked -= OnMediumToolClicked;
+            _smallTool.clicked -= OnSmallToolClicked;
+            _resumeButton.clicked -= OnResume;
+            _settingsButton.clicked -= OnSettings;
+            _quitButton.clicked -= OnQuit;
+            _mainMenuButton.clicked -= OnMainMenu;
+            _quitQuitButton.clicked -= ExitGame;
+            _cancelButton.clicked -= OnCancel;
+            _settings.Closed -= OnSettingsClosed;
+            _settings.Unregister();
         }
 
         //events--------------------------------------------------------------------------------------------------------
         //deregulation tools
-        private void OnBigToolClicked(ClickEvent clicked)
+        private void OnBigToolClicked()
         {
             // TODO (Hana) : lever un event C# écouté par le gameplay (l'UI ne touche pas au réseau).
         }
 
-        private void OnMediumToolClicked(ClickEvent clicked)
+        private void OnMediumToolClicked()
         {
             // TODO (Hana) : idem OnBigToolClicked.
         }
 
-        private void OnSmallToolClicked(ClickEvent clicked)
+        private void OnSmallToolClicked()
         {
             // TODO (Hana) : idem OnBigToolClicked.
         }
 
         //pause
         // TODO (Hana) : rien n'ouvre encore le menu pause (Échap) ; à voir avec PauseMenu qui gère déjà Échap.
-        private void OnResume(ClickEvent clicked)
+        private void OnResume()
         {
             if (!_isPopUpOpen)
             {
@@ -160,16 +147,16 @@ namespace Anachronism.UI
             }
         }
 
-        private void OnSettings(ClickEvent clicked)
+        private void OnSettings()
         {
             if (!_isPopUpOpen)
             {
-                OpenMenu(_settingsGroup);
+                OpenMenu(_settings.Group);
                 CloseMenu(_pauseGroup);
             }
         }
 
-        private void OnQuit(ClickEvent clicked)
+        private void OnQuit()
         {
             if (!_isPopUpOpen)
             {
@@ -179,39 +166,24 @@ namespace Anachronism.UI
         }
 
         //pop up
-        private void OnMainMenu(ClickEvent clicked)
+        private void OnMainMenu()
         {
             // TODO (Hana) : passer par SteamLobby pour quitter la partie (arrêt de FishNet) au lieu de charger la scène.
             // En l'état, l'hôte qui clique ici casse la partie de tout le monde.
             SceneManager.LoadScene(_mainMenuScene);
         }
 
-        private void OnQuitQuit(ClickEvent clicked)
-        {
-            ExitGame();
-        }
-
-        private void OnCancel(ClickEvent clicked)
+        private void OnCancel()
         {
             CloseMenu(_popUpGroup);
             _isPopUpOpen = false;
         }
 
         //settings
-        private void OnMasterVolumeChanged(ChangeEvent<float> changed)
-        {
-            ChangeVolume(changed.newValue);
-        }
-
-        private void OnFullScreenToggleChanged(ChangeEvent<bool> changed)
-        {
-            SetFullScreen(changed.newValue);
-        }
-
-        private void OnClose(ClickEvent clicked)
+        private void OnSettingsClosed()
         {
             OpenMenu(_pauseGroup);
-            CloseMenu(_settingsGroup);
+            CloseMenu(_settings.Group);
         }
 
         //functions-----------------------------------------------------------------------------------------------------
@@ -232,35 +204,55 @@ namespace Anachronism.UI
         //in game
         public void UpdateDeregulationBar(float factor)
         {
-            _deregulationProgressBar.value = factor;
-            _deregulationProgressBar.title = DeregulationStaticText + (int)(factor * 100) + "%";
+            SetProgress(_deregulationProgressBar, factor);
+            int percent = ToPercent(factor);
+            if (percent != _deregulationPercent)
+            {
+                _deregulationPercent = percent;
+                _deregulationProgressBar.title = DeregulationStaticText + percent + "%";
+            }
         }
 
         public void UpdateTimer(int minutes, int seconds)
         {
-            _timer.text = minutes.ToString("00") + ":" + seconds.ToString("00");
+            int totalSeconds = minutes * 60 + seconds;
+            if (totalSeconds != _timerSeconds)
+            {
+                _timerSeconds = totalSeconds;
+                _timer.text = $"{minutes:00}:{seconds:00}";
+            }
         }
 
         //deregulation tools
         public void UpdateBigToolBar(float factor)
         {
-            UpdateToolBar(_bigToolProgressBar, factor);
+            UpdateToolBar(_bigToolProgressBar, factor, ref _bigToolPercent);
         }
 
         public void UpdateMediumToolBar(float factor)
         {
-            UpdateToolBar(_mediumToolProgressBar, factor);
+            UpdateToolBar(_mediumToolProgressBar, factor, ref _mediumToolPercent);
         }
 
         public void UpdateSmallToolBar(float factor)
         {
-            UpdateToolBar(_smallToolProgressBar, factor);
+            UpdateToolBar(_smallToolProgressBar, factor, ref _smallToolPercent);
         }
 
-        private static void UpdateToolBar(ProgressBar bar, float factor)
+        private static void UpdateToolBar(ProgressBar bar, float factor, ref int lastPercent)
         {
-            bar.value = factor;
-            bar.title = factor < 1 ? (int)(factor * 100) + "%" : FullStaticText;
+            SetProgress(bar, factor);
+            int percent = ToPercent(factor);
+            if (percent != lastPercent)
+            {
+                lastPercent = percent;
+                bar.title = percent < 100 ? percent + "%" : FullStaticText;
+            }
+        }
+
+        private static int ToPercent(float factor)
+        {
+            return (int)(Mathf.Clamp01(factor) * 100);
         }
     }
 }

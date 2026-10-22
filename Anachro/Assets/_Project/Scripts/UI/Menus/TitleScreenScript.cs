@@ -13,15 +13,15 @@ namespace Anachronism.UI
         private void OnEnable()
         {
             _playButton = Root.Q<Button>("playButton");
-            _playButton.RegisterCallback<ClickEvent>(OnPlayClicked);
+            _playButton.clicked += OnPlayClicked;
         }
 
         private void OnDisable()
         {
-            _playButton.UnregisterCallback<ClickEvent>(OnPlayClicked);
+            _playButton.clicked -= OnPlayClicked;
         }
 
-        private void OnPlayClicked(ClickEvent clicked)
+        private void OnPlayClicked()
         {
             SceneManager.LoadScene(_nextScene);
         }

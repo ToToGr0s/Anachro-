@@ -1,6 +1,6 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <ui:GroupBox style="position: absolute; height: 1068px; width: 1905px; flex-direction: column-reverse;">
-        <ui:Label text="" double-click-selects-word="false" name="tip" style="align-self: center; font-size: 26px; flex-direction: column;"/>
+    <ui:GroupBox style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; flex-direction: column-reverse;">
+        <ui:Label text="" double-click-selects-word="false" name="tip" style="align-self: center; font-size: 26px;"/>
         <ui:ProgressBar value="0" title="" name="loadingBar"/>
     </ui:GroupBox>
 </ui:UXML>

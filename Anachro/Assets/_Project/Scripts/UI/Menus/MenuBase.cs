@@ -36,15 +36,12 @@ namespace Anachronism.UI
             Application.Quit();
         }
 
-        protected static void SetFullScreen(bool isFullScreen)
+        /// <summary>
+        /// Remplit une barre avec un ratio 0–1. Les ProgressBar vont de 0 à 100 par défaut : sans ça, 1 = 1 %.
+        /// </summary>
+        protected static void SetProgress(ProgressBar bar, float factor)
         {
-            // TODO (Hana) : doublon avec DisplayController (F11), garder une seule source pour le plein écran.
-            Screen.fullScreen = isFullScreen;
-        }
-
-        protected static void ChangeVolume(float volume)
-        {
-            // TODO (Hana) : brancher sur le mixer audio quand il existera.
+            bar.value = Mathf.Clamp01(factor) * bar.highValue;
         }
     }
 }

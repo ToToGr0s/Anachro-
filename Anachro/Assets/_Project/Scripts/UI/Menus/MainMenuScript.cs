@@ -8,93 +8,56 @@ namespace Anachronism.UI
     {
         [SerializeField] private string _playScene;
 
-        //main
         private VisualElement _mainGroup;
         private Button _startButton;
         private Button _settingsButton;
         private Button _quitButton;
-
-        //settings
-        private VisualElement _settingsGroup;
-        private Slider _masterVolumeSlider;
-        private Toggle _fullScreenToggle;
-        private Button _closeButton;
+        private SettingsPanel _settings;
 
         private void OnEnable()
         {
-            //main
             _mainGroup = Root.Q<VisualElement>("MainMenuGroup");
             _startButton = Root.Q<Button>("startButton");
             _settingsButton = Root.Q<Button>("settingsButton");
             _quitButton = Root.Q<Button>("quitButton");
-
-            //settings
-            _settingsGroup = Root.Q<VisualElement>("SettingsMenuGroup");
-            _masterVolumeSlider = Root.Q<Slider>("masterVolumeSlider");
-            _fullScreenToggle = Root.Q<Toggle>("fullScreenToggle");
-            _closeButton = Root.Q<Button>("closeButton");
+            _settings = new SettingsPanel(Root, "SettingsMenuGroup");
 
             OpenMenu(_mainGroup);
-            CloseMenu(_settingsGroup);
+            CloseMenu(_settings.Group);
 
-            //main
-            _startButton.RegisterCallback<ClickEvent>(OnStartClicked);
-            _settingsButton.RegisterCallback<ClickEvent>(OnSettingsClicked);
-            _quitButton.RegisterCallback<ClickEvent>(OnQuitClicked);
-
-            //settings
-            _masterVolumeSlider.RegisterCallback<ChangeEvent<float>>(OnMasterVolumeChanged);
-            _fullScreenToggle.RegisterCallback<ChangeEvent<bool>>(OnFullScreenToggleChanged);
-            _closeButton.RegisterCallback<ClickEvent>(OnClose);
+            _startButton.clicked += OnStartClicked;
+            _settingsButton.clicked += OnSettingsClicked;
+            _quitButton.clicked += ExitGame;
+            _settings.Closed += OnSettingsClosed;
+            _settings.Register();
         }
 
         private void OnDisable()
         {
-            //main
-            _startButton.UnregisterCallback<ClickEvent>(OnStartClicked);
-            _settingsButton.UnregisterCallback<ClickEvent>(OnSettingsClicked);
-            _quitButton.UnregisterCallback<ClickEvent>(OnQuitClicked);
-
-            //settings
-            _masterVolumeSlider.UnregisterCallback<ChangeEvent<float>>(OnMasterVolumeChanged);
-            _fullScreenToggle.UnregisterCallback<ChangeEvent<bool>>(OnFullScreenToggleChanged);
-            _closeButton.UnregisterCallback<ClickEvent>(OnClose);
+            _startButton.clicked -= OnStartClicked;
+            _settingsButton.clicked -= OnSettingsClicked;
+            _quitButton.clicked -= ExitGame;
+            _settings.Closed -= OnSettingsClosed;
+            _settings.Unregister();
         }
 
         //events--------------------------------------------------------------------------------------------------------
-        //main
-        private void OnStartClicked(ClickEvent clicked)
+        private void OnStartClicked()
         {
             // TODO (Hana) : passer par LobbyMenu / SteamLobby (créer ou rejoindre une partie) au lieu de charger la scène en local.
             SceneManager.LoadScene(_playScene);
         }
 
-        private void OnSettingsClicked(ClickEvent clicked)
+        private void OnSettingsClicked()
         {
-            OpenMenu(_settingsGroup);
+            OpenMenu(_settings.Group);
             CloseMenu(_mainGroup);
         }
 
-        private void OnQuitClicked(ClickEvent clicked)
-        {
-            ExitGame();
-        }
-
-        //settings
-        private void OnMasterVolumeChanged(ChangeEvent<float> changed)
-        {
-            ChangeVolume(changed.newValue);
-        }
-
-        private void OnFullScreenToggleChanged(ChangeEvent<bool> changed)
-        {
-            SetFullScreen(changed.newValue);
-        }
-
-        private void OnClose(ClickEvent clicked)
+        private void OnSettingsClosed()
         {
             OpenMenu(_mainGroup);
-            CloseMenu(_settingsGroup);
+            CloseMenu(_settings.Group);
         }
     }
 }
