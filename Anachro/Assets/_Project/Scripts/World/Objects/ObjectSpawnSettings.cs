@@ -15,14 +15,21 @@ namespace Anachronism.World
         [SerializeField, Min(0f)] private float _minSpacing = 0.5f;
         // Une zone pleine ne doit pas faire tourner la boucle sans fin : au-delà, l'objet est abandonné.
         [SerializeField, Min(1)] private int _attemptsPerObject = 20;
-        // Surfaces sur lesquelles un objet peut être posé (sol, tables, chaises).
-        [SerializeField] private LayerMask _surfaceLayers = 1;
+        // Surfaces sur lesquelles un objet peut être posé (sol, tables, chaises) : le layer SpawnSurface, pas Default.
+        // Ce layer doit aussi être mis sur ces objets dans la scène et coché dans le masque du NavMeshSurface.
+        [SerializeField] private LayerMask _surfaceLayers;
 
         public int MinCount => _minCount;
         public int MaxCount => _maxCount;
         public float MinSpacing => _minSpacing;
         public int AttemptsPerObject => _attemptsPerObject;
         public LayerMask SurfaceLayers => _surfaceLayers;
+
+        // GetMask est interdit dans l'initialiseur d'un champ sérialisé : un nouvel asset reçoit SpawnSurface ici.
+        private void Reset()
+        {
+            _surfaceLayers = LayerMask.GetMask("SpawnSurface");
+        }
 
         private void OnValidate()
         {

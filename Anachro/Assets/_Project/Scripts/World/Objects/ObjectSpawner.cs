@@ -11,6 +11,8 @@ namespace Anachronism.World
     /// Ils restent visibles sur l'écran de fin et disparaissent au retour au lobby ou au lancement suivant.
     /// Nouvelle map : poser le prefab ObjectSpawner et des prefabs ObjectSpawnZone, choisir l'époque et les réglages,
     /// puis clic droit sur le composant > « Référencer toutes les zones de la scène ».
+    /// Les sols et tables qui reçoivent des objets doivent être sur le layer SpawnSurface, et ce layer doit être
+    /// coché dans le masque du NavMeshSurface : sinon aucun objet n'apparaît, ou ces surfaces sortent du NavMesh.
     /// </summary>
     public sealed class ObjectSpawner : NetworkBehaviour
     {
@@ -132,7 +134,7 @@ namespace Anachronism.World
             {
                 ObjectSpawnZone zone = PickZone(totalArea);
                 AnachronismDefinition definition = _valid[Random.Range(0, _valid.Count)];
-                if (!TryFindPlace(zone, definition.Mesh.bounds, out Vector3 position, out Quaternion rotation))
+                if (!TryFindPlace(zone, definition, out Vector3 position, out Quaternion rotation))
                     continue;
 
                 WorldObject worldObject = Instantiate(_prefab, position, rotation);
@@ -186,8 +188,9 @@ namespace Anachronism.World
         // une zone éteinte dans la hiérarchie ne doit plus recevoir d'objets.
         private static bool IsUsable(ObjectSpawnZone zone) => zone != null && zone.isActiveAndEnabled && zone.Area > 0f;
 
-        private bool TryFindPlace(ObjectSpawnZone zone, Bounds bounds, out Vector3 position, out Quaternion rotation)
+        private bool TryFindPlace(ObjectSpawnZone zone, AnachronismDefinition definition, out Vector3 position, out Quaternion rotation)
         {
+            Bounds bounds = definition.Mesh.bounds;
             position = default;
             rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
@@ -203,7 +206,18 @@ namespace Anachronism.World
 
             // Le bas du mesh sur la surface, quel que soit son pivot.
             position = hit.point - Vector3.up * bounds.min.y;
-            if (!zone.ContainsFootprint(position + rotation * new Vector3(bounds.center.x, 0f, bounds.center.z), rotation,
+            // Décalage du centre de l'empreinte : le pivot du mesh n'est pas forcément au milieu.
+            Vector3 footprintOffset = rotation * new Vector3(bounds.center.x, 0f, bounds.center.z);
+
+            // Même règle d'appui que la pose des fugitifs : pas d'objet à moitié dans le vide au bord d'une table.
+            // Seul SpawnSurface compte comme appui : un bout qui dépasse sur une surface Default est considéré dans le vide.
+            var request = new PlacementRequest(definition.Size, hit.point + footprintOffset, hit.normal);
+            float support = PlacementSpace.SupportRatio(request, definition.Dimensions, rotation, _tuning,
+                _settings.SurfaceLayers, _tuning.PlacedObjectsMask);
+            if (support < _tuning.MinSupportRatio)
+                return false;
+
+            if (!zone.ContainsFootprint(position + footprintOffset, rotation,
                     new Vector2(bounds.extents.x, bounds.extents.z)))
                 return false;
 
