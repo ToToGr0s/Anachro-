@@ -335,14 +335,18 @@ namespace Anachronism.UI
             if (_previewRole != PlayerRole.Villain)
                 return;
 
-            _itemBar.SetSelected((int)(Time.time / 3f) % ItemBarView.SlotCount);
-            for (int i = 0; i < ItemBarView.SlotCount && i < _previewCooldowns.Length; i++)
+            // Un vrai placer pilote deja la barre : l'apercu ne la touche pas, il se contente de la faire decompter.
+            if (_placer == null)
             {
-                if (Time.time < _previewNextCooldownTimes[i])
-                    continue;
+                _itemBar.SetSelected((int)(Time.time / 3f) % ItemBarView.SlotCount);
+                for (int i = 0; i < ItemBarView.SlotCount && i < _previewCooldowns.Length; i++)
+                {
+                    if (Time.time < _previewNextCooldownTimes[i])
+                        continue;
 
-                _itemBar.SetCooldown(i, _previewCooldowns[i], _previewCooldowns[i]);
-                _previewNextCooldownTimes[i] = Time.time + _previewCooldowns[i] + 2f;
+                    _itemBar.SetCooldown(i, _previewCooldowns[i], _previewCooldowns[i]);
+                    _previewNextCooldownTimes[i] = Time.time + _previewCooldowns[i] + 2f;
+                }
             }
 
             _itemBar.Tick(Time.deltaTime);

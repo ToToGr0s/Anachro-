@@ -54,7 +54,9 @@ namespace Anachronism.Gameplay
             // sous un parent inactif (aucun Awake), on retire ces deux composants, puis on sort la copie du parent.
             WorldObject copy = Instantiate(_worldObjectPrefab, _inactiveParent);
             GameObject placed = copy.gameObject;
-            DestroyImmediate(copy);
+            // Tous les NetworkBehaviour (pas seulement WorldObject) : un composant reseau ajoute plus tard au prefab ne casse pas le test.
+            foreach (NetworkBehaviour networkBehaviour in placed.GetComponentsInChildren<NetworkBehaviour>(true))
+                DestroyImmediate(networkBehaviour);
             DestroyImmediate(placed.GetComponent<NetworkObject>());
             placed.name = definition.DisplayName + " (test)";
 

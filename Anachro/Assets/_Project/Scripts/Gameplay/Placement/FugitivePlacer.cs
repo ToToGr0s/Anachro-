@@ -45,6 +45,14 @@ namespace Anachronism.Gameplay
         public static event Action<FugitivePlacer> Enabled;
         public static event Action<FugitivePlacer> Disabled;
 
+        // Domain reload desactive dans ce projet : sans ce reset, un abonne reste branche d'un Play a l'autre.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay()
+        {
+            Enabled = null;
+            Disabled = null;
+        }
+
         private void Awake()
         {
             if (_camera == null || _ghost == null || _tuning == null)
