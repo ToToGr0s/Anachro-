@@ -4,12 +4,13 @@ using Anachronism.UI;
 using System.Collections.Generic;
 using System.Linq;
 using FishNet.Component.Scenes;
-using FishNet.Component.Spawning;
 using FishNet.Component.Transforming;
 using FishNet.Managing;
 using FishNet.Managing.Object;
 using FishNet.Managing.Transporting;
 using FishNet.Object;
+using FishNet.Transporting.Multipass;
+using FishNet.Transporting.Tugboat;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -34,6 +35,8 @@ namespace Anachronism.Editor
         private const string MatchManagerName = "MatchManager";
         private const string UiName = "UI";
         private const string LobbyMenuPath = "Assets/_Project/Prefabs/UI/Lobby/LobbyMenu.uxml";
+        private const string HudName = "UI_Hud";
+        private const string HudPrefabPath = "Assets/_Project/Prefabs/UI/Hud/UI_Hud.prefab";
         private const string PanelSettingsPath = "Assets/_Project/Prefabs/UI/AnachroPanelSettings.asset";
         private const string RuntimeThemePath = "Assets/_Project/Prefabs/UI/AnachroRuntimeTheme.tss";
         private const string NetworkManagerName = "NetworkManager";
@@ -44,6 +47,8 @@ namespace Anachronism.Editor
         private const int MaxPlayers = 8;
         private const int SpawnPointCount = MaxPlayers;
         private const float SpawnRadius = 4f;
+        // Parties locales (LocalSession) : uniquement sur ce PC, jamais exposées au réseau.
+        private const string LocalAddress = "127.0.0.1";
 
         [MenuItem("Anachro/Setup/Construire la base réseau")]
         public static void Build()
@@ -91,14 +96,12 @@ namespace Anachronism.Editor
                 return null;
             }
 
-            // Capsule provisoire : Célian la remplace par le vrai joueur (Gameplay/Player).
+            // Capsule provisoire : Anachro > Setup > Brancher joueur et PNJ en réseau la remplace par le contrôleur de Célian.
             GameObject root = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             root.name = "Player_Base";
             root.AddComponent<NetworkObject>();
             // Client-autoritaire par défaut : le mouvement joueur est le seul point client-autoritaire assumé.
             root.AddComponent<NetworkTransform>();
-            // Déplacement de test provisoire, remplacé par le contrôleur de Célian (C01).
-            root.AddComponent<DevPlayerMover>();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);
@@ -115,19 +118,20 @@ namespace Anachronism.Editor
         {
             Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
             DefaultPrefabObjects prefabObjects = AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(DefaultPrefabObjectsPath);
-            NetworkObject playerPrefab = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
             DestroyRoot(scene, NetworkManagerName);
             // Sol et points d'apparition vivaient dans Boot avant l'enchaînement de scènes : ils sont dans la map.
             DestroyRoot(scene, SpawnPointsName);
             DestroyRoot(scene, GroundName);
             DestroyRoot(scene, ServicesName);
             DestroyRoot(scene, UiName);
+            DestroyRoot(scene, HudName);
 
             GameObject managerObject = new GameObject(NetworkManagerName);
             NetworkManager networkManager = managerObject.AddComponent<NetworkManager>();
             networkManager.SpawnablePrefabs = prefabObjects;
 
-            // Steam seulement : on rejoint une partie par son code (lobby Steam), jamais par une IP.
+            // Vraies parties par Steam : on rejoint par le code du lobby, jamais par une IP. Tugboat (EnsureLocalTransport)
+            // ne sert qu'aux tests locaux sur 127.0.0.1.
             FishySteamworks.FishySteamworks steamTransport = managerObject.AddComponent<FishySteamworks.FishySteamworks>();
 
             // Les setters runtime touchent des sockets absents hors Play Mode : on passe par les champs sérialisés.
@@ -137,14 +141,9 @@ namespace Anachronism.Editor
             steamSettings.FindProperty("_peerToPeer").boolValue = true;
             steamSettings.ApplyModifiedPropertiesWithoutUndo();
 
-            TransportManager transportManager = managerObject.GetComponent<TransportManager>();
-            if (transportManager == null)
-                transportManager = managerObject.AddComponent<TransportManager>();
-            transportManager.Transport = steamTransport;
+            EnsureLocalTransport(managerObject);
 
-            // Points d'apparition fournis par la map à son chargement (MapSpawnPoints).
-            PlayerSpawner spawner = managerObject.AddComponent<PlayerSpawner>();
-            spawner.SetPlayerPrefab(playerPrefab);
+            // Pas de PlayerSpawner : les joueurs apparaissent au lancement de la partie (MatchPlayerSpawner, dans la map).
 
             // Boot charge MainMenu au lancement, la map quand le serveur démarre, et revient au menu à la déconnexion.
             DefaultScene defaultScene = managerObject.AddComponent<DefaultScene>();
@@ -158,9 +157,45 @@ namespace Anachronism.Editor
 
             new GameObject(ServicesName).AddComponent<SteamService>();
             CreateLobbyMenu();
+            CreateHud();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
+        }
+
+        /// <summary>
+        /// Steam + Tugboat dans un Multipass : Steam pour les vraies parties, Tugboat pour tester plusieurs instances
+        /// sur un même PC (Steam refuse de se connecter à soi-même). Rejouable sur un NetworkManager existant.
+        /// </summary>
+        public static void EnsureLocalTransport(GameObject managerObject)
+        {
+            FishySteamworks.FishySteamworks steamTransport = managerObject.GetComponent<FishySteamworks.FishySteamworks>();
+
+            if (!managerObject.TryGetComponent(out Tugboat tugboat))
+                tugboat = managerObject.AddComponent<Tugboat>();
+            SerializedObject tugboatSettings = new SerializedObject(tugboat);
+            tugboatSettings.FindProperty("_ipv4BindAddress").stringValue = LocalAddress;
+            tugboatSettings.FindProperty("_enableIpv6").boolValue = false;
+            tugboatSettings.FindProperty("_maximumClients").intValue = MaxPlayers;
+            tugboatSettings.FindProperty("_clientAddress").stringValue = LocalAddress;
+            tugboatSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            if (!managerObject.TryGetComponent(out Multipass multipass))
+                multipass = managerObject.AddComponent<Multipass>();
+            SerializedObject multipassSettings = new SerializedObject(multipass);
+            SerializedProperty transports = multipassSettings.FindProperty("_transports");
+            transports.arraySize = 2;
+            transports.GetArrayElementAtIndex(0).objectReferenceValue = steamTransport;
+            transports.GetArrayElementAtIndex(1).objectReferenceValue = tugboat;
+            multipassSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            if (!managerObject.TryGetComponent(out TransportManager transportManager))
+                transportManager = managerObject.AddComponent<TransportManager>();
+            transportManager.Transport = multipass;
+            EditorUtility.SetDirty(transportManager);
+
+            if (!managerObject.TryGetComponent(out LocalSession _))
+                managerObject.AddComponent<LocalSession>();
         }
 
         private static void CreateSceneIfMissing(string path, System.Action buildContent)
@@ -240,6 +275,18 @@ namespace Anachronism.Editor
             document.panelSettings = LoadOrCreatePanelSettings();
             document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(LobbyMenuPath);
             uiObject.AddComponent<LobbyMenu>();
+        }
+
+        private static void CreateHud()
+        {
+            GameObject hudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(HudPrefabPath);
+            if (hudPrefab == null)
+            {
+                Debug.LogError($"[NetworkBaseBuilder] {HudPrefabPath} introuvable : le HUD n'est pas ajouté à Boot.");
+                return;
+            }
+
+            PrefabUtility.InstantiatePrefab(hudPrefab);
         }
 
         private static PanelSettings LoadOrCreatePanelSettings()

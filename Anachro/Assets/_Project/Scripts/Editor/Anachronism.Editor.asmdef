@@ -4,7 +4,9 @@
     "references": [
         "Anachronism.Runtime",
         "FishNet.Runtime",
-        "FishySteamworks"
+        "FishySteamworks",
+        "Unity.AI.Navigation",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

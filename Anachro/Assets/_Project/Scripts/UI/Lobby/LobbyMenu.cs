@@ -26,6 +26,7 @@ namespace Anachronism.UI
         private UIDocument _document;
         private NetworkManager _networkManager;
         private SteamLobby _steamLobby;
+        private LocalSession _localSession;
 
         private VisualElement _homePanel;
         private VisualElement _connectingPanel;
@@ -39,13 +40,15 @@ namespace Anachronism.UI
         private Button _leaveButton;
         private Button _cancelButton;
         private Button _quitButton;
+        private Button _localHostButton;
+        private Button _localJoinButton;
+        private Button _soloRoleButton;
         private Label _steamWarning;
         private Label _lobbyCode;
         private Label _playerCount;
         private Label _resultLabel;
         private Label _waitingLabel;
         private Label _matchPhase;
-        private Label _matchRole;
         private Label _statusLabel;
 
         private bool _isLeaving;
@@ -54,7 +57,8 @@ namespace Anachronism.UI
         private int _shownPlayers = -1;
         private int _shownSeconds = -1;
         private GamePhase _shownPhase;
-        private PlayerRole _shownRole;
+        // Rôle d'une partie de test en solo, choisi par l'hôte seul dans le lobby.
+        private PlayerRole _soloRole = PlayerRole.Guardian;
 
         private void Awake()
         {
@@ -81,7 +85,6 @@ namespace Anachronism.UI
             _resultLabel = root.Q<Label>("result-label");
             _waitingLabel = root.Q<Label>("waiting-label");
             _matchPhase = root.Q<Label>("match-phase");
-            _matchRole = root.Q<Label>("match-role");
             _statusLabel = root.Q<Label>("status-label");
 
             _createButton.clicked += OnCreateClicked;
@@ -91,11 +94,17 @@ namespace Anachronism.UI
             _leaveButton = root.Q<Button>("leave-button");
             _cancelButton = root.Q<Button>("cancel-button");
             _quitButton = root.Q<Button>("quit-button");
+            _localHostButton = root.Q<Button>("local-host-button");
+            _localJoinButton = root.Q<Button>("local-join-button");
+            _soloRoleButton = root.Q<Button>("solo-role-button");
 
             _copyButton.clicked += OnCopyClicked;
             _leaveButton.clicked += OnLeaveClicked;
             _cancelButton.clicked += OnLeaveClicked;
             _quitButton.clicked += OnQuitClicked;
+            _localHostButton.clicked += OnLocalHostClicked;
+            _localJoinButton.clicked += OnLocalJoinClicked;
+            _soloRoleButton.clicked += OnSoloRoleClicked;
             _codeField.RegisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
 
             _currentScreen = (MenuScreen)(-1);
@@ -111,6 +120,9 @@ namespace Anachronism.UI
             _leaveButton.clicked -= OnLeaveClicked;
             _cancelButton.clicked -= OnLeaveClicked;
             _quitButton.clicked -= OnQuitClicked;
+            _localHostButton.clicked -= OnLocalHostClicked;
+            _localJoinButton.clicked -= OnLocalJoinClicked;
+            _soloRoleButton.clicked -= OnSoloRoleClicked;
             _codeField.UnregisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
         }
 
@@ -125,6 +137,10 @@ namespace Anachronism.UI
             }
 
             _steamLobby = _networkManager.GetComponent<SteamLobby>();
+            _localSession = _networkManager.GetComponent<LocalSession>();
+            // Boot sans transport local (base réseau pas reconstruite) : on cache les boutons au lieu de planter.
+            SetVisible(_localHostButton, _localSession != null);
+            SetVisible(_localJoinButton, _localSession != null);
             _steamLobby.Failed += OnLobbyFailed;
             _steamLobby.LobbyChanged += OnLobbyChanged;
             _networkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
@@ -175,7 +191,6 @@ namespace Anachronism.UI
             _currentScreen = screen;
             _shownPlayers = -1;
             _shownSeconds = -1;
-            _shownRole = (PlayerRole)255;
             SetVisible(_homePanel, screen == MenuScreen.Home);
             SetVisible(_connectingPanel, screen == MenuScreen.Connecting);
             SetVisible(_lobbyPanel, screen == MenuScreen.Lobby);
@@ -186,7 +201,9 @@ namespace Anachronism.UI
                 bool isHost = _networkManager.IsServerStarted;
                 SetVisible(_startButton, isHost);
                 SetVisible(_waitingLabel, !isHost);
-                _lobbyCode.text = LobbyCode.Format(_steamLobby.Code);
+                bool isLocal = _localSession != null && _localSession.IsLocal;
+                SetVisible(_copyButton, !isLocal);
+                _lobbyCode.text = isLocal ? "LOCAL" : LobbyCode.Format(_steamLobby.Code);
                 SetStatus(string.Empty);
             }
         }
@@ -212,10 +229,16 @@ namespace Anachronism.UI
             bool hasEnded = match != null && match.Phase == GamePhase.End;
             SetVisible(_resultLabel, hasEnded);
             if (hasEnded)
-                _resultLabel.text = match.Winner == Winner.Guardians ? "Victoire des gentils" : "Victoire des méchants";
+                _resultLabel.text = match.Winner == Winner.Guardians ? "Victoire des chasseurs" : "Victoire des fugitifs";
 
             _startButton.text = hasEnded ? "Rejouer" : "Lancer la partie";
             _startButton.SetEnabled(match != null);
+
+            // Hôte seul : partie de test, il choisit son rôle. Même règle que celle appliquée au lancement par MatchManager.
+            bool isSolo = match != null && match.IsServerInitialized && MatchManager.IsSoloTest(match.CountActivePlayers());
+            SetVisible(_soloRoleButton, isSolo);
+            if (isSolo)
+                _soloRoleButton.text = _soloRole == PlayerRole.Villain ? "Test solo : fugitif" : "Test solo : chasseur";
         }
 
         private void RefreshMatchBar()
@@ -227,12 +250,6 @@ namespace Anachronism.UI
                 _shownSeconds = seconds;
                 _shownPhase = match.Phase;
                 _matchPhase.text = $"{DescribePhase(match.Phase)}  {FormatTime(seconds)}";
-            }
-
-            if (match.LocalRole != _shownRole)
-            {
-                _shownRole = match.LocalRole;
-                _matchRole.text = match.LocalRole == PlayerRole.Villain ? "Méchant" : match.LocalRole == PlayerRole.Guardian ? "Gentil" : string.Empty;
             }
         }
 
@@ -248,6 +265,23 @@ namespace Anachronism.UI
             _steamLobby.JoinByCode(_codeField.value);
         }
 
+        private void OnSoloRoleClicked() =>
+            _soloRole = _soloRole == PlayerRole.Villain ? PlayerRole.Guardian : PlayerRole.Villain;
+
+        private void OnLocalHostClicked()
+        {
+            SetStatus(string.Empty);
+            if (!_localSession.Host())
+                SetStatus("Impossible d'héberger en local (une partie locale tourne déjà sur ce PC ?).");
+        }
+
+        private void OnLocalJoinClicked()
+        {
+            SetStatus(string.Empty);
+            if (!_localSession.Join())
+                SetStatus("Impossible de rejoindre la partie locale.");
+        }
+
         private void OnCodeFieldKeyDown(KeyDownEvent keyEvent)
         {
             if ((keyEvent.keyCode == KeyCode.Return || keyEvent.keyCode == KeyCode.KeypadEnter) && _joinButton.enabledSelf)
@@ -261,7 +295,7 @@ namespace Anachronism.UI
             if (match == null || !_networkManager.IsServerStarted)
                 return;
 
-            SetStatus(match.StartMatch() switch
+            SetStatus(match.StartMatch(_soloRole) switch
             {
                 MatchStartResult.NotEnoughPlayers => "Pas assez de joueurs pour lancer la partie.",
                 MatchStartResult.PlayersLoading => "Un joueur charge encore la map, réessaie dans un instant.",
@@ -302,15 +336,15 @@ namespace Anachronism.UI
         private static void SetVisible(VisualElement element, bool isVisible) =>
             element.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
 
+        // Rien à 0 : pendant la chasse le chrono est caché (RemainingTime vaut 0), seule la phase s'affiche.
         private static string FormatTime(int seconds) =>
             seconds <= 0 ? string.Empty : $"{seconds / 60}:{seconds % 60:00}";
 
         private static string DescribePhase(GamePhase phase) => phase switch
         {
-            GamePhase.Briefing => "Préparation",
-            GamePhase.Hiding => "Les méchants cachent les objets",
+            GamePhase.Scouting => "Les fugitifs repèrent la map",
             GamePhase.Searching => "Recherche",
-            GamePhase.Portal => "Portail ouvert",
+            GamePhase.LastChance => "Les fugitifs sont repérés, dernière chance",
             _ => string.Empty
         };
     }

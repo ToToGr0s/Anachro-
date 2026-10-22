@@ -13,8 +13,8 @@ TagManager:
   - UI
   - NavMovable
   - NavObstacle
-  - 
-  - 
+  - PlacedObject
+  - Character
   - 
   - 
   - 

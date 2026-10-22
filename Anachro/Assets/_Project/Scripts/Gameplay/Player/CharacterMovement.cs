@@ -6,10 +6,12 @@ namespace Anachronism.Gameplay
     // Gravite, saut, collisions (collide-and-slide), pentes et marches sont geres ici.
     // Les deux roles ont le meme deplacement (GDD 2.3): le role n'est pas connu de ce script.
     // TODO (Theo) : mouvement client-autoritaire, n'executer que pour l'owner (IsOwner) une fois FishNet importe.
-    [RequireComponent(typeof(CapsuleCollider))]
+    // Peut vivre sur un enfant « Controller » : il déplace alors _body (la racine du joueur, qui porte la CapsuleCollider).
     public class CharacterMovement : MonoBehaviour
     {
         [SerializeField] private PlayerControllerSettings _settings;
+        [Tooltip("Racine du joueur : l'objet déplacé, qui porte la CapsuleCollider et la caméra. Vide = cet objet.")]
+        [SerializeField] private Transform _body;
 
         private const float SkinWidth = 0.03f;           // marge gardee entre la capsule et les surfaces
         private const float GroundProbeDistance = 0.06f; // en dessous de cette distance, on est "au sol"
@@ -29,12 +31,13 @@ namespace Anachronism.Gameplay
         private bool _isRunning; // course demandee ET en mouvement (sert aux effets de camera)
         private float _verticalVelocity;
         private bool _isGrounded;
+        private bool _isLocked;
 
         public bool IsGrounded => _isGrounded;
         public bool IsSprinting => _isRunning;
 
-        private float Radius => _capsule.radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.z);
-        private float Height => Mathf.Max(_capsule.height * transform.lossyScale.y, Radius * 2f);
+        private float Radius => _capsule.radius * Mathf.Max(_body.lossyScale.x, _body.lossyScale.z);
+        private float Height => Mathf.Max(_capsule.height * _body.lossyScale.y, Radius * 2f);
 
         private void Awake()
         {
@@ -45,21 +48,27 @@ namespace Anachronism.Gameplay
                 return;
             }
 
-            _capsule = GetComponent<CapsuleCollider>();
-            _capsule.height = _settings.Height;
-            _capsule.radius = _settings.Radius;
-            _capsule.center = Vector3.zero;
+            if (_body == null)
+                _body = transform;
+
+            _capsule = _body.GetComponent<CapsuleCollider>();
+            if (_capsule == null)
+            {
+                Debug.LogError("CharacterMovement: CapsuleCollider manquante sur le corps du joueur.", this);
+                enabled = false;
+                return;
+            }
+
+            // Taille de la capsule : celle du prefab, rien n'est imposé ici.
             // Trigger: nos propres requetes (qui ignorent les triggers) ne tapent jamais dans notre capsule
             _capsule.isTrigger = true;
 
-            Camera cam = GetComponentInChildren<Camera>();
+            Camera cam = _body.GetComponentInChildren<Camera>();
             if (cam != null)
             {
-                // La capsule est centree sur le pivot: la camera est a CameraHeight depuis les pieds,
-                // et legerement en retrait (CameraBackOffset) pour ne pas voir a travers un mur contre lequel on se colle.
+                // Position de la caméra : celle du prefab. Le balancement de la marche part de là.
                 _cameraTransform = cam.transform;
-                _cameraBaseLocalPosition = new Vector3(0f, _settings.CameraHeight - _settings.Height * 0.5f, -_settings.CameraBackOffset);
-                _cameraTransform.localPosition = _cameraBaseLocalPosition;
+                _cameraBaseLocalPosition = _cameraTransform.localPosition;
             }
         }
 
@@ -70,6 +79,8 @@ namespace Anachronism.Gameplay
 
         public void Jump()
         {
+            if (_isLocked) return;
+
             _jumpRequested = true;
         }
 
@@ -85,13 +96,14 @@ namespace Anachronism.Gameplay
         {
             _isSprinting = false;
             _isRunning = false;
+            _isLocked = false;
         }
 
         // ---------- Geometrie de la capsule et requetes ----------
 
         private void GetCapsule(Vector3 position, out Vector3 bottomCenter, out Vector3 topCenter)
         {
-            Vector3 center = position + transform.rotation * Vector3.Scale(_capsule.center, transform.lossyScale);
+            Vector3 center = position + _body.rotation * Vector3.Scale(_capsule.center, _body.lossyScale);
             float half = Height / 2f - Radius;
             bottomCenter = center + Vector3.down * half;
             topCenter = center + Vector3.up * half;
@@ -132,7 +144,7 @@ namespace Anachronism.Gameplay
                 for (int i = 0; i < count; i++)
                 {
                     Collider other = _overlaps[i];
-                    if (Physics.ComputePenetration(_capsule, position, transform.rotation,
+                    if (Physics.ComputePenetration(_capsule, position, _body.rotation,
                             other, other.transform.position, other.transform.rotation,
                             out Vector3 direction, out float distance))
                     {
@@ -244,7 +256,7 @@ namespace Anachronism.Gameplay
             float dt = Mathf.Min(Time.deltaTime, MaxDeltaTime);
             if (dt <= 0f) return;
 
-            Vector3 position = transform.position;
+            Vector3 position = _body.position;
             float heightBeforePush = position.y;
             Depenetrate(ref position);
             // Repousse vers le haut (apparition dans le sol): la vitesse de chute accumulee n'a plus de sens
@@ -265,8 +277,9 @@ namespace Anachronism.Gameplay
             _jumpRequested = false;
 
             // 1) Deplacement horizontal (relatif a l'orientation du joueur, la souris tourne le corps)
-            Vector3 input = Vector3.ClampMagnitude(new Vector3(_movementInput.x, 0f, _movementInput.z), 1f);
-            Vector3 direction = transform.right * input.x + transform.forward * input.z;
+            Vector3 raw = _isLocked ? Vector3.zero : _movementInput;
+            Vector3 input = Vector3.ClampMagnitude(new Vector3(raw.x, 0f, raw.z), 1f);
+            Vector3 direction = _body.right * input.x + _body.forward * input.z;
             _isRunning = _isSprinting && direction.sqrMagnitude > 0.0001f;
             if (direction.sqrMagnitude > 0.0001f)
             {
@@ -305,10 +318,10 @@ namespace Anachronism.Gameplay
             // Glisse: quand on marche au sol, la camera ne suit pas les changements de hauteur d'un coup
             // (marches, rebords, pentes). Elle les rattrape en douceur. En l'air (saut, chute): aucun lissage.
             if (grounded && wasOnGround && !jumped)
-                _cameraOffsetY -= position.y - transform.position.y;
+                _cameraOffsetY -= position.y - _body.position.y;
 
             _isGrounded = grounded;
-            transform.position = position;
+            _body.position = position;
             UpdateCameraSmoothing(dt);
         }
 
@@ -318,6 +331,14 @@ namespace Anachronism.Gameplay
             _cameraOffsetY = Mathf.Lerp(_cameraOffsetY, 0f, 1f - Mathf.Exp(-_settings.StepSmoothing * dt));
             if (_cameraTransform != null)
                 _cameraTransform.localPosition = _cameraBaseLocalPosition + Vector3.up * _cameraOffsetY;
+        }
+
+        // Immobilise le joueur (pose d'un objet) ; le regard reste libre.
+        public void SetMovementLocked(bool isLocked)
+        {
+            _isLocked = isLocked;
+            if (isLocked)
+                _jumpRequested = false;
         }
     }
 }
