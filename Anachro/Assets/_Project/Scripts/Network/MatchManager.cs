@@ -12,7 +12,7 @@ namespace Anachronism.Network
     /// <summary>
     /// Objet réseau de scène (dans la map). Seul l'hôte décide : phases, rôles, chrono, victoire.
     /// Les SyncVar ne contiennent rien de secret : chaque rôle n'est envoyé qu'à son joueur (TargetRpc).
-    /// Tir, anachronismes et portail arrivent avec T06 / T07.
+    /// Tir et anachronismes arrivent avec T06 / T07.
     /// </summary>
     public sealed class MatchManager : NetworkBehaviour
     {
@@ -40,6 +40,8 @@ namespace Anachronism.Network
         // Joueurs partis en pleine partie, par adresse : ils retrouvent leur rôle s'ils reviennent avant la fin.
         private readonly Dictionary<string, AwayPlayer> _awayPlayers = new Dictionary<string, AwayPlayer>();
         private MatchSettings _settings;
+        // Fin de la chasse, gardée côté serveur : en SyncVar, les clients connaîtraient le timer caché (T18-7).
+        private uint _searchingEndTick;
 
         private readonly struct AwayPlayer
         {
@@ -204,12 +206,9 @@ namespace Anachronism.Network
             _degradationBase.Value = 0f;
             _degradationBaseTick.Value = TimeManager.Tick;
             _degradationPerSecond.Value = 0f;
+            _searchingEndTick = 0;
             _winner.Value = Winner.None;
-            // Briefing à 0 s : sans chrono, la phase ne se terminerait jamais. On passe directement à la cache.
-            if (settings.BriefingDuration > 0f)
-                SetPhase(GamePhase.Briefing, settings.BriefingDuration);
-            else
-                EnterHiding();
+            EnterScouting();
 
             return MatchStartResult.Started;
         }
@@ -226,9 +225,9 @@ namespace Anachronism.Network
         {
             _phase.Value = phase;
 
-            // La dégradation monte pendant la recherche et le portail, et se fige à la fin.
-            float degradationRate = phase == GamePhase.Searching || phase == GamePhase.Portal
-                ? 1f / _settings.DegradationDuration
+            // La barre ne monte seule qu'en dernière chance : de sa valeur actuelle à 100 % pendant la durée du chrono.
+            float degradationRate = phase == GamePhase.LastChance
+                ? LastChanceRate(ComputeDegradation(TimeManager.Tick), _settings.LastChanceDuration, (float)TimeManager.TickDelta)
                 : 0f;
             if (!Mathf.Approximately(degradationRate, _degradationPerSecond.Value))
                 SetDegradationRate(degradationRate);
@@ -237,7 +236,7 @@ namespace Anachronism.Network
                 ? TimeManager.Tick + TimeManager.TimeToTicks(duration, TickRounding.RoundUp)
                 : 0;
 
-            // Réévalue les conditions d'observation (T05 : méchants et objets cachés aux gentils pendant la cache).
+            // Réévalue les conditions d'observation (T05 : fugitifs et objets cachés aux chasseurs pendant le repérage).
             ServerManager.Objects.RebuildObservers();
         }
 
@@ -253,34 +252,55 @@ namespace Anachronism.Network
                 return;
             }
 
+            // Pendant la chasse, _phaseEndTick vaut 0 (chrono caché) : son échéance est testée à part.
+            if (phase == GamePhase.Searching && TimeManager.Tick >= _searchingEndTick)
+            {
+                SetPhase(GamePhase.LastChance, _settings.LastChanceDuration);
+                return;
+            }
+
             if (_phaseEndTick.Value == 0 || TimeManager.Tick < _phaseEndTick.Value)
                 return;
 
-            if (phase == GamePhase.Briefing)
-                EnterHiding();
-            // TODO (Théo) : avec T07, placer automatiquement les objets que les méchants n'ont pas posés à temps.
-            else if (phase == GamePhase.Hiding)
-                SetPhase(GamePhase.Searching, 0f);
+            // TODO (Théo) : avec T07, placer automatiquement les objets que les fugitifs n'ont pas posés à temps.
+            if (phase == GamePhase.Scouting)
+                EnterSearching();
+            // Filet de sécurité : la barre est recalée sur le chrono, mais un arrondi de tick peut la laisser juste sous 100 %.
+            else if (phase == GamePhase.LastChance)
+                EndMatch(Winner.Villains);
         }
 
-        /// <summary>Seule entrée dans la cache (fin du briefing ou briefing à 0 s) : T07 n'aura qu'un endroit à compléter.</summary>
+        /// <summary>Seule entrée dans le repérage : T07 n'aura qu'un endroit à compléter.</summary>
         [Server]
-        private void EnterHiding()
+        private void EnterScouting()
         {
-            SetPhase(GamePhase.Hiding, _settings.HidingDuration);
+            SetPhase(GamePhase.Scouting, _settings.ScoutingDuration);
         }
 
-        /// <summary>Pénalité ponctuelle (T06 : tir sur un innocent). La montée continue repart de la nouvelle valeur.</summary>
+        /// <summary>Seule entrée dans la chasse : son timer reste côté serveur, aucun chrono n'est envoyé aux clients.</summary>
+        [Server]
+        private void EnterSearching()
+        {
+            _searchingEndTick = TimeManager.Tick + TimeManager.TimeToTicks(_settings.SearchingDuration, TickRounding.RoundUp);
+            SetPhase(GamePhase.Searching, 0f);
+        }
+
+        /// <summary>Ajoute (ou retire si négatif) une part de barre : pose, destruction, tir sur un innocent. La montée continue repart de la nouvelle valeur.</summary>
         [Server]
         private void AddDegradation(float amount)
         {
-            // Une pénalité (T06) n'a de sens qu'en jeu : hors manche, elle modifierait l'état de la partie suivante.
-            if (_phase.Value != GamePhase.Searching && _phase.Value != GamePhase.Portal)
+            // En jeu seulement : hors manche, elle modifierait l'état de la partie suivante.
+            // Le repérage est inclus pour les poses ; elles ne peuvent pas remplir la barre avant la chasse (20 % max et délai entre deux poses).
+            if (_phase.Value != GamePhase.Scouting && _phase.Value != GamePhase.Searching && _phase.Value != GamePhase.LastChance)
                 return;
 
             uint now = TimeManager.Tick;
-            _degradationBase.Value = Mathf.Min(1f, ComputeDegradation(now) + amount);
+            _degradationBase.Value = Mathf.Clamp01(ComputeDegradation(now) + amount);
             _degradationBaseTick.Value = now;
+
+            // La barre doit rester calée sur le chrono : après un ajout ou un retrait, elle repart pour finir pile à 0:00.
+            if (_phase.Value == GamePhase.LastChance)
+                SetDegradationRate(LastChanceRate(_degradationBase.Value, RemainingTime, (float)TimeManager.TickDelta));
 
             if (_degradationBase.Value >= 1f)
                 EndMatch(Winner.Villains);
@@ -294,6 +314,11 @@ namespace Anachronism.Network
             _degradationBaseTick.Value = now;
             _degradationPerSecond.Value = perSecond;
         }
+
+        /// <summary>Vitesse pour aller de la valeur actuelle à 100 % pile à la fin du chrono. Même calcul à l'entrée en dernière chance et après chaque ajout.</summary>
+        // minTime évite la division par zéro si l'ajout arrive pendant le dernier tick.
+        private static float LastChanceRate(float degradation, float remainingTime, float minTime) =>
+            (1f - degradation) / Mathf.Max(remainingTime, minTime);
 
         private float ComputeDegradation(uint tick)
         {
@@ -353,6 +378,11 @@ namespace Anachronism.Network
             if (_addresses.Remove(connection, out string address) && !string.IsNullOrEmpty(address))
                 _awayPlayers[address] = new AwayPlayer(connection, role, !_neutralizedVillains.Contains(connection));
 
+            // TODO (Théo) : règle de déconnexion voulue (T18-6), à appliquer ici et au retour (OnClientLoadedStartScenes) :
+            // - repérage et chasse : un joueur parti, chasseur ou fugitif, peut revenir ; son départ ne fait gagner personne ;
+            // - dernière chance : s'il était le dernier de son camp encore connecté, l'autre camp gagne ; sinon il peut revenir.
+            // Aujourd'hui un fugitif parti est neutralisé dans toutes les phases, et un chasseur ne fait perdre que s'il était le dernier.
+            // Un joueur qui plante n'est vu parti qu'après le délai d'expiration du ServerManager (environ 1 min).
             // Un méchant qui quitte est neutralisé : quitter ne doit pas être un moyen de faire durer la partie.
             if (role == PlayerRole.Villain)
             {

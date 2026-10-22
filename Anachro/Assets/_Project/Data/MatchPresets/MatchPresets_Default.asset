@@ -15,9 +15,8 @@ MonoBehaviour:
   _baseSettings:
     _villainCount: 1
     _objectsPerVillain: 4
-    _briefingDuration: 10
-    _hidingDuration: 60
-    _degradationDuration: 420
+    _scoutingDuration: 60
+    _searchingDuration: 300
+    _lastChanceDuration: 60
     _wrongShotPenalty: 0.05
   _minPlayers: 2
-  _twoVillainsFromPlayerCount: 7

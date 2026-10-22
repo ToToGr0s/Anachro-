@@ -137,11 +137,10 @@ namespace Anachronism.UI
             if (!isShown)
                 return;
 
-            // TODO (Olivier) : passer à _match.Disruption.Value quand le DisruptionMeter de Théo remplacera Degradation (T18).
             SetDisruption(_match.Degradation);
-            // TODO (Olivier) : quand Théo aura ajouté GamePhase.FinalCountdown (T03-2) et le DisruptionMeter (T18),
-            // remplacer par SetEndCountdown(_match.Phase == GamePhase.FinalCountdown, _match.Disruption.CountdownRemaining).
-            SetEndCountdown(false, 0f);
+
+            SetEndCountdown(_match.Phase == GamePhase.LastChance, _match.RemainingTime);
+
             _itemBar.Tick(Time.deltaTime);
         }
 
