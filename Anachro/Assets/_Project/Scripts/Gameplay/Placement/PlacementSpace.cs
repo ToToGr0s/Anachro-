@@ -46,6 +46,7 @@ namespace Anachronism.Gameplay
         }
 
         // Part (0-1) de la face posee qui touche vraiment la surface : on tire un quadrillage de rayons sous la face.
+        // Publique pour le spawn des objets de la map (ObjectSpawner) : normale unitaire, rotation = celle de l'objet pose.
         public static float SupportRatio(PlacementRequest request, Vector3 dimensions, Quaternion rotation,
             GameplayTuning tuning, int obstacleMask, int placedObjectsMask)
         {

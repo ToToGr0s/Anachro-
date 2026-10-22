@@ -210,8 +210,11 @@ namespace Anachronism.World
             Vector3 footprintOffset = rotation * new Vector3(bounds.center.x, 0f, bounds.center.z);
 
             // Même règle d'appui que la pose des fugitifs : pas d'objet à moitié dans le vide au bord d'une table.
+            // Seul SpawnSurface compte comme appui : un bout qui dépasse sur une surface Default est considéré dans le vide.
             var request = new PlacementRequest(definition.Size, hit.point + footprintOffset, hit.normal);
-            if (PlacementSpace.SupportRatio(request, definition.Dimensions, rotation, _tuning, _settings.SurfaceLayers, _tuning.PlacedObjectsMask) < _tuning.MinSupportRatio)
+            float support = PlacementSpace.SupportRatio(request, definition.Dimensions, rotation, _tuning,
+                _settings.SurfaceLayers, _tuning.PlacedObjectsMask);
+            if (support < _tuning.MinSupportRatio)
                 return false;
 
             if (!zone.ContainsFootprint(position + footprintOffset, rotation,
