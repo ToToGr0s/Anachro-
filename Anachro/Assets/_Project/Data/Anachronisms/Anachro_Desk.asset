@@ -12,10 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4294cf38830d2af4dad4a7d458ba6e8a, type: 3}
   m_Name: Anachro_Desk
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.AnachronismDefinition
-  _size: 2
-  _prefab: {fileID: 0}
   _displayName: Desk
+  _era: 4
+  _size: 2
   _icon: {fileID: 0}
-  _disruptionPercent: 21
-  _allowedEras:
-  - {fileID: 11400000, guid: c91422a9d33a1934190e73d7b97df1c7, type: 2}
+  _mesh: {fileID: 0}
+  _material: {fileID: 0}
