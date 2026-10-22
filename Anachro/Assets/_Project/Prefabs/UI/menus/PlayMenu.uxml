@@ -1,0 +1,39 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:Template name="SettingsMenu" src="project://database/Assets/_Project/Prefabs/UI/menus/SettingsMenu.uxml?fileID=9197481963319205126&amp;guid=4a29e62c0f2175f46ba53e25ac010e93&amp;type=3#SettingsMenu"/>
+    <ui:VisualElement name="inGameGroup" style="flex-grow: 1; display: flex;">
+        <ui:VisualElement name="anachronismToolsGroup" style="flex-grow: 1; position: absolute; height: 273px; width: 989px; top: 805px; left: 490px; flex-direction: row; justify-content: space-around;">
+            <ui:Button text="grand" name="bigDisruptionButton" style="flex-direction: column-reverse;">
+                <ui:ProgressBar value="22" title="grand" name="bigDisruptionBar"/>
+            </ui:Button>
+            <ui:Button text="petit" enable-rich-text="false" name="smallDisruptionButton" style="flex-direction: column-reverse;">
+                <ui:ProgressBar value="22" title="petit" focusable="false" name="smallDisruptionBar" style="flex-direction: row;"/>
+            </ui:Button>
+            <ui:Button text="medium" name="mediumDisruptionButton" style="flex-direction: column-reverse;">
+                <ui:ProgressBar value="22" title="moyen" name="mediumDisruptionBar" style="flex-direction: row;"/>
+            </ui:Button>
+        </ui:VisualElement>
+        <ui:ProgressBar value="22" title="" name="deregulationBar" style="align-self: stretch;"/>
+        <ui:Label text="" name="timer" style="align-self: stretch;"/>
+    </ui:VisualElement>
+    <ui:VisualElement name="pauseMenuGroup" style="flex-grow: 1; position: absolute; height: 1091px; width: 1921px; align-self: center; flex-direction: row; display: flex;">
+        <ui:GroupBox name="commands" style="width: 1244px;">
+            <ui:Label text="Label" style="align-self: center;"/>
+            <ui:Button text="reprendre" name="resumeButton"/>
+            <ui:Button text="options" name="settingsButton"/>
+            <ui:Button text="quitter" name="quitButton"/>
+        </ui:GroupBox>
+        <ui:GroupBox name="controls">
+            <ui:Image name="keyboard"/>
+            <ui:Image name="mouse"/>
+            <ui:Image name="specialActions"/>
+        </ui:GroupBox>
+    </ui:VisualElement>
+    <ui:VisualElement name="popUpGroup" style="flex-grow: 1; position: absolute; height: 663px; width: 874px; top: 183px; left: 581px;">
+        <ui:Label text="que voulez-vous faire ?" style="align-self: center;"/>
+        <ui:GroupBox style="opacity: 1; flex-direction: row; justify-content: space-evenly;">
+            <ui:Button text="menu principal" name="mainMenuButton"/>
+            <ui:Button text="quitter" name="quitQuitButton"/>
+        </ui:GroupBox>
+    </ui:VisualElement>
+    <ui:Instance template="SettingsMenu" name="settingsGroup" style="position: absolute; height: 1088px; width: 1979px;"/>
+</ui:UXML>

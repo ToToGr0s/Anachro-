@@ -1,0 +1,6 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:Slider label="volume general" value="42" high-value="100" name="masterVolumeSlider"/>
+    <ui:Label text="Label"/>
+    <ui:Toggle label="plein écran" name="fullScreenToggle"/>
+    <ui:Button text="close" name="closeButton" style="position: absolute; top: 980px; left: 1697px;"/>
+</ui:UXML>
