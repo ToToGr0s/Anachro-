@@ -211,7 +211,7 @@ namespace Anachronism.World
 
             // Même règle d'appui que la pose des fugitifs : pas d'objet à moitié dans le vide au bord d'une table.
             var request = new PlacementRequest(definition.Size, hit.point + footprintOffset, hit.normal);
-            if (PlacementSpace.SupportRatio(request, bounds.size, rotation, _tuning, _settings.SurfaceLayers, _tuning.PlacedObjectsMask) < _tuning.MinSupportRatio)
+            if (PlacementSpace.SupportRatio(request, definition.Dimensions, rotation, _tuning, _settings.SurfaceLayers, _tuning.PlacedObjectsMask) < _tuning.MinSupportRatio)
                 return false;
 
             if (!zone.ContainsFootprint(position + footprintOffset, rotation,
