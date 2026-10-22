@@ -95,12 +95,13 @@ namespace Anachronism.World
             float totalArea = 0f;
             foreach (ObjectSpawnZone zone in _zones)
             {
-                if (zone != null && zone.Area > 0f)
+                if (IsUsable(zone))
                     totalArea += zone.Area;
             }
             if (totalArea <= 0f)
             {
-                Debug.LogError("[ObjectSpawner] Aucune zone de spawn : aucun objet généré.", this);
+                // Avertissement et pas erreur : désactiver les zones est la façon voulue de couper le spawn d'une map.
+                Debug.LogWarning("[ObjectSpawner] Aucune zone de spawn active : aucun objet généré.", this);
                 return;
             }
 
@@ -171,7 +172,7 @@ namespace Anachronism.World
             foreach (ObjectSpawnZone zone in _zones)
             {
                 // Une zone de surface nulle pourrait sortir quand le tirage vaut 0 : son point de départ serait dégénéré.
-                if (zone == null || zone.Area <= 0f)
+                if (!IsUsable(zone))
                     continue;
                 last = zone;
                 pick -= zone.Area;
@@ -180,6 +181,10 @@ namespace Anachronism.World
             }
             return last;
         }
+
+        // Les zones restent référencées même désactivées (le menu contextuel inclut les inactives) :
+        // une zone éteinte dans la hiérarchie ne doit plus recevoir d'objets.
+        private static bool IsUsable(ObjectSpawnZone zone) => zone != null && zone.isActiveAndEnabled && zone.Area > 0f;
 
         private bool TryFindPlace(ObjectSpawnZone zone, Bounds bounds, out Vector3 position, out Quaternion rotation)
         {
