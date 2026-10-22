@@ -26,6 +26,11 @@ namespace Anachronism.Gameplay
         [SerializeField, Min(0f)] private float _smallReloadSeconds = 15f;
         [SerializeField, Min(0f)] private float _mediumReloadSeconds = 30f;
         [SerializeField, Min(0f)] private float _largeReloadSeconds = 45f;
+        // Part de barre d'un objet selon sa taille (GDD 2.11), avant division par le nombre de fugitifs.
+        // Ajoutée à la pose, retirée quand un chasseur détruit l'anachronisme.
+        [SerializeField, Range(0f, 1f)] private float _smallDisruption = 0.07f;
+        [SerializeField, Range(0f, 1f)] private float _mediumDisruption = 0.14f;
+        [SerializeField, Range(0f, 1f)] private float _largeDisruption = 0.21f;
 
         public float CarrierRatio => _carrierRatio;
         public float PlacementDuration => _placementDuration;
@@ -50,6 +55,23 @@ namespace Anachronism.Gameplay
                     Debug.LogError($"GameplayTuning : taille inconnue ({size}).", this);
                     return _largeReloadSeconds;
             }
+        }
+
+        /// <summary>Part de barre (0..1) d'un objet de cette taille pour une partie à villainCount fugitifs.</summary>
+        public float GetDisruption(AnachronismSize size, int villainCount)
+        {
+            float disruption;
+            switch (size)
+            {
+                case AnachronismSize.Small: disruption = _smallDisruption; break;
+                case AnachronismSize.Medium: disruption = _mediumDisruption; break;
+                case AnachronismSize.Large: disruption = _largeDisruption; break;
+                default:
+                    Debug.LogError($"GameplayTuning : taille inconnue ({size}).", this);
+                    disruption = _largeDisruption;
+                    break;
+            }
+            return disruption / Mathf.Max(villainCount, 1);
         }
     }
 }

@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace Anachronism.Gameplay
 {
-    // Apercu de l'objet a poser : le vrai modele du prefab, vert si PlacementRules l'accepte, rouge sinon.
+    // Apercu de l'objet a poser : le vrai mesh de la definition, vert si PlacementRules l'accepte, rouge sinon.
+    // Le fantome est place au centre de la boite de pose (PlacementRules.PositionFor).
     // Visuel seul, aucune regle ici.
     public class PlacementGhost : MonoBehaviour
     {
@@ -34,7 +35,7 @@ namespace Anachronism.Gameplay
 
         public void Show(AnachronismDefinition definition)
         {
-            if (definition == null || definition.Prefab == null)
+            if (definition == null || definition.Mesh == null)
             {
                 Hide();
                 return;
@@ -84,27 +85,19 @@ namespace Anachronism.Gameplay
             visual.AppliedState = state;
         }
 
-        // Copie du visuel du prefab (ses enfants), sans collider ni script : le fantome ne doit ni bloquer
-        // les rayons de visee ni faire tourner la logique du vrai objet.
+        // Mesh seul, sans collider : le fantome ne doit pas bloquer les rayons de visee.
         private GhostVisual CreateVisual(AnachronismDefinition definition)
         {
             GameObject root = new GameObject(definition.DisplayName + " (fantome)");
-            root.SetActive(false);   // pas d'Awake sur les copies avant qu'on les ait nettoyees
+            root.SetActive(false);
             root.transform.SetParent(transform, false);
 
-            foreach (Transform child in definition.Prefab.transform)
-                Instantiate(child.gameObject, root.transform, false);
-
-            // DestroyImmediate sur la copie encore inactive : un Destroy differe laisserait tourner Awake/OnEnable
-            // des composants copies des que la racine est activee. Ordre : les scripts d'abord (RequireComponent).
-            RemoveAll<MonoBehaviour>(root);
-            RemoveAll<Joint>(root);
-            RemoveAll<Rigidbody>(root);
-            RemoveAll<Collider>(root);
-            RemoveAll<Animator>(root);
-            RemoveAll<AudioSource>(root);
-            RemoveAll<ParticleSystem>(root);
-            RemoveAll<Light>(root);
+            // Le pivot du mesh n'est pas forcement au centre de sa boite : on le decale pour que la boite soit centree sur le fantome.
+            GameObject model = new GameObject("Modele", typeof(MeshFilter), typeof(MeshRenderer));
+            model.transform.SetParent(root.transform, false);
+            model.transform.localPosition = -definition.BoundsCenter;
+            model.GetComponent<MeshFilter>().sharedMesh = definition.Mesh;
+            model.GetComponent<MeshRenderer>().sharedMaterials = new Material[Mathf.Max(1, definition.Mesh.subMeshCount)];
 
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             GhostVisual visual = new GhostVisual
@@ -124,12 +117,6 @@ namespace Anachronism.Gameplay
             }
 
             return visual;
-        }
-
-        private static void RemoveAll<T>(GameObject root) where T : Component
-        {
-            foreach (T component in root.GetComponentsInChildren<T>(true))
-                DestroyImmediate(component);
         }
 
         private static Material[] FilledArray(Material material, int count)

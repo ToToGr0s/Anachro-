@@ -31,20 +31,29 @@ namespace Anachronism.Gameplay
 
         private void OnItemPlaced(PlacementRequest request, AnachronismDefinition definition)
         {
-            if (definition == null || definition.Prefab == null)
+            if (definition == null || definition.Mesh == null)
             {
-                Debug.LogWarning("SandboxPlacementSpawner : pas de prefab a faire apparaitre.", this);
+                Debug.LogWarning("SandboxPlacementSpawner : pas de mesh a faire apparaitre.", this);
                 return;
             }
 
-            // Le prefab porte un NetworkObject : l'instancier hors reseau fait lever une erreur FishNet.
-            // On recopie donc seulement ses enfants (le visuel) sous un objet vide place comme le prefab le serait.
-            GameObject placed = new GameObject(definition.Prefab.name + " (test)");
+            // WorldObject porte un NetworkObject : l'instancier hors reseau fait lever une erreur FishNet.
+            // On recree donc son visuel et sa boite sous un objet vide, place comme le serveur le placera.
+            GameObject placed = new GameObject(definition.DisplayName + " (test)", typeof(MeshFilter), typeof(MeshRenderer), typeof(BoxCollider));
+            Quaternion rotation = PlacementRules.RotationFor(request.Normal, _tuning);
+            // PositionFor donne le centre de la boite ; le pivot du mesh en est decale de BoundsCenter.
             placed.transform.SetPositionAndRotation(
-                PlacementRules.PositionFor(request.Position, request.Normal, definition.Dimensions, _tuning),
-                PlacementRules.RotationFor(request.Normal, _tuning));
-            foreach (Transform child in definition.Prefab.transform)
-                Instantiate(child.gameObject, placed.transform, false);
+                PlacementRules.PositionFor(request.Position, request.Normal, definition.Dimensions, _tuning) - rotation * definition.BoundsCenter,
+                rotation);
+            placed.GetComponent<MeshFilter>().sharedMesh = definition.Mesh;
+            placed.GetComponent<MeshRenderer>().sharedMaterial = definition.Material;
+            BoxCollider box = placed.GetComponent<BoxCollider>();
+            box.center = definition.BoundsCenter;
+            box.size = definition.Dimensions;
+            // Meme calque que WorldObject : la pose suivante le traite comme un objet deja pose.
+            int placedMask = _tuning.PlacedObjectsMask.value;
+            if (placedMask != 0)
+                placed.layer = (int)Mathf.Log(placedMask & -placedMask, 2);
         }
     }
 }

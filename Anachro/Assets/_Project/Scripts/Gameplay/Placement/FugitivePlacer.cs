@@ -12,7 +12,6 @@ namespace Anachronism.Gameplay
 
         [SerializeField] private Camera _camera;
         [SerializeField] private PlacementGhost _ghost;
-        [SerializeField] private AnachronismRegistry _registry;
         [SerializeField] private GameplayTuning _tuning;
         // TODO (Celian) : l'epoque viendra de la map (EraDefinition de la partie) ; en local on la donne a la main.
         [SerializeField] private EraDefinition _era;
@@ -44,9 +43,9 @@ namespace Anachronism.Gameplay
 
         private void Awake()
         {
-            if (_camera == null || _ghost == null || _registry == null || _tuning == null)
+            if (_camera == null || _ghost == null || _tuning == null)
             {
-                Debug.LogError("FugitivePlacer : camera, fantome, registre ou reglages manquant.", this);
+                Debug.LogError("FugitivePlacer : camera, fantome ou reglages manquant.", this);
                 enabled = false;
             }
 
@@ -189,7 +188,8 @@ namespace Anachronism.Gameplay
         // TODO (Theo) : le serveur tire les 3 objets et les envoie en TargetRpc ; le client n'envoie que la taille choisie (regle reseau 1).
         private void DrawItem(AnachronismSize size)
         {
-            _heldItems[(int)size] = _registry.RandomOfSize(size, _era);
+            // Les objets posables de l'epoque sont deja d'une autre epoque (EraDefinition le verifie a la saisie).
+            _heldItems[(int)size] = _era != null ? _era.RandomPlaceable(size) : null;
         }
     }
 }

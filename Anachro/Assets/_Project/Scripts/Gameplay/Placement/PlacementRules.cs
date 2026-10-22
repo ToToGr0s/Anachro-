@@ -71,8 +71,9 @@ namespace Anachronism.Gameplay
             return kind != PlacementSurfaceType.None && (allowedSurfaces & kind) != 0;
         }
 
-        // Centre de l'objet pose : le point vise est le centre de la face posee (pivot du prefab au centre),
+        // Centre de la boite de l'objet pose : le point vise est le centre de la face posee,
         // l'objet depasse donc de la moitie de son epaisseur (hauteur au sol, profondeur au mur).
+        // Le pivot du mesh peut etre ailleurs : position du transform = ce centre - rotation * definition.BoundsCenter.
         public static Vector3 PositionFor(Vector3 contactPoint, Vector3 normal, Vector3 dimensions, GameplayTuning tuning)
         {
             bool isWall = ClassifySurface(normal, tuning) == PlacementSurfaceType.Wall;

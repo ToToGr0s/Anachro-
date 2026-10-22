@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da994dabe7a16f44aaf3b75ccf43c4e0, type: 3}
+  m_Name: Era_MiddleAge
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.EraDefinition
+  _displayName: "Moyen \xC2ge"
+  _era: 2
+  _npcs: {fileID: 11400000, guid: 0de02c0d456cda74f8a7d16f69ca8e64, type: 2}
+  _spawnedObjects:
+  - {fileID: 11400000, guid: a8d32cafa386c854e9210e3e83a784f8, type: 2}
+  - {fileID: 11400000, guid: 01eb3f633e3dd7649a6bf5a4b9e6e1b2, type: 2}
+  - {fileID: 11400000, guid: 0022126508944e744bf0c389ee6c114b, type: 2}
+  - {fileID: 11400000, guid: 49c1c1f0a5fe24d41843697e373b4daa, type: 2}
+  - {fileID: 11400000, guid: 0fd0c91a55f7eca4fb8d46db1e01ece5, type: 2}
+  - {fileID: 11400000, guid: acc7b3e32d2a9dc44aa8abbd5350e4e1, type: 2}
+  - {fileID: 11400000, guid: 7f1bfbdba1fc29c4c9e24ae71d399e21, type: 2}
+  - {fileID: 11400000, guid: 02fe958ddf26bd44a85a67f2a6da6815, type: 2}
+  - {fileID: 11400000, guid: 18d25ff2d77954d4da1c97c9c7f40615, type: 2}
+  - {fileID: 11400000, guid: 2e0e5163cd69fdf4a908dbefed43f98d, type: 2}
+  _placeableObjects:
+  - {fileID: 11400000, guid: c6b61737e9f4eaf4fb05c6486a57ce3d, type: 2}
+  - {fileID: 11400000, guid: f4b09c667cff92946842bde1ae0ed6b9, type: 2}
+  - {fileID: 11400000, guid: e4567012ec2aed442a169f0ae9f65c67, type: 2}
+  - {fileID: 11400000, guid: e3e1373cb1b729c4e9bd99bdf2f61886, type: 2}
+  - {fileID: 11400000, guid: 66f6151ed7bd30749afbec74c6526105, type: 2}
+  - {fileID: 11400000, guid: 85c2d3b916dd89e46a7e59547f1dd5b7, type: 2}
+  - {fileID: 11400000, guid: 927b7802037804b4196ab425b0177a5b, type: 2}
+  - {fileID: 11400000, guid: adbdc6fcd12ef96428a58a4e29044d50, type: 2}
+  - {fileID: 11400000, guid: 4d5bfab415e9a3049b520ffed4eebae3, type: 2}
+  - {fileID: 11400000, guid: 787f52d9122be164e889dab60f0905fb, type: 2}
+  _music: {fileID: 0}
+  _mapScene: 

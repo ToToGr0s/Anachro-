@@ -12,12 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4294cf38830d2af4dad4a7d458ba6e8a, type: 3}
   m_Name: Anachro_Phone
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.AnachronismDefinition
-  _size: 0
-  _prefab: {fileID: 1161230099099558904, guid: d33a5f4b5003d1f44910b6c8ad0f2a04, type: 3}
   _displayName: Phone
+  _era: 4
+  _size: 0
   _icon: {fileID: 0}
-  _disruptionPercent: 7
-  _allowedEras:
-  - {fileID: 11400000, guid: c91422a9d33a1934190e73d7b97df1c7, type: 2}
+  _mesh: {fileID: 0}
+  _material: {fileID: 0}
   _allowedSurfaces: -1
-  _dimensions: {x: 0.15, y: 0.3, z: 0.03}
