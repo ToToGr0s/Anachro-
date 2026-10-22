@@ -1,3 +1,4 @@
+using Anachronism.Gameplay;
 using Anachronism.Network;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -18,11 +19,7 @@ namespace Anachronism.UI
 
         [SerializeField] private float[] _disruptionTierThresholds = { 0.25f, 0.5f, 0.75f };
 
-        // TODO (Olivier) : [SerializeField] private FugitivePlacer _placer, abonné à CooldownChanged (Archi), quand
-        // Célian l'aura créé (C04). Il manque aussi un moyen de savoir quelle taille est choisie : à demander à Célian
-        // (event SelectedSizeChanged ou propriété SelectedSize), sinon le HUD ne peut pas surligner l'emplacement.
-        // CooldownChanged doit aussi donner la durée totale de la recharge (ou le HUD la lit dans l'AnachronismDefinition) :
-        // ItemBarView.SetCooldown(taille, restant, total) ne la devine plus.
+        private FugitivePlacer _placer;
 
         [Header("Aperçu sans réseau (menu ⋮ du composant, en Play)")]
         [SerializeField] private float[] _previewCooldowns = { 15f, 30f, 45f };
@@ -104,6 +101,12 @@ namespace Anachronism.UI
             ResetShownValues();
             _isShown = true;
             SetShown(false);
+
+            FugitivePlacer.Enabled += BindPlacer;
+            FugitivePlacer.Disabled += UnbindPlacer;
+            // HUD réactivé alors que le joueur est déjà là : l'event Enabled est passé sans nous.
+            if (FugitivePlacer.Current != null)
+                BindPlacer(FugitivePlacer.Current);
         }
 
         private void Start()
@@ -113,6 +116,10 @@ namespace Anachronism.UI
 
         private void OnDisable()
         {
+            FugitivePlacer.Enabled -= BindPlacer;
+            FugitivePlacer.Disabled -= UnbindPlacer;
+            UnbindPlacer(_placer);
+
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
             Unbind();
@@ -206,7 +213,11 @@ namespace Anachronism.UI
             _isShown = isShown;
             _root.style.display = isShown ? DisplayStyle.Flex : DisplayStyle.None;
             if (isShown)
+            {
+                // Caché, le HUD ne décomptait plus : on repart de l'état du placer.
+                SyncWithPlacer();
                 return;
+            }
 
             _itemBar.ClearCooldowns();
             _itemBar.SetSelected(0);
@@ -226,7 +237,7 @@ namespace Anachronism.UI
             _root.EnableInClassList(HunterClass, role == PlayerRole.Guardian);
             _root.EnableInClassList(FugitiveClass, role == PlayerRole.Villain);
             _roleLabel.text = DescribeRole(role);
-            _itemBar.SetSelected(0);
+            SyncWithPlacer();
         }
 
         private void SetDisruption(float ratio)
@@ -329,17 +340,61 @@ namespace Anachronism.UI
             if (_previewRole != PlayerRole.Villain)
                 return;
 
-            _itemBar.SetSelected((int)(Time.time / 3f) % ItemBarView.SlotCount);
-            for (int i = 0; i < ItemBarView.SlotCount && i < _previewCooldowns.Length; i++)
+            // Un vrai placer pilote deja la barre : l'apercu ne la touche pas, il se contente de la faire decompter.
+            if (_placer == null)
             {
-                if (Time.time < _previewNextCooldownTimes[i])
-                    continue;
+                _itemBar.SetSelected((int)(Time.time / 3f) % ItemBarView.SlotCount);
+                for (int i = 0; i < ItemBarView.SlotCount && i < _previewCooldowns.Length; i++)
+                {
+                    if (Time.time < _previewNextCooldownTimes[i])
+                        continue;
 
-                _itemBar.SetCooldown(i, _previewCooldowns[i], _previewCooldowns[i]);
-                _previewNextCooldownTimes[i] = Time.time + _previewCooldowns[i] + 2f;
+                    _itemBar.SetCooldown(i, _previewCooldowns[i], _previewCooldowns[i]);
+                    _previewNextCooldownTimes[i] = Time.time + _previewCooldowns[i] + 2f;
+                }
             }
 
             _itemBar.Tick(Time.deltaTime);
+        }
+
+        private void BindPlacer(FugitivePlacer placer)
+        {
+            UnbindPlacer(_placer);
+            _placer = placer;
+            _placer.SizeSelected += OnSizeSelected;
+            _placer.CooldownChanged += OnCooldownChanged;
+            SyncWithPlacer();
+        }
+
+        // Le placer garde sa taille et sa recharge quand le HUD est caché ou réinitialisé : la barre se recale dessus.
+        private void SyncWithPlacer()
+        {
+            _itemBar.SetSelected(_placer != null ? (int)_placer.SelectedSize : 0);
+            if (_placer == null || _placer.CooldownRemaining <= 0f)
+                return;
+
+            for (int i = 0; i < ItemBarView.SlotCount; i++)
+                _itemBar.SetCooldown(i, _placer.CooldownRemaining, _placer.CooldownDuration);
+        }
+
+        private void UnbindPlacer(FugitivePlacer placer)
+        {
+            if (placer == null || placer != _placer)
+                return;
+
+            _placer.SizeSelected -= OnSizeSelected;
+            _placer.CooldownChanged -= OnCooldownChanged;
+            _placer = null;
+        }
+
+        private void OnSizeSelected(AnachronismSize size) => _itemBar.SetSelected((int)size);
+
+        // La recharge est globale : poser un objet bloque les trois emplacements, quelle que soit sa taille.
+        // ItemBarView décompte ensuite tout seul (Tick).
+        private void OnCooldownChanged(AnachronismSize size, float duration)
+        {
+            for (int i = 0; i < ItemBarView.SlotCount; i++)
+                _itemBar.SetCooldown(i, duration, duration);
         }
     }
 }

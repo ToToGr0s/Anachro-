@@ -99,24 +99,34 @@ namespace Anachronism.World
         private void Apply(AnachronismDefinition definition)
         {
             Definition = definition;
-            _meshFilter.sharedMesh = definition.Mesh;
-            _meshRenderer.sharedMaterial = definition.Material;
+            ApplyDefinition(definition, _meshFilter, _meshRenderer, _collider, _obstacle, this);
+        }
+
+        /// <summary>
+        /// Règle unique « définition -> composants du prefab ». Public et statique pour que les tests locaux (scène Sandbox,
+        /// sans réseau) appliquent exactement la même règle que le jeu, sans la recopier.
+        /// </summary>
+        public static void ApplyDefinition(AnachronismDefinition definition, MeshFilter meshFilter, MeshRenderer meshRenderer,
+            BoxCollider collider, NavMeshObstacle obstacle, Object context)
+        {
+            meshFilter.sharedMesh = definition.Mesh;
+            meshRenderer.sharedMaterial = definition.Material;
 
             if (definition.Mesh == null)
             {
-                Debug.LogError($"[WorldObject] {definition.name} n'a pas de mesh : collider et obstacle gardent la taille du prefab.", this);
+                Debug.LogError($"[WorldObject] {definition.name} n'a pas de mesh : collider et obstacle gardent la taille du prefab.", context);
                 return;
             }
 
             // Boîte calée sur le mesh : suffit pour viser et poser. Réactivée ici pour un objet réutilisé (pooling).
             Bounds bounds = definition.Mesh.bounds;
-            _collider.enabled = true;
-            _collider.center = bounds.center;
-            _collider.size = bounds.size;
-            _obstacle.center = bounds.center;
-            _obstacle.size = bounds.size;
+            collider.enabled = true;
+            collider.center = bounds.center;
+            collider.size = bounds.size;
+            obstacle.center = bounds.center;
+            obstacle.size = bounds.size;
             // Un petit objet (bague, timbre) ne gêne pas les PNJ : le découper creuserait un trou inutile dans le NavMesh.
-            _obstacle.enabled = definition.Size != AnachronismSize.Small;
+            obstacle.enabled = definition.Size != AnachronismSize.Small;
         }
     }
 }

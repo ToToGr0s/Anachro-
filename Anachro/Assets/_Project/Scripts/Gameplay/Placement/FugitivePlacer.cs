@@ -32,6 +32,9 @@ namespace Anachronism.Gameplay
         public event Action<bool> PlacingChanged;
 
         public AnachronismSize SelectedSize => _selectedSize;
+        // Le HUD s'en sert pour se recaler apres avoir ete cache ou reinitialise.
+        public float CooldownDuration { get; private set; }
+        public float CooldownRemaining => _isCoolingDown ? Mathf.Max(0f, _readyTime - Time.time) : 0f;
 
         // size = taille de l'objet pose (elle fixe la duree), duration = duree totale de la recharge ; le HUD (Olivier) decompte lui-meme.
         public event Action<AnachronismSize, float> CooldownChanged;
@@ -40,6 +43,21 @@ namespace Anachronism.Gameplay
         // Local seulement : l'objet tenu au moment de la pose (spawner de test, HUD). Ne pas l'envoyer au serveur.
         public event Action<PlacementRequest, AnachronismDefinition> ItemPlaced;
         public event Action<AnachronismSize> SizeSelected;
+        // Le HUD (persistant, hors scene) ne peut pas porter de reference vers le joueur : il suit le placer qui s'active.
+        // Seul l'owner l'active (PlayerNetworkSetup), donc c'est toujours le placer du joueur local.
+        public static event Action<FugitivePlacer> Enabled;
+        public static event Action<FugitivePlacer> Disabled;
+        // Pour un abonne arrive apres l'activation (HUD reactive) : il rattrape le placer deja actif.
+        public static FugitivePlacer Current { get; private set; }
+
+        // Domain reload desactive dans ce projet : sans ce reset, un abonne reste branche d'un Play a l'autre.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay()
+        {
+            Enabled = null;
+            Disabled = null;
+            Current = null;
+        }
 
         private void Awake()
         {
@@ -51,6 +69,12 @@ namespace Anachronism.Gameplay
 
             if (_era == null)
                 Debug.LogError("FugitivePlacer : epoque non assignee, aucun objet ne sera tire.", this);
+        }
+
+        private void OnEnable()
+        {
+            Current = this;
+            Enabled?.Invoke(this);
         }
 
         private void Start()
@@ -105,6 +129,10 @@ namespace Anachronism.Gameplay
         // Domain reload desactive : une pose interrompue ne doit pas rester coincee au Play suivant.
         private void OnDisable()
         {
+            if (Current == this)
+                Current = null;
+            Disabled?.Invoke(this);
+
             if (!_isPlacing)
                 return;
 
@@ -180,6 +208,7 @@ namespace Anachronism.Gameplay
             // TODO (Celian) : la duree viendra de MatchSettings.CooldownFor (reglage de l'hote) ; temps de jeu en ticks (regle reseau 6).
             float duration = _tuning.GetReloadSeconds(size);
             _readyTime = Time.time + duration;
+            CooldownDuration = duration;
             _isCoolingDown = true;
             Array.Clear(_heldItems, 0, _heldItems.Length);
             CooldownChanged?.Invoke(size, duration);
