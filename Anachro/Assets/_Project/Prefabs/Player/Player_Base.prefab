@@ -37,6 +37,7 @@ Transform:
   - {fileID: 530670655246137570}
   - {fileID: 5526224817007714654}
   - {fileID: 4684589586344324735}
+  - {fileID: 3259574708623912692}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &8017830287955416054
@@ -468,6 +469,54 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: e8b865d2-b2f3-436a-88d1-138796b9d763
     m_ActionName: 'Player/Sprint[/Keyboard/leftShift]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 6860906671407096613}
+        m_TargetAssemblyTypeName: Anachronism.Gameplay.InputManager, Anachronism.Runtime
+        m_MethodName: OnPlace
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 8d4cd958-fe27-4c76-a237-64921f82d3a5
+    m_ActionName: 'Player/Place[/Mouse/leftButton]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 6860906671407096613}
+        m_TargetAssemblyTypeName: Anachronism.Gameplay.InputManager, Anachronism.Runtime
+        m_MethodName: OnSelectSize
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: bea4f3af-62c4-41dc-b3f4-8d8973206a73
+    m_ActionName: 'Player/SelectSize[/Keyboard/1,/Keyboard/2,/Keyboard/3]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 6860906671407096613}
+        m_TargetAssemblyTypeName: Anachronism.Gameplay.InputManager, Anachronism.Runtime
+        m_MethodName: OnScrollSize
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 32cd016d-1b16-481e-9326-5a550c85e71d
+    m_ActionName: 'Player/ScrollSize[/Mouse/scroll/y]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Player
@@ -486,7 +535,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.InputManager
   _characterMovement: {fileID: 7567151471635064754}
-  _placer: {fileID: 0}
+  _placer: {fileID: 952805693337423203}
 --- !u!1 &4135728470870934959
 GameObject:
   m_ObjectHideFlags: 0
@@ -609,6 +658,84 @@ MonoBehaviour:
   _skins: {fileID: 11400000, guid: 0de02c0d456cda74f8a7d16f69ca8e64, type: 2}
   _settings: {fileID: 11400000, guid: 277c5246d3431694ea154502c5a8d292, type: 2}
   _skin: {fileID: 2949540036812197049}
+--- !u!1 &7650865602896415800
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3259574708623912692}
+  - component: {fileID: 5436620613370717081}
+  - component: {fileID: 4790523065084742268}
+  - component: {fileID: 952805693337423203}
+  m_Layer: 0
+  m_Name: 'Placement '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3259574708623912692
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7650865602896415800}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.48235, y: 0.89884, z: 2.70151}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1777146722808752011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5436620613370717081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7650865602896415800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25b1a2d479b08c64e96a9ad2ecc59463, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.PlacementGhost
+  _validMaterial: {fileID: 2100000, guid: 7997701f74e130046ba9df4e9e5e0682, type: 2}
+  _invalidMaterial: {fileID: 2100000, guid: b64197dc3d942e44db8d6cd429d1417f, type: 2}
+--- !u!114 &4790523065084742268
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7650865602896415800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78491f4741815af43aac57192931c512, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.SandboxPlacementSpawner
+  _placer: {fileID: 952805693337423203}
+  _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
+--- !u!114 &952805693337423203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7650865602896415800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed4648e472067d6439b6c2fec82fe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.FugitivePlacer
+  _camera: {fileID: 5595452329960202124}
+  _ghost: {fileID: 5436620613370717081}
+  _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
+  _era: {fileID: 11400000, guid: 620ee05ee27f84f49a9f66bdad47f447, type: 2}
 --- !u!1001 &3305686498224683352
 PrefabInstance:
   m_ObjectHideFlags: 0

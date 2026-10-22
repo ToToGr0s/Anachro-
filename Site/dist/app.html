@@ -1,0 +1,1523 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>Anachro Prod</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout : en-tête (semaine en cours + jalon) → avancement par personne → onglets → une vue à la fois. Une couleur par personne. */
+:root{
+  --bg:#F2F3F6; --surface:#FFFFFF; --sunk:#E7E9EF; --fg:#151821; --muted:#5D6375; --line:#D3D7E0;
+  --accent:#C2410C; --accent-soft:#FBE3D6;
+  --theo:#2F5FD0; --theo-soft:#E2EAFB; --celian:#1F8A5B; --celian-soft:#DDF3E8; --olivier:#B4590E; --olivier-soft:#FBE9D8;
+  --hanae:#C2377A; --hanae-soft:#FBE1EE; --art:#8B3FB8; --art-soft:#F1E3F8; --tous:#4B5263; --tous-soft:#E4E6EC;
+  --doing:#B7860B; --doing-soft:#FBF0CF; --done:#1F8A5B; --done-soft:#DDF3E8; --blocked:#C0262D; --blocked-soft:#FBDADB;
+  --scrim:rgba(15,18,26,.45);
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12141A; --surface:#1B1E26; --sunk:#242833; --fg:#E9EBF1; --muted:#9BA1B3; --line:#323746;
+  --accent:#F08A4B; --accent-soft:#3A2418;
+  --theo:#7FA3F5; --theo-soft:#1D2742; --celian:#5CC994; --celian-soft:#16301F; --olivier:#F0A061; --olivier-soft:#3A2614;
+  --hanae:#F08CBB; --hanae-soft:#3A1A2A; --art:#C990EC; --art-soft:#2E1F3A; --tous:#AEB4C4; --tous-soft:#262A35;
+  --doing:#E9BC45; --doing-soft:#3A3014; --done:#5CC994; --done-soft:#16301F; --blocked:#F0686E; --blocked-soft:#3D1A1C;
+  --scrim:rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12141A; --surface:#1B1E26; --sunk:#242833; --fg:#E9EBF1; --muted:#9BA1B3; --line:#323746;
+  --accent:#F08A4B; --accent-soft:#3A2418;
+  --theo:#7FA3F5; --theo-soft:#1D2742; --celian:#5CC994; --celian-soft:#16301F; --olivier:#F0A061; --olivier-soft:#3A2614;
+  --hanae:#F08CBB; --hanae-soft:#3A1A2A; --art:#C990EC; --art-soft:#2E1F3A; --tous:#AEB4C4; --tous-soft:#262A35;
+  --doing:#E9BC45; --doing-soft:#3A3014; --done:#5CC994; --done-soft:#16301F; --blocked:#F0686E; --blocked-soft:#3D1A1C;
+  --scrim:rgba(0,0,0,.6); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.wrap{max-width:1320px;margin:0 auto;padding-inline:20px;padding-block:24px 64px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+button{font-family:inherit}
+.muted{color:var(--muted)}
+
+.top{display:grid;grid-template-columns:1fr auto;gap:16px 24px;align-items:end;margin-bottom:20px}
+.top h1{font-size:clamp(30px,5vw,44px);font-weight:800}
+.top .sub{color:var(--muted);margin-top:2px}
+.now{display:flex;gap:12px;flex-wrap:wrap}
+.pill-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;min-width:0}
+.pill-box .k{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.pill-box .v{font-family:var(--f-display);font-size:20px;font-weight:600;line-height:1.2}
+.pill-box .v small{font-family:var(--f-body);font-size:14px;color:var(--muted);font-weight:500}
+.pill-box.hot{border-color:var(--accent);background:var(--accent-soft)}
+
+.progress{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.prog{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;min-width:0}
+.prog .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.prog .name{font-weight:600;font-size:16px;display:flex;align-items:center;gap:8px;min-width:0}
+.prog .pct{font-family:var(--f-mono);font-weight:700;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--sunk);border-radius:99px;overflow:hidden;margin-top:8px;display:flex}
+.bar i{display:block;height:100%}
+.prog .meta{font-size:13px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding-block:8px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.tabs button{font:600 15px var(--f-body);color:var(--muted);background:none;border:0;padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.tabs button:hover{background:var(--sunk);color:var(--fg)}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.note{font-size:14px;color:var(--muted);margin:0 0 14px}
+.banner{background:var(--doing-soft);border:1px solid var(--doing);border-radius:var(--r);padding:10px 14px;font-size:14px;margin-bottom:16px}
+.empty{padding:18px;color:var(--muted);font-size:15px;background:var(--surface);border:1px dashed var(--line);border-radius:var(--r)}
+
+/* Cette semaine */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;align-items:start}
+.col{min-width:0;display:flex;flex-direction:column;gap:10px}
+.colh{display:flex;align-items:center;gap:10px;padding:4px 2px;border-bottom:3px solid var(--c);}
+.colh h3{font-size:21px}
+.colh span{font-size:13px;color:var(--muted);margin-left:auto}
+
+.gcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;min-width:0}
+.gcard>header{display:flex;gap:8px;align-items:baseline;padding:10px 12px 6px;flex-wrap:wrap}
+.gcard>header h4{margin:0;font-size:16px;font-weight:600}
+.gcard>header .cnt{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:5px;background:var(--c-soft);color:var(--c)}
+.gcard.alldone>header h4{text-decoration:line-through;color:var(--muted)}
+.subs{display:flex;flex-direction:column;padding:0 4px 6px}
+.sub{display:flex;gap:10px;align-items:flex-start;padding:6px 8px;border-radius:7px}
+.sub:hover{background:var(--sunk)}
+.sub input[type=checkbox]{width:18px;height:18px;margin:2px 0 0;accent-color:var(--done);flex:none;cursor:pointer}
+.sub .txt{flex:1;min-width:0;font-size:15px;line-height:1.4}
+.sub.done .txt{text-decoration:line-through;color:var(--muted)}
+.sub .who{font-size:12px;color:var(--muted);display:block}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:6px;vertical-align:1px}
+.badge.doing{background:var(--doing-soft);color:var(--doing)}
+.badge.blocked{background:var(--blocked-soft);color:var(--blocked)}
+.edit{flex:none;border:0;background:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 4px;border-radius:5px;opacity:.55}
+.sub:hover .edit,.edit:focus-visible{opacity:1}
+.late{margin-top:4px}
+.late>summary{cursor:pointer;font-weight:600;color:var(--blocked);font-size:14px;padding:4px 2px}
+
+/* Planning */
+.plan{overflow-x:auto}
+.pgrid{display:grid;grid-template-columns:120px repeat(6,minmax(170px,1fr));min-width:1170px}
+.pgrid>div{padding:10px 8px;border-bottom:1px solid var(--line);min-width:0}
+.phead{position:sticky;top:0;background:var(--bg);font-weight:700;border-bottom:2px solid var(--fg)!important;display:flex;gap:6px;align-items:center}
+.wk h3{font-size:22px;font-weight:800}
+.wk .d{font-size:13px;color:var(--muted)}
+.wk.cur h3{color:var(--accent)}
+.row-past{opacity:.5}
+.mile{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent)}
+.now-tag{display:inline-block;margin-top:4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:var(--accent);color:var(--bg)}
+.chips{display:flex;flex-direction:column;gap:5px}
+.chip{display:flex;gap:6px;justify-content:space-between;align-items:baseline;padding:6px 8px;border-radius:7px;font-size:13.5px;line-height:1.3;background:var(--c-soft);color:var(--fg);border:1px solid transparent}
+.chip b{font-family:var(--f-mono);font-size:11.5px;color:var(--c);flex:none;font-variant-numeric:tabular-nums}
+.chip.cdone{opacity:.55;text-decoration:line-through}
+.chip.cblocked{border-color:var(--blocked)}
+.gapline{grid-column:1/-1;padding:9px 8px!important;font-size:13.5px;color:var(--muted);background:repeating-linear-gradient(135deg,transparent 0 8px,var(--sunk) 8px 9px)}
+.phase{grid-column:1/-1;font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--accent);padding-top:22px!important}
+
+/* Toutes les tâches */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.chipbtn{font:600 14px var(--f-body);border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:6px 12px;border-radius:99px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.chipbtn[aria-pressed="true"]{border-color:var(--fg);background:var(--fg);color:var(--bg)}
+.toolbar select,.toolbar input,.form select,.form input{font:500 14px var(--f-body);padding:7px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);min-width:0}
+.toolbar input[type=search]{flex:1 1 200px}
+.primary{font:600 14px var(--f-body);background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+.ghost{font:600 14px var(--f-body);background:none;color:var(--fg);border:1.5px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+.danger{font:600 14px var(--f-body);background:none;color:var(--blocked);border:1.5px solid var(--blocked);border-radius:8px;padding:8px 14px;cursor:pointer}
+.wgroup{margin-bottom:22px}
+.wgroup>h3{font-size:19px;margin-bottom:8px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.wgroup>h3 small{font:500 14px var(--f-body);color:var(--muted)}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;align-items:start}
+
+/* Jalons / infos */
+.miles{display:flex;flex-direction:column;gap:10px}
+.ms{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.ms .when{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1}
+.ms .when small{display:block;font:500 14px var(--f-body);color:var(--muted)}
+.ms h3{font-size:19px}
+.ms p{margin:2px 0 0;color:var(--muted);font-size:15px}
+.ms .state{font-size:13px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap}
+.ms.next{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.st-past{background:var(--sunk);color:var(--muted)} .st-next{background:var(--accent);color:var(--bg)} .st-later{background:var(--sunk);color:var(--fg)}
+.alerts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:28px}
+.alert{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);padding:14px 16px;min-width:0}
+.alert h3{font-size:18px;margin-bottom:4px}
+.alert p{margin:0;color:var(--muted);font-size:15px}
+.roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px}
+.role{border-radius:var(--r);padding:14px 16px;min-width:0;background:var(--c-soft)}
+.role h3{font-size:21px;color:var(--c)}
+.role p{margin:4px 0 0;font-size:15px}
+.rename{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.rename label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+
+/* Règles */
+details.rule{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+details.rule>summary{cursor:pointer;padding:14px 16px;font-family:var(--f-display);font-weight:600;font-size:20px;list-style:none;display:flex;justify-content:space-between;gap:12px}
+details.rule>summary::-webkit-details-marker{display:none}
+details.rule>summary::after{content:"+";font-family:var(--f-mono);color:var(--muted)}
+details.rule[open]>summary::after{content:"–"}
+.rb{padding:0 16px 16px}
+.rb ol,.rb ul{margin:0;padding-left:22px}
+.rb li{margin:6px 0}
+.rb li b{font-weight:600}
+.rb li span{color:var(--muted)}
+pre.tree{font-family:var(--f-mono);font-size:13.5px;background:var(--sunk);border-radius:8px;padding:14px;overflow-x:auto;margin:0 0 10px;line-height:1.55}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+td code,li code,p code{font-family:var(--f-mono);font-size:13px;background:var(--sunk);padding:1px 5px;border-radius:4px}
+
+/* Éditeur */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:max(40px,env(safe-area-inset-top,0px)) 16px 16px;overflow-y:auto}
+.form{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;width:min(560px,100%);display:flex;flex-direction:column;gap:12px}
+.form h2{font-size:22px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.form .actions .sp{flex:1}
+.form .err{color:var(--blocked);font-size:14px;margin:0}
+
+.c-theo{--c:var(--theo);--c-soft:var(--theo-soft)} .c-celian{--c:var(--celian);--c-soft:var(--celian-soft)} .c-olivier{--c:var(--olivier);--c-soft:var(--olivier-soft)} .c-hanae{--c:var(--hanae);--c-soft:var(--hanae-soft)}
+.c-art{--c:var(--art);--c-soft:var(--art-soft)} .c-tous{--c:var(--tous);--c-soft:var(--tous-soft)}
+
+
+/* Liens rapides (GDD…) */
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.qbtn{display:inline-flex;align-items:center;gap:7px;font:600 14px var(--f-body);text-decoration:none;color:var(--fg);background:var(--surface);border:1.5px solid var(--line);border-radius:99px;padding:6px 14px}
+.qbtn:hover{border-color:var(--fg)}
+.qbtn.main{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.qbtn .ext{font-size:12px;opacity:.7}
+.qbtn.add{border-style:dashed;color:var(--muted)}
+a{color:var(--accent)}
+.linkbtn{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.pill-box.clk{cursor:pointer;text-align:left;font:inherit;color:inherit}
+.pill-box.clk:hover{box-shadow:0 0 0 2px var(--accent)}
+
+/* Groupes repliables */
+.gcard>header{cursor:pointer;user-select:none}
+.gcard>header::after{content:"▾";font-size:12px;color:var(--muted);margin-left:2px;transition:transform .15s}
+.gcard.shut>header::after{transform:rotate(-90deg)}
+.gcard.shut>.subs{display:none}
+.gcard.hl{box-shadow:0 0 0 3px var(--accent)}
+
+/* Toutes les tâches : liste compacte */
+.spr{margin-bottom:18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.spr.cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.sprh{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(90px,180px) auto;gap:14px;align-items:center;padding:12px 16px;background:var(--sunk)}
+.sprh:hover{background:var(--line)}
+.sprh:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.sprh .sn{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1}
+.sprh .sd{font-size:14px;color:var(--muted);min-width:0}
+.sprh .sd b{color:var(--fg);font-weight:600}
+.sprh .sm{display:inline-block;font-size:12px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);margin-left:6px}
+.sprh .go{font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap}
+.mbar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;display:flex}
+.mbar i{display:block;height:100%}
+.mnum{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:3px;text-align:right}
+.glist{display:flex;flex-direction:column}
+.grow{border-top:1px solid var(--line)}
+.grow>button{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;grid-template-columns:4px minmax(0,1fr) auto 110px 16px;gap:12px;align-items:center;padding:9px 16px 9px 0}
+.grow>button:hover{background:var(--sunk)}
+.grow>button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.grow .stripe{align-self:stretch;background:var(--c);border-radius:0 3px 3px 0}
+.grow .gt{font-weight:600;font-size:15px;min-width:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow .gw{font-size:13px;color:var(--muted);white-space:nowrap}
+.grow .chev{font-size:12px;color:var(--muted);transition:transform .15s}
+.grow.open .chev{transform:rotate(90deg)}
+.grow.alldone .gt>span:first-child{text-decoration:line-through;color:var(--muted)}
+.grow .subs{padding:0 12px 10px 20px}
+.grow .badge{margin-left:0}
+.mini{display:flex;flex-direction:column;gap:3px}
+
+/* Fenêtre sprint */
+.sheet{background:var(--bg);border:1px solid var(--line);border-radius:14px;width:min(1100px,100%);display:flex;flex-direction:column;overflow:hidden;margin-bottom:24px}
+.sheet>header{background:var(--surface);border-bottom:1px solid var(--line);padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.sheet .sh1{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.sheet .sh1 h2{font-size:30px;font-weight:800;line-height:1.1}
+.sheet .sh1 h2 small{font:500 16px var(--f-body);color:var(--muted);margin-left:8px}
+.sheet .sh1 .sp{flex:1}
+.sheet .navb{display:flex;gap:6px}
+.sheet .st{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 9px;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.sheet .st.live{background:var(--accent);color:var(--bg)}
+.sheet .milebox{background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;font-size:15px}
+.sheet .milebox b{color:var(--accent)}
+.sheet .stats{display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-size:14px;color:var(--muted)}
+.sheet .stats .bar{flex:1 1 220px;margin:0;height:10px}
+.sheet .stats b{color:var(--fg);font-variant-numeric:tabular-nums}
+.sheet .sb{padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start}
+.sheet .sb .col{gap:8px}
+@media (max-width:700px){
+  .sprh{grid-template-columns:auto minmax(0,1fr)}
+  .sprh .mini,.sprh .go{grid-column:2}
+  .grow>button{grid-template-columns:4px minmax(0,1fr) 16px}
+  .grow .gw,.grow .mini{display:none}
+  .sheet .sh1 h2{font-size:24px}
+  .scrim{padding:8px}
+}
+button.chip{font:inherit;font-size:13.5px;width:100%;text-align:left;cursor:pointer}
+button.chip:hover{border-color:var(--c)}
+.wk button{all:unset;cursor:pointer;display:block}
+.wk button:hover h3{color:var(--accent)}
+.wk button:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wk .see{font-size:12px;font-weight:600;color:var(--accent)}
+.ms.clk{cursor:pointer}
+.ms.clk:hover{border-color:var(--fg)}
+@media (max-width:1000px){.progress{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:700px){
+  .progress,.alerts{grid-template-columns:1fr}
+  .top{grid-template-columns:1fr}
+  .ms{grid-template-columns:1fr}
+  .form .two{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){.tabs button,.chipbtn,.sub{transition:background .15s,color .15s,border-color .15s}}
+
+/* Éditeur du calendrier + glisser-déposer du planning */
+.form.calform{width:min(900px,100%)}
+.calform h3{font-size:18px;margin-top:6px}
+.calform h3 small{font:500 13px var(--f-body);color:var(--muted)}
+.calrows{display:flex;flex-direction:column;gap:6px}
+.calrow{display:grid;grid-template-columns:64px 148px 148px minmax(0,1fr) 72px auto;gap:6px;align-items:center}
+.calrow.gap{grid-template-columns:minmax(0,1fr) auto}
+.calrow.gap input{background:var(--sunk);font-style:italic}
+.calrow.mile{grid-template-columns:150px minmax(0,1fr) minmax(0,1.6fr) auto}
+.calrow input,.calrow select{width:100%}
+.calrow .c-s{font-family:var(--f-mono);font-weight:700}
+.calrow .c-n{font:500 12px var(--f-mono);color:var(--muted);white-space:nowrap}
+.c-tools{display:flex;gap:4px}
+.ghost.ctl{padding:4px 9px;font-size:13px}
+.ghost.ctl:disabled{opacity:.35;cursor:default}
+.ghost.ctl.del{color:var(--blocked)}
+.caladd{display:flex;gap:8px;flex-wrap:wrap}
+.chip[draggable=true]{cursor:grab}
+.chip.dragging{opacity:.4}
+.pgrid>div.drop{background:var(--accent-soft)}
+@media (max-width:700px){
+  .calrow{grid-template-columns:52px 1fr 1fr}
+  .calrow input[type=date]{padding-inline:5px;font-size:13px}
+  .calrow .c-ph{grid-column:1/-1}
+  .calrow .c-n{grid-column:1/2}
+  .calrow .c-tools{grid-column:2/-1;justify-content:flex-end}
+  .calrow.gap,.calrow.mile{grid-template-columns:1fr}
+}
+</style></head><body>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Anachro — Prod</h1>
+      <div class="sub">Théo · Célian · Olivier · les artistes — sortie Steam fin mars 2027, MAJ en avril et juin</div>
+      <div class="quick" id="quick"></div>
+    </div>
+    <div class="now" id="now"></div>
+  </div>
+
+  <div class="progress" id="progress"></div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="semaine" id="tab-semaine">Cette semaine</button>
+    <button role="tab" data-tab="planning" id="tab-planning">Planning</button>
+    <button role="tab" data-tab="taches" id="tab-taches">Toutes les tâches</button>
+    <button role="tab" data-tab="jalons" id="tab-jalons">Jalons</button>
+    <button role="tab" data-tab="infos" id="tab-infos">Infos &amp; alertes</button>
+    <button role="tab" data-tab="regles" id="tab-regles">Code &amp; règles</button>
+    <button role="tab" data-tab="archi" id="tab-archi">Archi</button>
+  </nav>
+
+  <div id="dbnote" class="banner" hidden></div>
+
+  <section data-panel="semaine" id="p-semaine"><div class="empty">Chargement des tâches…</div></section>
+  <section data-panel="planning" id="p-planning" hidden></section>
+  <section data-panel="taches" id="p-taches" hidden></section>
+  <section data-panel="jalons" id="p-jalons" hidden></section>
+  <section data-panel="infos" id="p-infos" hidden></section>
+  <section data-panel="regles" id="p-regles" hidden>
+    <details class="rule" open>
+      <summary>Arborescence du projet</summary>
+      <div class="rb">
+<pre class="tree">Assets/
+├── _Project/
+│   ├── Art/        Models/ Materials/ Textures/ Animations/ VFX/     → artistes
+│   ├── Audio/      Music/ Sfx/ Mixers/                               → Olivier
+│   ├── Data/       ScriptableObjects : Anachronisms/ Eras/ MatchPresets/ → Célian
+│   ├── Prefabs/    Network/ Player/ Npc/ Anachronisms/ Props/ UI/
+│   ├── Scenes/     Boot, MainMenu, Maps/Map_&lt;Epoque&gt;, Sandbox/Sandbox_&lt;Prenom&gt;
+│   └── Scripts/
+│       ├── Core/       bootstrap, utilitaires                      → tous
+│       ├── Network/    MatchManager, lobby Steam, observers, vocal → Théo
+│       ├── Gameplay/   Player/ Weapon/ Placement/ Portal/ Photos/  → Célian
+│       ├── Npc/        IA, spawner de foule                        → Olivier
+│       ├── World/      Degradation/ Glitch/                        → Olivier
+│       ├── UI/         Hud/ Menus/ Lobby/                          → Olivier
+│       └── Editor/     outils éditeur
+└── ThirdParty/         FishNet, FishySteamworks (ne jamais modifier)</pre>
+        <ul>
+          <li><b>Namespace = dossier</b> : <code>Anachronism.Network</code>, <code>Anachronism.Gameplay</code>, <code>Anachronism.Npc</code>…</li>
+          <li><b>2 asmdefs seulement</b> : <code>Anachronism.Runtime</code> et <code>Anachronism.Editor</code>. On découpe si la compil devient lente.</li>
+          <li><b>Un dossier = un responsable.</b> Pour toucher le dossier d'un autre, on le prévient.</li>
+        </ul>
+      </div>
+    </details>
+    <details class="rule">
+      <summary>Conventions de nommage</summary>
+      <div class="rb tbl">
+        <table>
+          <thead><tr><th>Quoi</th><th>Convention</th><th>Exemple</th></tr></thead>
+          <tbody>
+            <tr><td>Classe, méthode, propriété, event, enum</td><td>PascalCase</td><td><code>MatchManager</code>, <code>StartMatch()</code></td></tr>
+            <tr><td>Champ privé (y compris <code>[SerializeField]</code>)</td><td>_camelCase</td><td><code>[SerializeField] private float _shootCooldown;</code></td></tr>
+            <tr><td>Paramètre, variable locale</td><td>camelCase</td><td><code>claimedTarget</code></td></tr>
+            <tr><td>Constante, static readonly</td><td>PascalCase</td><td><code>MaxPlayers</code></td></tr>
+            <tr><td>Interface</td><td>I + PascalCase</td><td><code>IShootable</code></td></tr>
+            <tr><td>Booléen</td><td>Is / Has / Can</td><td><code>IsFound</code>, <code>_hasPlaced</code></td></tr>
+            <tr><td>Event / handler</td><td>passé / On…</td><td><code>VillainCaptured</code> / <code>OnVillainCaptured</code></td></tr>
+            <tr><td>RPC FishNet</td><td>suffixe du type</td><td><code>ShootServerRpc</code>, <code>PlayFxObserversRpc</code>, <code>TargetAssignRole</code></td></tr>
+            <tr><td>Fichier</td><td>1 classe publique = 1 fichier</td><td><code>MatchManager.cs</code></td></tr>
+            <tr><td>Prefab</td><td>préfixe de domaine</td><td><code>Npc_Villager</code>, <code>Anachro_Phone</code></td></tr>
+            <tr><td>Scène</td><td>Map_ / Sandbox_</td><td><code>Map_Rome</code>, <code>Sandbox_Celian</code></td></tr>
+            <tr><td>Assets art</td><td>SM_ SK_ M_ T_ A_</td><td><code>SM_Phone</code>, <code>T_Phone_Albedo</code></td></tr>
+          </tbody>
+        </table>
+        <p class="note" style="margin-top:10px">Toujours écrire <code>private</code> / <code>public</code>. Jamais de champ public : <code>[SerializeField] private</code> + propriété.</p>
+      </div>
+    </details>
+    <details class="rule">
+      <summary>Règles de code</summary>
+      <div class="rb"><ol>
+        <li><b>Pas de Find / FindObjectOfType / GetComponent dans Update.</b> <span>Références via l'inspecteur ou cache dans Awake.</span></li>
+        <li><b>Singletons : seulement MatchManager et les services de Core.</b> <span>Pas de nouveau sans en parler.</span></li>
+        <li><b>Valeurs d'équilibrage dans des ScriptableObjects.</b> <span>Rien en dur dans le code.</span></li>
+        <li><b>Events C# pour découpler.</b> <span>Monde, UI, audio écoutent MatchManager, ne le modifient jamais.</span></li>
+        <li><b>L'UI ne touche jamais le réseau.</b> <span>UI → gameplay → RPC.</span></li>
+        <li><b>Règles partagées client/serveur = fonctions pures.</b> <span>Ex : validité d'une pose, utilisée par l'aperçu et par le serveur.</span></li>
+        <li><b>Commentaires = le pourquoi.</b> <span><code>// TODO (Prénom) :</code> pour ce qui reste.</span></li>
+      </ol></div>
+    </details>
+    <details class="rule">
+      <summary>Règles réseau (FishNet, l'hôte = serveur)</summary>
+      <div class="rb"><ol>
+        <li><b>L'hôte décide de tout</b> : phases, rôles, pose, tirs, munitions, capture, victoire. <span>Le client envoie des intentions, jamais des résultats.</span></li>
+        <li><b>Toute RPC client → serveur est hostile.</b> <span>Vérifier rôle, phase, cadence, distance, état.</span></li>
+        <li><b>Aucun secret en SyncVar.</b> <span>Le rôle passe par TargetRpc, « est un anachronisme » reste sur le serveur.</span></li>
+        <li><b>SyncVar = état, RPC = événement.</b> <span>Animations et FX calculés en local.</span></li>
+        <li><b>PNJ et méchant : synchro strictement identique.</b> <span>Même NetworkTransform, même fréquence, Animator par la vitesse. Sinon le méchant se repère.</span></li>
+        <li><b>Le temps en ticks</b> (TimeManager), <span>pas Time.time côté client.</span></li>
+        <li><b>Code des deux côtés protégé</b> par IsServerInitialized / IsOwner, <span>méthodes serveur en [Server].</span></li>
+        <li><b>Tester avec hôte + 2 clients</b>, <span>et chaque semaine à 120 ms / 2 % de perte.</span></li>
+        <li><b>Seul point client-autoritaire : le mouvement.</b> <span>Pas de prédiction / réconciliation.</span></li>
+        <li><b>Vocal de proximité pour tous, sans indicateur au-dessus des têtes.</b> <span>Sinon le méchant qui parle est repéré.</span></li>
+      </ol></div>
+    </details>
+    <details class="rule">
+      <summary>Git</summary>
+      <div class="rb"><ul>
+        <li><b>Setup :</b> <span>.gitignore Unity officiel, Force Text, Visible Meta Files, Git LFS (fbx, blend, png, psd, tga, wav, ogg, mp3, ttf), .gitattributes avec unityyamlmerge.</span></li>
+        <li><b>Branches :</b> <span><code>main</code> toujours buildable · <code>Dev</code> intégration (part de main) · <code>Feat-sujet</code> / <code>Fix-sujet</code> depuis <code>Dev</code>.</span></li>
+        <li><b>PR :</b> <span>petites, relues par un autre dev.</span></li>
+        <li><b>Commits :</b> <span><code>feat: pose des objets</code> · <code>fix: désync PNJ</code> · <code>ld: greybox marché</code>.</span></li>
+        <li><b>Scènes :</b> <span>chacun dans <code>Sandbox_Prenom</code>. La map = Théo, les autres ajoutent des prefabs. <code>git lfs lock</code> avant de toucher une scène partagée.</span></li>
+        <li><b>.meta :</b> <span>toujours committés. Jamais renommer / déplacer un asset hors de Unity.</span></li>
+        <li><b>Références Missing :</b> <span>.meta manquant. Images de 130 octets : <code>git lfs install &amp;&amp; git lfs pull</code>.</span></li>
+      </ul></div>
+    </details>
+    <details class="rule">
+      <summary>Code déjà fourni (zip)</summary>
+      <div class="rb tbl">
+        <table>
+          <thead><tr><th>Fichier</th><th>Contenu</th><th>Suite</th></tr></thead>
+          <tbody>
+            <tr><td><code>Network/GameTypes.cs</code></td><td>Phases, rôles, vainqueur, réglages + préréglages</td><td>Théo</td></tr>
+            <tr><td><code>Network/MatchManager.cs</code></td><td>Phases, rôles secrets, chrono, dégradation, munitions, tir validé serveur, capture, portail</td><td>Théo</td></tr>
+            <tr><td><code>Network/HiddenWhileHidingCondition.cs</code></td><td>Méchants + objets invisibles aux gentils pendant la cache</td><td>Théo</td></tr>
+            <tr><td><code>Gameplay/Anachronisms/PlacedAnachronism.cs</code></td><td>Objet posé, état « trouvé »</td><td>Célian</td></tr>
+            <tr><td><code>Npc/NpcAgent.cs</code></td><td>Marqueur PNJ, IA à écrire</td><td>Olivier</td></tr>
+          </tbody>
+        </table>
+        <p class="note" style="margin-top:10px">Écrit pour FishNet v4, non compilé : vérifier les signatures à l'import.</p>
+      </div>
+    </details>
+  </section>
+  <section data-panel="archi" id="p-archi" hidden>
+    <style>
+    /* Diagramme de classes en lecture seule : bandes = couches (de haut en bas), colonnes = fonctionnalités.
+       Couleur d'une boîte = sorte de classe (comme une légende UML), pas son responsable. */
+    :root{--k-ui:#FBDDEC;--k-ui-b:#C2418B;--k-if:#E7DCF8;--k-if-b:#7B4FC9;--k-so:#FCEFC2;--k-so-b:#B58A0B;--k-mono:#DAF2E3;--k-mono-b:#1F8A5B;
+      --k-net:#DFE8FB;--k-net-b:#2F5FD0;--k-cs:#E9EBF0;--k-cs-b:#6B7285;--k-en:#D6F2F5;--k-en-b:#138A99;--ar-note:#FFF4C2;--ar-note-fg:#5C4A00}
+    @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--k-ui:#45213A;--k-ui-b:#E57CB8;--k-if:#33264D;--k-if-b:#B596F0;--k-so:#3D3313;--k-so-b:#E3BF4F;
+      --k-mono:#173226;--k-mono-b:#5CC994;--k-net:#1D2742;--k-net-b:#7FA3F5;--k-cs:#2A2E39;--k-cs-b:#AEB4C4;--k-en:#123236;--k-en-b:#5FD0DD;--ar-note:#3A3216;--ar-note-fg:#F2DE8C}}
+    :root[data-theme="dark"]{--k-ui:#45213A;--k-ui-b:#E57CB8;--k-if:#33264D;--k-if-b:#B596F0;--k-so:#3D3313;--k-so-b:#E3BF4F;
+      --k-mono:#173226;--k-mono-b:#5CC994;--k-net:#1D2742;--k-net-b:#7FA3F5;--k-cs:#2A2E39;--k-cs-b:#AEB4C4;--k-en:#123236;--k-en-b:#5FD0DD;--ar-note:#3A3216;--ar-note-fg:#F2DE8C}
+    .k-ui{--kb:var(--k-ui);--kc:var(--k-ui-b)} .k-if{--kb:var(--k-if);--kc:var(--k-if-b)} .k-so{--kb:var(--k-so);--kc:var(--k-so-b)} .k-mono{--kb:var(--k-mono);--kc:var(--k-mono-b)}
+    .k-net{--kb:var(--k-net);--kc:var(--k-net-b)} .k-cs{--kb:var(--k-cs);--kc:var(--k-cs-b)} .k-en{--kb:var(--k-en);--kc:var(--k-en-b)}
+    #p-archi [hidden]{display:none!important}
+    #p-archi .ghost.small{padding:5px 11px;font-size:13px}
+    #p-archi .ghost[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+    .ar-bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px}
+    .ar-bar .sp{flex:1}
+    /* Légende en cartes, comme sur un board : sortes de classes, liens, lecture des membres, règle des couches. */
+    .ar-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:12px}
+    .ar-legend .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:5px}
+    .ar-legend h5{margin:0 0 2px;font:700 13px var(--f-body);color:var(--fg)}
+    .ar-legend .it{display:flex;align-items:center;gap:8px}
+    .ar-legend .chip{width:16px;height:12px;border-radius:3px;background:var(--kb);border:1.5px solid var(--kc);flex:none}
+    .ar-legend svg{flex:none}
+    .ar-legend code{font:600 12px var(--f-mono);color:var(--fg)}
+    .ar-legend .nw{color:var(--accent);font:600 12px var(--f-mono)}
+    .ar-main{position:relative;display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--sunk);height:max(480px,calc(100vh - 230px))}
+    .ar-canvas{position:relative;flex:1;min-width:0;overflow:hidden;touch-action:none;cursor:grab;outline:none;user-select:none;-webkit-user-select:none}
+    .ar-canvas *{-webkit-user-drag:none}
+    .ar-canvas:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+    .ar-canvas.panning{cursor:grabbing}
+    .ar-world{position:absolute;left:0;top:0;transform-origin:0 0}
+    .ar-band{position:absolute;border-radius:14px;background:var(--bg);border:1.5px solid var(--line)}
+    .ar-band h4{position:absolute;left:18px;top:12px;margin:0;font:800 19px var(--f-display);letter-spacing:-.01em;color:var(--fg);white-space:nowrap}
+    .ar-band h4 small{font:500 14px var(--f-body);color:var(--muted);margin-left:10px;letter-spacing:0}
+    .ar-colh{position:absolute;font:700 15px var(--f-body);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:center}
+    .ar-edges{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}
+    .ar-edges g{display:none}
+    .ar-edges g.show{display:inline;opacity:.6}
+    .ar-edges g.on{display:inline;opacity:1}
+    .ar-edges path.v{fill:none;stroke-width:1.4;stroke-linejoin:round}
+    .ar-edges g.on path.v{stroke-width:2.6}
+    .ar-edges text{font:700 11px var(--f-mono);paint-order:stroke;stroke:var(--sunk);stroke-width:4px;stroke-linejoin:round}
+    .ar-edges text.lb{display:none;font:700 12px var(--f-body)}
+    .ar-edges g.on text.lb{display:inline}
+    /* Boîte UML : en-tête coloré (stéréotype, nom), compartiments champs et méthodes, note en bas. */
+    .ar-node{position:absolute;width:270px;background:var(--surface);border:1.5px solid var(--kc);border-radius:7px;overflow:hidden;
+      font-size:11.5px;line-height:1.38;box-shadow:0 1px 2px rgba(0,0,0,.08);cursor:pointer;user-select:none}
+    .ar-node.dim{opacity:.25}
+    .ar-node.near{box-shadow:0 0 0 2px var(--kc)}
+    .ar-node.sel{box-shadow:0 0 0 4px var(--kb),0 0 0 6px var(--kc)}
+    .ar-node .hd{padding:5px 8px 5px;text-align:center;background:var(--kb);border-bottom:1.5px solid var(--kc)}
+    .ar-node .stp{font-size:10.5px;color:var(--muted)}
+    .ar-node .n{font:700 14px var(--f-mono);overflow-wrap:anywhere;color:var(--fg)}
+    .ar-node.k-if .n{font-style:italic}
+    .ar-node .meta{display:flex;justify-content:center;gap:6px;align-items:center;font-size:10.5px;color:var(--muted);margin-top:1px;flex-wrap:wrap}
+    .ar-node .st{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 5px;border-radius:99px}
+    .st-ok .st{background:var(--done-soft);color:var(--done)} .st-mod .st{background:var(--doing-soft);color:var(--doing)} .st-new .st{background:var(--surface);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+    .ar-node ul{margin:0;padding:4px 8px 5px;list-style:none;font-family:var(--f-mono);font-size:11px}
+    .ar-node ul+ul{border-top:1px solid var(--line)}
+    .ar-node li{overflow-wrap:anywhere;padding-left:1.2ch;text-indent:-1.2ch}
+    .ar-node li.nw,.ar-panel li.nw{color:var(--accent);font-weight:600}
+    .ar-node .nt{background:var(--ar-note);color:var(--ar-note-fg);padding:5px 8px;font-size:11px;border-top:1px solid var(--line)}
+    .ar-zoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}
+    .ar-zoom button{width:34px;height:34px;font:700 18px var(--f-body);background:var(--surface);color:var(--fg);border:1.5px solid var(--line);border-radius:8px;cursor:pointer}
+    .ar-panel{width:340px;flex:none;border-left:1px solid var(--line);background:var(--surface);overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+    .ar-panel h3{font-size:18px;overflow-wrap:anywhere}
+    .ar-panel h4{margin:4px 0 0;font:700 13px var(--f-body);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .ar-panel .row{display:flex;gap:6px;align-items:center}
+    .ar-panel .ro{font-size:14px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+    .ar-panel .ro.nt{background:var(--ar-note);color:var(--ar-note-fg);padding:8px 10px;border-radius:8px}
+    .ar-panel ul{margin:0;padding:0;list-style:none;font-family:var(--f-mono);font-size:12.5px}
+    .ar-panel li{overflow-wrap:anywhere;padding:1px 0}
+    .ar-links{display:flex;flex-direction:column;gap:3px;font-size:13px}
+    .ar-links button{all:unset;cursor:pointer;padding:3px 6px;border-radius:6px;overflow-wrap:anywhere}
+    .ar-links button:hover,.ar-links button:focus-visible{background:var(--sunk)}
+    .ar-links i{font-style:normal}
+    .ar-x{margin-left:auto}
+    @media (max-width:700px){
+      .ar-main{height:max(420px,calc(100vh - 200px))}
+      .ar-panel{position:absolute;left:0;right:0;bottom:0;width:auto;max-height:60%;border-left:0;border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(0,0,0,.15);z-index:3}
+    }
+    </style>
+    <div class="ar-bar">
+      <p class="note" style="margin:0">Diagramme de classes : une bande par couche, une colonne par fonctionnalité. <b>Clique une classe</b> pour voir tous ses liens. Glisser pour se déplacer, molette ou pincer pour zoomer, double-clic sur une classe pour la centrer.</p>
+      <span class="sp"></span>
+      <button type="button" class="ghost small" id="ar-all" aria-pressed="false">Tous les liens</button>
+      <button type="button" class="ghost small" id="ar-fit">Tout voir</button>
+    </div>
+    <div class="ar-legend" id="ar-legend"></div>
+    <div class="ar-main">
+      <div class="ar-canvas" id="ar-canvas" tabindex="0" aria-label="Diagramme de classes du code">
+        <div class="ar-world" id="ar-world"><div id="ar-bands"></div><div id="ar-nodes"></div><svg class="ar-edges" id="ar-edges" aria-hidden="true"></svg></div>
+        <div class="ar-zoom"><button type="button" id="ar-zin" aria-label="Zoomer">+</button><button type="button" id="ar-zout" aria-label="Dézoomer">−</button></div>
+      </div>
+      <aside class="ar-panel" id="ar-panel" hidden></aside>
+    </div>
+  </section>
+</div>
+<div id="sprint" hidden></div>
+<div id="editor" hidden></div>
+
+<script>
+const ST = {todo:"À faire", doing:"En cours", done:"Fait", blocked:"Bloqué"};
+const PEOPLE = {theo:"Théo", celian:"Célian", olivier:"Olivier", hanae:"Hanaé", art1:"Hugo", art2:"JB", tous:"Équipe"};
+const COLS = [
+  {k:"theo", who:["theo"]}, {k:"celian", who:["celian"]}, {k:"olivier", who:["olivier"]}, {k:"hanae", who:["hanae"]},
+  {k:"art", label:"Artistes", who:["art1","art2"]}, {k:"tous", label:"Équipe (hors code)", who:["tous"]},
+];
+const CATS = ["Online","LD","Gameplay","Data","PNJ","Monde","UI","Audio","Outils","Art","Prod","Playtest","Steam","Marketing"];
+const colorOf = who => who && who.startsWith("art") ? "art" : (who || "tous");
+const colLabel = c => c.label || PEOPLE[c.k];
+
+// Calendrier : vient du serveur (meta 'calendar'), modifiable depuis Planning et Jalons (openCalendar).
+// WEEKS garde l'ancienne forme (d = libellé, m = jalon) et MILES = [semaine, date, titre, critère, date ISO].
+let CAL = {v:0, weeks:[], miles:[]};
+let WEEKS = [], SW = [], MILES = [];
+const MONTHS = ["jan","fév","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"];
+const dayLabel = s => { const d = day(s); return d.getDate()+" "+MONTHS[d.getMonth()]; };
+const rangeLabel = (a,b) => { const [da,ma] = dayLabel(a).split(" "), [db,mb] = dayLabel(b).split(" "); return ma===mb ? `${da}–${db} ${mb}` : `${da} ${ma}–${db} ${mb}`; };
+function setCalendar(cal){
+  CAL = cal;
+  const ms = new Map(cal.miles.map(m=>[m.wk,m]));
+  WEEKS = cal.weeks.map(w => w.s ? {...w, d:rangeLabel(w.a,w.b), m:ms.get(w.s)?.t} : {gap:w.gap});
+  SW = WEEKS.filter(w=>w.s);
+  MILES = SW.filter(w=>ms.has(w.s)).map(w=>{ const m = ms.get(w.s); return [w.s, dayLabel(w.b), m.t, m.c, w.b]; });
+  CUR = findCur();
+}
+const ALERTS = [
+  ["Il reste 10,5 semaines de studio, pas 20","Jusqu'à fin mars : S2 → S12, environ 315 h par dev. Février : 0 semaine studio, novembre : 1."],
+  ["1 map en mars, la 2e en juin","Sortie avec 1 map bien finie. MAJ 1.1 fin avril (bugs), MAJ 1.2 mi-juin (map 2)."],
+  ["Démo finie le 29 janvier","Le Next Fest est en février et il n'y a aucune semaine studio en février. Vérifier la date limite d'inscription."],
+  ["Steam : s'y prendre tôt","AppID payant (qui paie ?). Page « bientôt disponible » 2 semaines minimum avant la sortie, review du build = plusieurs jours. Page en ligne fin S6."],
+  ["Les trous de 5-6 semaines","Fin de chaque bloc : main buildable + une note sur où on en est. Après la sortie, quelqu'un surveille les avis et les bugs bloquants."],
+  ["Artistes : map 2 en avance","Le kit de la map 2 doit commencer dès que la map 1 est finie, sinon la MAJ 1.2 ne tient pas."],
+];
+const ROLES = [
+  ["theo","theo","Online (FishNet, Steam, vocal, validation serveur, builds) + level design"],
+  ["celian","celian","Joueur & gameplay : contrôleur, pistolet, pose, capture, portail, photos, data"],
+  ["olivier","olivier","PNJ, monde & présentation : foule, dégradation, glitchs, HUD, menu & lobby, audio"],
+  ["hanae","hanae","UI : menus secondaires (pause, options, fin, crédits), accessibilité, traduction, visuels"],
+  ["art1","art","Persos & animations : PNJ, skins, anims, PNJ de l'époque 2"],
+  ["art2","art","Décors & props : anachronismes, kits d'époque, habillage, visuels Steam"],
+  ["tous","tous","Hors code : organisation, playtests, page Steam, trailer, réseaux, lancement"],
+];
+
+// ---------- état ----------
+let tasks = new Map(); let me=null, rev=0, editorOpen=false;          // id -> doc
+let loaded = false, db = null, canWrite = false;
+let LINKS = []; const TOG = new Map(); let SPRINT = null; let expandAll = false; let DRAG = null;
+const $ = (s,r=document) => r.querySelector(s);
+const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; };
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const day = s => new Date(s+"T00:00:00");
+const today = (()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; })();
+const wIdx = s => SW.findIndex(w=>w.s===s);
+function findCur(){
+  if(!SW.length) return {w:{s:"", d:""}, live:false};
+  const w = SW.find(w=> today>=day(w.a) && today<=new Date(day(w.b).getTime()+2*864e5));
+  return w ? {w, live:true} : {w: SW.find(w=>day(w.a)>today) || SW[SW.length-1], live:false};
+}
+let CUR = findCur();
+const name = who => PEOPLE[who] || who;
+const isLate = t => wIdx(t.wk) < wIdx(CUR.w.s) && t.s!=="done";
+
+function list(){ return [...tasks.values()].sort((a,b)=> (wIdx(a.wk)-wIdx(b.wk)) || ((a.o??0)-(b.o??0)) || a.id.localeCompare(b.id)); }
+function groupsOf(arr){
+  const m = new Map();
+  for(const t of arr){ if(!m.has(t.g)) m.set(t.g,{g:t.g, gt:t.gt, who:t.who, cat:t.cat, wk:t.wk, items:[]}); m.get(t.g).items.push(t); }
+  return [...m.values()];
+}
+
+// ---------- écritures ----------
+async function writeStatus(id, s){
+  const t = tasks.get(id); if(!t || t.s===s) return;
+  t.s = s; scheduleRender();
+  try{ await api("/api/tasks/"+encodeURIComponent(id),{method:"PATCH",body:JSON.stringify({s})}); load(); }catch(e){ if(e.message!=="auth") note("Le statut n'a pas été enregistré : "+e.message); }
+}
+function body(t){ return {g:t.g, gt:t.gt, t:t.t, who:t.who, wk:t.wk, cat:t.cat, s:t.s, o:t.o??0}; }
+
+// ---------- rendu ----------
+let raf = 0;
+function scheduleRender(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(renderAll); }
+
+function subRow(t, showWho){
+  const r = el("div","sub"+(t.s==="done"?" done":""));
+  if(t.updated_by) r.title = "Modifié par "+name(t.updated_by)+" le "+new Date(t.updated_at).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+  const cb = el("input"); cb.type="checkbox"; cb.id="cb-"+t.id+"-"+Math.random().toString(36).slice(2,6);
+  cb.checked = t.s==="done"; cb.disabled = !canWrite; cb.setAttribute("aria-label", t.t);
+  cb.addEventListener("change",()=>writeStatus(t.id, cb.checked?"done":"todo"));
+  const txt = el("label","txt", esc(t.t) + (t.s==="doing"||t.s==="blocked" ? `<span class="badge ${t.s}">${ST[t.s]}</span>`:"") + (showWho?`<span class="who">${esc(name(t.who))}</span>`:""));
+  txt.htmlFor = cb.id;
+  r.append(cb, txt);
+  if(canWrite){ const e = el("button","edit","✎"); e.type="button"; e.title="Modifier"; e.setAttribute("aria-label","Modifier « "+t.t+" »"); e.addEventListener("click",()=>openEditor(t)); r.append(e); }
+  return r;
+}
+function groupCard(g, opts={}){
+  const done = g.items.filter(t=>t.s==="done").length, all = done===g.items.length;
+  const key = (opts.ctx||"c")+"|"+g.g+"|"+g.wk;
+  const open = TOG.has(key) ? TOG.get(key) : !all;
+  const c = el("div","gcard c-"+colorOf(g.who)+(all?" alldone":"")+(open?"":" shut"));
+  c.dataset.g = g.g;
+  const hd = el("header",null,`<span class="tag">${esc(g.cat)}</span><h4>${esc(g.gt)}</h4><span class="cnt">${done}/${g.items.length}${opts.wk?" · "+g.wk:""}</span>`);
+  hd.tabIndex = 0; hd.setAttribute("role","button"); hd.setAttribute("aria-expanded",String(open));
+  const tog = ()=>{ const o = c.classList.toggle("shut"); TOG.set(key,!o); hd.setAttribute("aria-expanded",String(!o)); };
+  hd.addEventListener("click",tog); hd.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tog(); } });
+  c.append(hd);
+  const subs = el("div","subs"); g.items.forEach(t=>subs.append(subRow(t, opts.showWho && (t.who!==g.who)))); c.append(subs);
+  return c;
+}
+function counts(ts){ const k={done:0,doing:0,blocked:0,todo:0}; ts.forEach(t=>k[t.s]=(k[t.s]||0)+1); return k; }
+function miniBar(ts){
+  const n=ts.length||1, k=counts(ts);
+  return `<div class="mbar"><i style="width:${100*k.done/n}%;background:var(--done)"></i><i style="width:${100*k.doing/n}%;background:var(--doing)"></i><i style="width:${100*k.blocked/n}%;background:var(--blocked)"></i></div>`;
+}
+function sprintState(w){ return w===CUR.w ? (CUR.live?"En cours":"Prochain") : day(w.b)<today ? "Passé" : "À venir"; }
+
+function renderNow(){
+  const next = MILES.find(m=>day(m[4])>=today);
+  const days = next ? Math.round((day(next[4])-today)/864e5) : 0;
+  $("#now").innerHTML = (SW.length?`<button type="button" class="pill-box hot clk" id="pill-cur" title="Voir le contenu du sprint"><div class="k">${CUR.live?"Semaine studio en cours":"Prochaine semaine studio"}</div><div class="v">${CUR.w.s} <small>${CUR.w.d} · voir →</small></div></button>`:"")
+   + (next?`<div class="pill-box"><div class="k">Prochain jalon</div><div class="v">${esc(next[2])} <small>${next[1]} · J-${days}</small></div></div>`:"")
+   + (me?`<div class="pill-box"><div class="k">Connecté</div><div class="v">${esc(me.name)} <small>${me.role==="admin"?`<a href="/admin">Admin</a> · `:""}<a href="#" id="logout">Déconnexion</a></small></div></div>`:"");
+  const pc = $("#pill-cur"); if(pc) pc.addEventListener("click",()=>openSprint(CUR.w.s));
+  renderLinks();
+  const lo = $("#logout"); if(lo) lo.addEventListener("click",async e=>{ e.preventDefault(); await fetch("/api/logout",{method:"POST"}); location.reload(); });
+}
+
+function renderLinks(){
+  const q = $("#quick"); if(!q) return; q.innerHTML="";
+  LINKS.forEach((l,i)=>{ const a = el("a","qbtn"+(i===0?" main":""),`${i===0?"📘":"🔗"} ${esc(l.label)} <span class="ext">↗</span>`); a.href=l.url; a.target="_blank"; a.rel="noopener noreferrer"; q.append(a); });
+  if(!LINKS.length && me && me.role==="admin"){ const a = el("a","qbtn add","+ Ajouter le lien du GDD"); a.href="/admin#liens"; q.append(a); }
+  if(LINKS.length && me && me.role==="admin"){ const a = el("a","qbtn add","✎"); a.href="/admin#liens"; a.title="Modifier les liens"; a.setAttribute("aria-label","Modifier les liens"); q.append(a); }
+}
+
+function renderProgress(){
+  const box = $("#progress"); box.innerHTML="";
+  const all = list();
+  for(const c of COLS){
+    const ts = all.filter(t=>c.who.includes(t.who)); const n = ts.length||1;
+    const k = {done:0,doing:0,blocked:0}; ts.forEach(t=>{ if(k[t.s]!=null) k[t.s]++; });
+    const late = ts.filter(isLate).length;
+    const p = el("div","prog c-"+c.k);
+    p.innerHTML = `<div class="row"><span class="name"><i class="dot" style="background:var(--c)"></i>${esc(colLabel(c))}</span><span class="pct">${Math.round(100*k.done/n)} %</span></div>
+      <div class="bar"><i style="width:${100*k.done/n}%;background:var(--done)"></i><i style="width:${100*k.doing/n}%;background:var(--doing)"></i><i style="width:${100*k.blocked/n}%;background:var(--blocked)"></i></div>
+      <div class="meta">${k.done}/${ts.length} faites${late?` · <b style="color:var(--blocked)">${late} en retard</b>`:""}${k.blocked?` · ${k.blocked} bloquée${k.blocked>1?"s":""}`:""}</div>`;
+    box.append(p);
+  }
+}
+
+function renderSemaine(){
+  const p = $("#p-semaine"); p.innerHTML="";
+  if(!tasks.size){ p.append(el("div","empty","Aucune tâche pour l'instant. Va dans « Toutes les tâches » et clique sur « + Ajouter une tâche ».")); return; }
+  const w = CUR.w;
+  const nt = el("p","note",`${CUR.live?"Cette semaine":"Prochaine semaine studio"} : <b>${w.s}</b> (${w.d})${w.m?` — jalon en fin de semaine : <b>${esc(w.m)}</b>`:""}. Coche ce qui est fait, tout le monde le voit. Clique sur un groupe pour le replier. `);
+  const sb = el("button","linkbtn","Vue d'ensemble du sprint →"); sb.type="button"; sb.addEventListener("click",()=>openSprint(w.s)); nt.append(sb); p.append(nt);
+  const cols = el("div","cols"); const all = list();
+  for(const c of COLS){
+    const col = el("div","col c-"+c.k);
+    const mine = all.filter(t=>c.who.includes(t.who));
+    const now = mine.filter(t=>t.wk===w.s); const late = mine.filter(isLate);
+    const gs = groupsOf(now);
+    col.append(el("div","colh",`<i class="dot" style="background:var(--c)"></i><h3>${esc(colLabel(c))}</h3><span>${now.filter(t=>t.s==="done").length}/${now.length}</span>`));
+    gs.forEach(g=>col.append(groupCard(g,{showWho:c.who.length>1, ctx:"sem"})));
+    if(!gs.length) col.append(el("div","empty","Rien cette semaine."));
+    if(late.length){
+      const d = el("details","late"); d.append(el("summary",null,`En retard (${late.length})`));
+      groupsOf(late).forEach(g=>d.append(groupCard(g,{wk:true,showWho:c.who.length>1, ctx:"late"})));
+      col.append(d);
+    }
+    cols.append(col);
+  }
+  p.append(cols);
+}
+
+function renderPlanning(){
+  const p = $("#p-planning"); p.innerHTML="";
+  const nt = el("p","note","Une ligne = un sprint (une semaine studio, 30 h/dev). <b>Clique sur un sprint ou sur un bloc pour voir son contenu.</b> Bandes hachurées = pas de studio."+(canWrite?" Glisse un bloc sur une autre ligne pour le changer de semaine. ":""));
+  if(canWrite){ const b = el("button","linkbtn","✎ Modifier les semaines"); b.type="button"; b.addEventListener("click",()=>openCalendar("weeks")); nt.append(b); }
+  p.append(nt);
+  const wrap = el("div","plan"); const g = el("div","pgrid"); const all = list();
+  g.append(el("div","phead","Semaine"));
+  COLS.forEach(c=>g.append(el("div","phead c-"+c.k,`<i class="dot" style="background:var(--c)"></i>${esc(colLabel(c))}`)));
+  for(const w of WEEKS){
+    if(w.gap){ g.append(el("div","gapline",esc(w.gap))); continue; }
+    if(w.phase) g.append(el("div","phase",esc(w.phase)));
+    const past = day(w.b)<today && w!==CUR.w;
+    const lab = el("div","wk"+(w===CUR.w?" cur":"")+(past?" row-past":""));
+    const lb = el("button",null,`<h3>${w.s}</h3><div class="d">${w.d}</div>${w===CUR.w?`<span class="now-tag">${CUR.live?"Maintenant":"Prochaine"}</span><br>`:""}${w.m?`<span class="mile">◆ ${esc(w.m)}</span><br>`:""}<span class="see">Voir →</span>`);
+    lb.type="button"; lb.setAttribute("aria-label",`Voir le sprint ${w.s}`); lb.addEventListener("click",()=>openSprint(w.s));
+    lab.append(lb); g.append(lab); dropZone(lab, w.s);
+    for(const c of COLS){
+      const cell = el("div",past?"row-past":""); const chips = el("div","chips"); dropZone(cell, w.s);
+      groupsOf(all.filter(t=>t.wk===w.s && c.who.includes(t.who))).forEach(gr=>{
+        const done = gr.items.filter(t=>t.s==="done").length, bl = gr.items.some(t=>t.s==="blocked");
+        const ch = el("button","chip c-"+colorOf(gr.who)+(done===gr.items.length?" cdone":"")+(bl?" cblocked":""),`<span>${esc(gr.gt)}</span><b>${done}/${gr.items.length}</b>`);
+        ch.type="button"; ch.addEventListener("click",()=>openSprint(w.s, gr.g)); chips.append(ch);
+        if(canWrite){
+          ch.draggable = true; ch.title = "Glisser sur une autre semaine pour déplacer ce bloc";
+          ch.addEventListener("dragstart",e=>{ DRAG = {ids: gr.items.map(t=>t.id), from: w.s}; e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain", gr.gt); ch.classList.add("dragging"); });
+          ch.addEventListener("dragend",()=>{ DRAG = null; ch.classList.remove("dragging"); hlDrop(null); });
+        }
+      });
+      cell.append(chips); g.append(cell);
+    }
+  }
+  wrap.append(g); p.append(wrap);
+}
+
+const F = {who:"all", st:"all", cat:"all", q:""};
+function renderTaches(){
+  const p = $("#p-taches");
+  const hadFocus = document.activeElement && document.activeElement.id==="q";
+  p.innerHTML="";
+  const bar = el("div","toolbar");
+  for(const [k,v] of [["all","Tout le monde"],...COLS.map(c=>[c.k,colLabel(c)])]){
+    const b = el("button","chipbtn"+(k!=="all"?" c-"+k:""),(k!=="all"?`<i class="dot" style="background:var(--c)"></i>`:"")+esc(v));
+    b.type="button"; b.setAttribute("aria-pressed",String(F.who===k)); b.addEventListener("click",()=>{F.who=k; renderTaches();}); bar.append(b);
+  }
+  p.append(bar);
+  const bar2 = el("div","toolbar");
+  const sSt = el("select"); sSt.id="f-st"; sSt.setAttribute("aria-label","Filtrer par statut");
+  [["all","Tous les statuts"],["open","Pas fait"],["late","En retard"],...Object.entries(ST)].forEach(([k,v])=>{const o=el("option",null,v);o.value=k;sSt.append(o);});
+  sSt.value=F.st; sSt.addEventListener("change",()=>{F.st=sSt.value; renderTaches();});
+  const sCat = el("select"); sCat.id="f-cat"; sCat.setAttribute("aria-label","Filtrer par catégorie");
+  [["all","Toutes les catégories"],...CATS.map(c=>[c,c])].forEach(([k,v])=>{const o=el("option",null,v);o.value=k;sCat.append(o);});
+  sCat.value=F.cat; sCat.addEventListener("change",()=>{F.cat=sCat.value; renderTaches();});
+  const q = el("input"); q.type="search"; q.id="q"; q.placeholder="Rechercher une tâche…"; q.value=F.q;
+  q.addEventListener("input",()=>{F.q=q.value; clearTimeout(q._t); q._t=setTimeout(renderTaches,200);});
+  bar2.append(sSt,sCat,q);
+  if(canWrite){ const add = el("button","primary","+ Ajouter une tâche"); add.type="button"; add.addEventListener("click",()=>openEditor(null)); bar2.append(add); }
+  p.append(bar2);
+  if(hadFocus){ q.focus(); q.setSelectionRange(q.value.length,q.value.length); }
+
+  const col = COLS.find(c=>c.k===F.who);
+  const needle = F.q.trim().toLowerCase();
+  const keep = t => (!col || col.who.includes(t.who))
+    && (F.st==="all" || (F.st==="open" ? t.s!=="done" : F.st==="late" ? isLate(t) : t.s===F.st))
+    && (F.cat==="all" || t.cat===F.cat)
+    && (!needle || (t.t+" "+t.gt).toLowerCase().includes(needle));
+  const all = list().filter(keep);
+  const filtering = !!needle || F.st!=="all";
+  const nG = groupsOf(all).length;
+  const info = el("p","note",`${all.length} tâche${all.length>1?"s":""} · ${nG} groupe${nG>1?"s":""}. Clique sur un groupe pour voir ses tâches, sur un sprint pour sa vue d'ensemble. `);
+  const xa = el("button","linkbtn",expandAll?"Tout replier":"Tout déplier"); xa.type="button"; xa.addEventListener("click",()=>{ expandAll=!expandAll; [...TOG.keys()].filter(k=>k.startsWith("list|")).forEach(k=>TOG.delete(k)); renderTaches(); });
+  info.append(xa); p.append(info);
+  if(!all.length){ p.append(el("div","empty", loaded ? "Aucune tâche ne correspond." : "Chargement…")); return; }
+  const section = (w, ts) => {
+    const sec = el("div","spr"+(w&&w===CUR.w?" cur":""));
+    if(w){
+      const full = list().filter(t=>t.wk===w.s), k = counts(full);
+      const h = el("button","sprh",`<span class="sn">${w.s}</span><span class="sd"><b>${w.d}</b> · ${sprintState(w)}${w.m?`<span class="sm">◆ ${esc(w.m)}</span>`:""}</span><span class="mini">${miniBar(full)}<span class="mnum">${k.done}/${full.length}</span></span><span class="go">Voir le sprint →</span>`);
+      h.type="button"; h.addEventListener("click",()=>openSprint(w.s)); sec.append(h);
+    } else sec.append(el("div","sprh",`<span class="sn">—</span><span class="sd"><b>Sans semaine</b></span>`));
+    const gl = el("div","glist");
+    groupsOf(ts).forEach(g=>gl.append(groupRow(g, filtering)));
+    sec.append(gl); return sec;
+  };
+  for(const w of SW){ const ts = all.filter(t=>t.wk===w.s); if(ts.length) p.append(section(w, ts)); }
+  const orphan = all.filter(t=>wIdx(t.wk)<0);
+  if(orphan.length) p.append(section(null, orphan));
+}
+function groupRow(g, filtering){
+  const key = "list|"+g.g+"|"+g.wk;
+  const k = counts(g.items), all = k.done===g.items.length;
+  const open = TOG.has(key) ? TOG.get(key) : (expandAll || filtering);
+  const r = el("div","grow c-"+colorOf(g.who)+(all?" alldone":"")+(open?" open":""));
+  const whos = [...new Set(g.items.map(t=>name(t.who)))].join(", ");
+  const flags = (k.blocked?`<span class="badge blocked">${k.blocked} bloquée${k.blocked>1?"s":""}</span>`:"") + (k.doing?`<span class="badge doing">${k.doing} en cours</span>`:"") + (g.items.some(isLate)?`<span class="badge blocked">En retard</span>`:"");
+  const b = el("button",null,`<span class="stripe"></span><span class="gt"><span>${esc(g.gt)}</span><span class="tag">${esc(g.cat)}</span>${flags}</span><span class="gw">${esc(whos)}</span><span class="mini">${miniBar(g.items)}<span class="mnum">${k.done}/${g.items.length}</span></span><span class="chev">▶</span>`);
+  b.type="button"; b.setAttribute("aria-expanded",String(open));
+  const subs = el("div","subs"); subs.hidden = !open;
+  b.addEventListener("click",()=>{
+    const o = !r.classList.contains("open"); r.classList.toggle("open",o); subs.hidden=!o; b.setAttribute("aria-expanded",String(o)); TOG.set(key,o);
+    if(o && !subs.childElementCount) g.items.forEach(t=>subs.append(subRow(t, t.who!==g.who)));
+  });
+  if(open) g.items.forEach(t=>subs.append(subRow(t, t.who!==g.who)));
+  r.append(b, subs); return r;
+}
+
+function renderJalons(){
+  const p = $("#p-jalons"); p.innerHTML="";
+  if(canWrite){ const nt = el("p","note","Un jalon tombe le dernier jour de sa semaine. "); const b = el("button","linkbtn","✎ Modifier les jalons"); b.type="button"; b.addEventListener("click",()=>openCalendar("miles")); nt.append(b); p.append(nt); }
+  const nextIdx = MILES.findIndex(m=>day(m[4])>=today);
+  const box = el("div","miles");
+  MILES.forEach((m,i)=>{
+    const cls = (nextIdx<0||i<nextIdx) ? "past" : i===nextIdx ? "next" : "later";
+    const row = el("div","ms clk"+(cls==="next"?" next":""),`<div class="when">${m[0]}<small>${m[1]}</small></div><div><h3>${esc(m[2])}</h3><p>${esc(m[3])}</p></div><span class="state st-${cls}">${cls==="past"?"Date passée":cls==="next"?"Prochain":"À venir"}</span>`);
+    row.tabIndex=0; row.setAttribute("role","button"); row.title="Voir le contenu du sprint "+m[0];
+    row.addEventListener("click",()=>openSprint(m[0])); row.addEventListener("keydown",e=>{ if(e.key==="Enter"){ openSprint(m[0]); } });
+    box.append(row);
+  });
+  p.append(box);
+}
+
+function renderInfos(){
+  const p = $("#p-infos"); p.innerHTML="";
+  const h1 = el("h2",null,"À lire avant tout"); h1.style.cssText="font-size:24px;margin-bottom:10px"; p.append(h1);
+  const a = el("div","alerts"); ALERTS.forEach(x=>a.append(el("div","alert",`<h3>${esc(x[0])}</h3><p>${esc(x[1])}</p>`))); p.append(a);
+  const h2 = el("h2",null,"Qui fait quoi"); h2.style.cssText="font-size:24px;margin-bottom:10px"; p.append(h2);
+  const r = el("div","roles"); ROLES.forEach(([who,c,txt])=>r.append(el("div","role c-"+c,`<h3>${esc(name(who))}</h3><p>${esc(txt)}</p>`))); p.append(r);
+  if(me && me.role==="admin") p.append(el("p","note","Pour renommer les artistes ou donner les codes d’accès : <a href=\"/admin\">page admin</a>."));
+}
+
+function renderAll(){
+  renderNow(); renderProgress();
+  if(!loaded){ return; }
+  renderSemaine(); renderPlanning(); renderTaches(); renderJalons(); renderInfos();
+  if(SPRINT) renderSprint();
+}
+
+// ---------- fenêtre sprint ----------
+function openSprint(s, focusG){
+  if(wIdx(s)<0) return;
+  SPRINT = {s, focus: focusG||null}; renderSprint(true);
+  try{ history.replaceState(null,"","#sprint-"+s); }catch(e){}
+}
+function closeSprint(){
+  SPRINT=null; const b=$("#sprint"); b.hidden=true; b.innerHTML=""; document.body.style.overflow="";
+  try{ history.replaceState(null,"",location.pathname); }catch(e){}
+}
+function renderSprint(first){
+  const box = $("#sprint"); const old = box.querySelector(".scrim"); const top = old ? old.scrollTop : 0;
+  const w = SW[wIdx(SPRINT.s)]; const i = wIdx(w.s);
+  const ts = list().filter(t=>t.wk===w.s); const k = counts(ts); const n = ts.length||1;
+  const mile = MILES.find(m=>m[0]===w.s);
+  const phase = (()=>{ let ph=""; for(const x of WEEKS){ if(x.phase) ph=x.phase; if(x===w) return ph; } return ph; })();
+  box.hidden=false; box.innerHTML=""; document.body.style.overflow="hidden";
+  const scrim = el("div","scrim"); const sh = el("div","sheet"); sh.setAttribute("role","dialog"); sh.setAttribute("aria-modal","true"); sh.setAttribute("aria-label","Sprint "+w.s);
+  const st = sprintState(w);
+  const hd = el("header");
+  hd.innerHTML = `<div class="sh1"><div><h2>Sprint ${w.s}<small>${w.d}</small></h2><div class="muted" style="margin-top:4px">${esc(phase)} · <span class="st${st==="En cours"||st==="Prochain"?" live":""}">${st}</span></div></div><span class="sp"></span>
+    <div class="navb"><button type="button" class="ghost small" id="sp-prev" ${i<=0?"disabled":""}>← ${i>0?SW[i-1].s:""}</button><button type="button" class="ghost small" id="sp-next" ${i>=SW.length-1?"disabled":""}>${i<SW.length-1?SW[i+1].s:""} →</button><button type="button" class="ghost small" id="sp-close" aria-label="Fermer">✕</button></div></div>
+    ${mile?`<div class="milebox"><b>◆ Jalon de fin de sprint : ${esc(mile[2])}</b><br>${esc(mile[3])}</div>`:""}
+    <div class="stats"><div class="bar"><i style="width:${100*k.done/n}%;background:var(--done)"></i><i style="width:${100*k.doing/n}%;background:var(--doing)"></i><i style="width:${100*k.blocked/n}%;background:var(--blocked)"></i></div>
+      <span><b>${k.done}/${ts.length}</b> faites</span><span><b>${k.doing}</b> en cours</span><span${k.blocked?' style="color:var(--blocked)"':""}><b${k.blocked?' style="color:var(--blocked)"':""}>${k.blocked}</b> bloquée${k.blocked>1?"s":""}</span></div>`;
+  sh.append(hd);
+  const body = el("div","sb");
+  if(!ts.length) body.append(el("div","empty","Aucune tâche prévue sur ce sprint."));
+  for(const c of COLS){
+    const mine = ts.filter(t=>c.who.includes(t.who)); if(!mine.length) continue;
+    const col = el("div","col c-"+c.k);
+    col.append(el("div","colh",`<i class="dot" style="background:var(--c)"></i><h3>${esc(colLabel(c))}</h3><span>${mine.filter(t=>t.s==="done").length}/${mine.length}</span>`));
+    groupsOf(mine).forEach(g=>{ const card = groupCard(g,{showWho:c.who.length>1, ctx:"spr"}); if(SPRINT.focus===g.g){ card.classList.add("hl"); card.classList.remove("shut"); } col.append(card); });
+    body.append(col);
+  }
+  sh.append(body); scrim.append(sh); box.append(scrim);
+  scrim.addEventListener("click",e=>{ if(e.target===scrim) closeSprint(); });
+  $("#sp-close").addEventListener("click",closeSprint);
+  $("#sp-prev").addEventListener("click",()=>{ if(i>0) openSprint(SW[i-1].s); });
+  $("#sp-next").addEventListener("click",()=>{ if(i<SW.length-1) openSprint(SW[i+1].s); });
+  if(first){
+    const f = SPRINT.focus && sh.querySelector(`.gcard.hl`);
+    if(f) setTimeout(()=>f.scrollIntoView({block:"center"}),0); else $("#sp-close").focus();
+  } else scrim.scrollTop = top;
+}
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape" || !SPRINT || editorOpen) return; closeSprint();
+}, true);
+document.addEventListener("keydown",e=>{
+  if(!SPRINT || editorOpen || e.target.closest("input,select,textarea")) return;
+  const i = wIdx(SPRINT.s);
+  if(e.key==="ArrowLeft" && i>0) openSprint(SW[i-1].s);
+  if(e.key==="ArrowRight" && i<SW.length-1) openSprint(SW[i+1].s);
+});
+
+// ---------- éditeur ----------
+function openEditor(t){
+  const isNew = !t;
+  const d = t ? {...t} : {id:null, t:"", g:"", gt:"", who: (COLS.find(c=>c.k===F.who)?.who[0]) || "theo", wk: CUR.w.s, cat:"Gameplay", s:"todo"};
+  const groups = groupsOf(list()).map(g=>[g.g,g.gt,g.wk]);
+  const box = $("#editor"); box.hidden=false; box.innerHTML=""; editorOpen=true;
+  const scrim = el("div","scrim"); const f = el("form","form"); f.setAttribute("role","dialog"); f.setAttribute("aria-modal","true");
+  f.innerHTML = `<h2>${isNew?"Nouvelle tâche":"Modifier la tâche"}</h2>
+    <label>Tâche<input id="e-t" required maxlength="200"></label>
+    <label>Groupe<select id="e-g"></select></label>
+    <label id="e-ngw" hidden>Nom du nouveau groupe<input id="e-ng" maxlength="80"></label>
+    <div class="two"><label>Qui<select id="e-who"></select></label><label>Semaine<select id="e-wk"></select></label></div>
+    <div class="two"><label>Catégorie<select id="e-cat"></select></label><label>Statut<select id="e-s"></select></label></div>
+    <p class="err" id="e-err" hidden></p>
+    <div class="actions">${isNew?"":`<button type="button" class="danger" id="e-del">Supprimer</button>`}<span class="sp"></span><button type="button" class="ghost" id="e-cancel">Annuler</button><button type="submit" class="primary">Enregistrer</button></div>`;
+  scrim.append(f); box.append(scrim);
+  const opt = (sel, pairs, val) => { pairs.forEach(([k,v])=>{const o=el("option",null,esc(v));o.value=k;sel.append(o);}); sel.value=val; };
+  $("#e-t").value = d.t;
+  opt($("#e-g"), [["__new","+ Nouveau groupe…"],...groups.map(([g,gt,wk])=>[g,`${gt} (${wk})`])], d.g || "__new");
+  opt($("#e-who"), Object.keys(PEOPLE).map(k=>[k,PEOPLE[k]]), d.who);
+  opt($("#e-wk"), SW.map(w=>[w.s,`${w.s} — ${w.d}`]), d.wk);
+  opt($("#e-cat"), CATS.map(c=>[c,c]), CATS.includes(d.cat)?d.cat:"Gameplay");
+  opt($("#e-s"), Object.entries(ST), d.s);
+  const syncG = ()=>{ $("#e-ngw").hidden = $("#e-g").value!=="__new"; };
+  $("#e-g").addEventListener("change",()=>{ syncG(); const gg = groups.find(x=>x[0]===$("#e-g").value); if(gg && isNew){ const any=[...tasks.values()].find(x=>x.g===gg[0]); if(any){ $("#e-who").value=any.who; $("#e-wk").value=any.wk; $("#e-cat").value=CATS.includes(any.cat)?any.cat:"Gameplay"; } } });
+  syncG();
+  const close = ()=>{ box.hidden=true; box.innerHTML=""; editorOpen=false; };
+  $("#e-cancel").addEventListener("click",close);
+  scrim.addEventListener("click",e=>{ if(e.target===scrim) close(); });
+  f.addEventListener("keydown",e=>{ if(e.key==="Escape") close(); });
+  const del = $("#e-del");
+  if(del) del.addEventListener("click",async()=>{
+    if(del.dataset.armed!=="1"){ del.dataset.armed="1"; del.textContent="Confirmer la suppression"; return; }
+    tasks.delete(d.id); close(); scheduleRender();
+    try{ await api("/api/tasks/"+encodeURIComponent(d.id),{method:"DELETE"}); load(); }catch(e){ if(e.message!=="auth") note("La suppression a échoué : "+e.message); }
+  });
+  f.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const title = $("#e-t").value.trim(); const gsel = $("#e-g").value; const ng = $("#e-ng").value.trim();
+    const err = $("#e-err");
+    if(!title){ err.textContent="Donne un nom à la tâche."; err.hidden=false; return; }
+    if(gsel==="__new" && !ng){ err.textContent="Donne un nom au nouveau groupe, ou choisis un groupe existant."; err.hidden=false; return; }
+    let g = gsel, gt;
+    if(gsel==="__new"){ g = "N"+Date.now().toString(36); gt = ng; }
+    else gt = (groups.find(x=>x[0]===gsel)||[])[1] || d.gt;
+    const sameG = [...tasks.values()].filter(x=>x.g===g);
+    const o = (!isNew && d.g===g) ? d.o : (sameG.length ? Math.max(...sameG.map(x=>x.o||0))+1 : 900000 + Date.now()%100000);
+    const doc = {g, gt, t:title, who:$("#e-who").value, wk:$("#e-wk").value, cat:$("#e-cat").value, s:$("#e-s").value, o};
+    if(!isNew){ tasks.set(d.id,{...d,...doc}); }
+    close(); scheduleRender();
+    try{
+      if(isNew) await api("/api/tasks",{method:"POST",body:JSON.stringify(doc)});
+      else await api("/api/tasks/"+encodeURIComponent(d.id),{method:"PATCH",body:JSON.stringify(doc)});
+      load();
+    }catch(e2){ if(e2.message!=="auth") note("La tâche n'a pas été enregistrée : "+e2.message); }
+  });
+  $("#e-t").focus();
+}
+
+// ---------- glisser-déposer (planning) ----------
+function dropZone(node, wk){
+  node.dataset.wk = wk;
+  node.addEventListener("dragover",e=>{ if(!DRAG) return; if(DRAG.from===wk){ hlDrop(null); return; } e.preventDefault(); e.dataTransfer.dropEffect="move"; hlDrop(wk); });
+  node.addEventListener("drop",e=>{ e.preventDefault(); const d = DRAG; DRAG = null; hlDrop(null); if(d && d.from!==wk) moveTasks(d.ids, wk); });
+}
+function hlDrop(wk){ document.querySelectorAll(".pgrid [data-wk]").forEach(n=>n.classList.toggle("drop", n.dataset.wk===wk)); }
+async function moveTasks(ids, wk){
+  ids.forEach(id=>{ const t = tasks.get(id); if(t) t.wk = wk; }); scheduleRender();
+  try{ await api("/api/tasks/move",{method:"POST",body:JSON.stringify({ids, wk})}); load(); }
+  catch(e){ if(e.message!=="auth") note("Le déplacement n'a pas été enregistré : "+e.message); rev=0; load().catch(()=>{}); }
+}
+
+// ---------- éditeur du calendrier ----------
+// Copie de travail du calendrier : rien n'est envoyé avant « Enregistrer ». Chaque semaine garde « from » (son numéro
+// actuel) pour que le serveur emmène ses tâches si on la renumérote ; les jalons pointent sur la ligne (k), pas sur le numéro.
+function openCalendar(focus){
+  let uid = 0;
+  const rows = CAL.weeks.map(w => w.s ? {k:++uid, s:w.s, a:w.a, b:w.b, phase:w.phase||"", from:w.s} : {k:++uid, gap:w.gap});
+  let miles = CAL.miles.map(m => ({wk:(rows.find(r=>r.from===m.wk)||{}).k, t:m.t, c:m.c}));
+  const count = new Map(); tasks.forEach(t=>count.set(t.wk,(count.get(t.wk)||0)+1));
+  const box = $("#editor"); box.hidden=false; box.innerHTML=""; editorOpen=true;
+  const scrim = el("div","scrim"); const f = el("form","form calform"); f.setAttribute("role","dialog"); f.setAttribute("aria-modal","true"); f.setAttribute("aria-label","Calendrier");
+  f.innerHTML = `<h2>Calendrier</h2>
+    <p class="note" style="margin:0">Renuméroter une semaine emmène ses tâches avec elle. Une semaine qui a encore des tâches ne se supprime pas : déplace-les d'abord. Les pauses sont les bandes hachurées du planning.</p>
+    <h3 id="cal-wh">Semaines studio</h3><div class="calrows" id="cal-w"></div>
+    <div class="caladd"><button type="button" class="ghost" id="cal-addw">+ Semaine</button><button type="button" class="ghost" id="cal-addg">+ Pause</button><button type="button" class="ghost" id="cal-renum" title="Renumérote toutes les semaines dans l'ordre, sans toucher aux dates">Renuméroter S1, S2…</button></div>
+    <h3 id="cal-mh">Jalons <small>· date = dernier jour de la semaine</small></h3><div class="calrows" id="cal-m"></div>
+    <div class="caladd"><button type="button" class="ghost" id="cal-addm">+ Jalon</button></div>
+    <p class="err" id="cal-err" hidden></p>
+    <div class="actions"><span class="sp"></span><button type="button" class="ghost" id="cal-cancel">Annuler</button><button type="submit" class="primary">Enregistrer</button></div>`;
+  scrim.append(f); box.append(scrim);
+  const er = $("#cal-err"); const fail = msg => { er.textContent = msg; er.hidden = false; er.scrollIntoView({block:"nearest"}); };
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const plus = (s, n) => { const d = day(s); d.setDate(d.getDate()+n); return iso(d); };
+  const input = (cls, val, {ariaLabel, ...attrs}, on) => { const i = el("input",cls); Object.assign(i, attrs); i.setAttribute("aria-label",ariaLabel); i.value = val; i.addEventListener("input",()=>on(i.value)); return i; };
+  const tool = (txt, label, cls, on, disabled) => { const b = el("button","ghost ctl"+(cls?" "+cls:""),txt); b.type="button"; b.title=label; b.setAttribute("aria-label",label); b.disabled=!!disabled; b.addEventListener("click",on); return b; };
+
+  function renderWeeks(){
+    const c = $("#cal-w"); c.innerHTML="";
+    rows.forEach((r,i)=>{
+      const row = el("div","calrow"+(r.s!=null?"":" gap"));
+      if(r.s==null){
+        row.append(input("c-gap", r.gap, {placeholder:"Pause : ex. 26 oct → 27 nov · pas de studio", maxLength:120, ariaLabel:"Texte de la pause"}, v=>{ r.gap=v; }));
+      } else {
+        const n = r.from ? (count.get(r.from)||0) : 0;
+        row.append(
+          input("c-s", r.s, {maxLength:4, ariaLabel:"Numéro de la semaine"}, v=>{ r.s=v; renderMiles(); }),
+          input("c-a", r.a, {type:"date", ariaLabel:"Début"}, v=>{ r.a=v; }),
+          input("c-b", r.b, {type:"date", ariaLabel:"Fin"}, v=>{ r.b=v; renderMiles(); }),
+          input("c-ph", r.phase, {placeholder:"Début de bloc (optionnel)", maxLength:80, ariaLabel:"Début de bloc"}, v=>{ r.phase=v; }),
+          el("span","c-n", n ? `${n} tâche${n>1?"s":""}` : "vide"));
+      }
+      const tools = el("span","c-tools");
+      tools.append(
+        tool("↑","Monter",null,()=>{ [rows[i-1],rows[i]]=[rows[i],rows[i-1]]; renderWeeks(); renderMiles(); }, i===0),
+        tool("↓","Descendre",null,()=>{ [rows[i+1],rows[i]]=[rows[i],rows[i+1]]; renderWeeks(); renderMiles(); }, i===rows.length-1),
+        tool("✕","Supprimer cette ligne","del",()=>{
+          const n = r.from ? (count.get(r.from)||0) : 0;
+          if(n) return fail(`${r.s} a encore ${n} tâche${n>1?"s":""} : déplace-les sur une autre semaine avant de la supprimer.`);
+          const m = miles.find(x=>x.wk===r.k);
+          if(m) return fail(`Le jalon « ${m.t} » est sur ${r.s} : change-le de semaine ou supprime-le d'abord.`);
+          rows.splice(i,1); er.hidden=true; renderWeeks(); renderMiles();
+        }));
+      row.append(tools); c.append(row);
+    });
+  }
+  function renderMiles(){
+    const c = $("#cal-m"); c.innerHTML="";
+    if(!miles.length) c.append(el("div","empty","Aucun jalon."));
+    miles.forEach((m,i)=>{
+      const row = el("div","calrow mile");
+      const sel = el("select","c-mw"); sel.setAttribute("aria-label","Semaine du jalon");
+      if(!rows.some(r=>r.k===m.wk)){ const o = el("option",null,"Choisir…"); o.value=""; sel.append(o); }
+      rows.filter(r=>r.s!=null).forEach(r=>{ const o = el("option",null,esc(`${r.s||"?"} — ${r.b?dayLabel(r.b):"?"}`)); o.value=r.k; sel.append(o); });
+      sel.value = m.wk ?? ""; sel.addEventListener("change",()=>{ m.wk = Number(sel.value)||undefined; });
+      row.append(sel,
+        input("c-mt", m.t, {placeholder:"Titre du jalon", maxLength:80, ariaLabel:"Titre du jalon"}, v=>{ m.t=v; }),
+        input("c-mc", m.c, {placeholder:"Critère : à quoi on voit qu'il est atteint", maxLength:300, ariaLabel:"Critère du jalon"}, v=>{ m.c=v; }),
+        tool("✕","Supprimer ce jalon","del",()=>{ miles.splice(i,1); renderMiles(); }));
+      c.append(row);
+    });
+  }
+  renderWeeks(); renderMiles();
+
+  $("#cal-addw").addEventListener("click",()=>{
+    const ws = rows.filter(r=>r.s!=null && r.b), last = ws[ws.length-1];
+    const num = Math.max(0,...rows.map(r=>Number((r.s||"").replace(/^S/i,""))||0))+1;
+    // Semaine du lundi au vendredi, le lundi qui suit la dernière semaine.
+    const a = last ? plus(last.b, (8-day(last.b).getDay())%7||7) : iso(today);
+    rows.push({k:++uid, s:"S"+num, a, b:plus(a,4), phase:"", from:null}); renderWeeks(); renderMiles();
+    $("#cal-w").lastElementChild.querySelector("input").focus();
+  });
+  $("#cal-addg").addEventListener("click",()=>{ rows.push({k:++uid, gap:""}); renderWeeks(); $("#cal-w").lastElementChild.querySelector("input").focus(); });
+  $("#cal-renum").addEventListener("click",()=>{ let n = 0; rows.forEach(r=>{ if(r.s!=null) r.s = "S"+(++n); }); renderWeeks(); renderMiles(); });
+  $("#cal-addm").addEventListener("click",()=>{ miles.push({wk:undefined, t:"", c:""}); renderMiles(); $("#cal-m").lastElementChild.querySelector("select").focus(); });
+  // Pas de fermeture au clic à côté ni sur Échap : on perdrait toutes les modifications en cours.
+  const close = ()=>{ box.hidden=true; box.innerHTML=""; editorOpen=false; };
+  $("#cal-cancel").addEventListener("click",close);
+  f.addEventListener("submit",async e=>{
+    e.preventDefault(); er.hidden=true;
+    const norm = s => { s = String(s||"").trim().toUpperCase(); return /^\d+$/.test(s) ? "S"+s : s; };
+    const payload = {
+      v: CAL.v,
+      weeks: rows.map(r => r.s==null ? {gap:r.gap.trim()} : {s:norm(r.s), a:r.a, b:r.b, phase:r.phase.trim(), from:r.from}),
+      miles: miles.map(m => ({wk: norm((rows.find(r=>r.k===m.wk)||{}).s), t:m.t.trim(), c:m.c.trim()})),
+    };
+    const sb = f.querySelector("button[type=submit]"); sb.disabled = true;
+    try{ await api("/api/calendar",{method:"POST",body:JSON.stringify(payload)}); close(); rev=0; await load(); }
+    catch(x){ if(x.message!=="auth") fail(x.message); }
+    finally{ sb.disabled = false; }
+  });
+  setTimeout(()=>$(focus==="miles"?"#cal-mh":"#cal-wh").scrollIntoView({block:"start"}),0);
+}
+
+// ---------- onglets ----------
+const TABS = ["semaine","planning","taches","jalons","infos","regles","archi"];
+function show(tab){
+  if(!TABS.includes(tab)) tab="semaine";
+  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected", String(b.dataset.tab===tab)));
+  document.querySelectorAll("[data-panel]").forEach(s=>s.hidden = s.dataset.panel!==tab);
+  try{ localStorage.setItem("anachro-tab",tab); }catch(e){}
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.tab)));
+function note(msg){ const n=$("#dbnote"); n.textContent=msg; n.hidden=false; }
+
+renderNow(); renderProgress(); renderJalons();
+let start = (location.hash||"").slice(1); if(!start){ try{ start = localStorage.getItem("anachro-tab")||""; }catch(e){} }
+show(start);
+
+// ---------- serveur (Cloudflare Worker) ----------
+
+async function api(path, opts={}){
+  const r = await fetch(path,{credentials:"same-origin",headers:{"content-type":"application/json"},...opts});
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(r.status===401 && path!=="/api/login"){ showLogin(); throw new Error("auth"); }
+  if(!r.ok) throw new Error(j.error||("Erreur "+r.status));
+  return j;
+}
+async function load(){
+  const j = await api("/api/tasks"+(rev?"?since="+rev:""));
+  if(j.unchanged) return;
+  rev=j.rev; me=j.me; loaded=true;
+  canWrite = !!me && me.role !== "viewer";
+  if(me && me.role==="viewer") note("Mode spectateur : tu peux tout consulter, mais rien modifier.");
+  (j.people||[]).forEach(p=>{ if(p.role!=="viewer") PEOPLE[p.id]=p.name; });
+  tasks = new Map(j.tasks.map(t=>[t.id,{...t, s: ST[t.s]?t.s:"todo"}]));
+  LINKS = Array.isArray(j.links) ? j.links : [];
+  if(j.calendar) setCalendar(j.calendar);
+  const hs = (location.hash.match(/^#sprint-(S\d+)$/)||[])[1];
+  if(hs && !SPRINT && !load.didHash){ load.didHash=true; openSprint(hs); }
+  scheduleRender();
+}
+// Pas de rechargement pendant un glisser-déposer : le planning serait redessiné sous la souris.
+setInterval(()=>{ if(!document.hidden && me && !editorOpen && !DRAG) load().catch(()=>{}); }, 8000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && me) load().catch(()=>{}); });
+
+let loginOpen=false;
+async function showLogin(){
+  if(loginOpen) return; loginOpen=true;
+  let st={setup:false,people:[]}; try{ st = await (await fetch("/api/state")).json(); }catch(e){}
+  const box = $("#editor"); box.hidden=false; box.innerHTML=""; editorOpen=true;
+  const scrim = el("div","scrim"); const f = el("form","form");
+  if(st.setup){
+    f.innerHTML = `<h2>Première configuration</h2><p class="note" style="margin:0">Crée le mot de passe admin de Théo (6 caractères minimum). Tu donneras ensuite un code à chacun depuis la page admin.</p>
+      <label>Mot de passe admin<input id="l-pin" type="password" autocomplete="new-password" minlength="6" required></label><p class="err" id="l-err" hidden></p>
+      <div class="actions"><span class="sp"></span><button class="primary" type="submit">Créer</button></div>`;
+  } else {
+    f.innerHTML = `<h2>Connexion</h2><label>Qui es-tu ?<select id="l-user"></select></label>
+      <label>Code<input id="l-pin" type="password" autocomplete="current-password" required></label><p class="err" id="l-err" hidden></p>
+      <div class="actions"><span class="sp"></span><button class="primary" type="submit">Se connecter</button></div>`;
+  }
+  scrim.append(f); box.append(scrim);
+  if(!st.setup){
+    const sel=$("#l-user"); st.people.forEach(p=>{const o=el("option",null,esc(p.name)); o.value=p.id; sel.append(o);});
+    try{ const last=localStorage.getItem("anachro-user"); if(last) sel.value=last; }catch(e){}
+  }
+  $("#l-pin").focus();
+  f.addEventListener("submit",async e=>{
+    e.preventDefault(); const er=$("#l-err"); er.hidden=true;
+    try{
+      if(st.setup) await api("/api/setup",{method:"POST",body:JSON.stringify({pin:$("#l-pin").value})});
+      else {
+        await api("/api/login",{method:"POST",body:JSON.stringify({user:$("#l-user").value,pin:$("#l-pin").value})});
+        try{ localStorage.setItem("anachro-user",$("#l-user").value); }catch(e){}
+      }
+      box.hidden=true; box.innerHTML=""; editorOpen=false; loginOpen=false; rev=0; await load();
+      if(typeof arAfterLogin==="function") arAfterLogin();
+    }catch(x){ er.textContent=x.message; er.hidden=false; }
+  });
+}
+load().catch(e=>{ if(e.message!=="auth") $("#p-semaine").innerHTML=`<div class="empty">Impossible de charger les tâches : ${esc(e.message)}</div>`; });
+</script>
+<script>// ---------- diagramme de classes (onglet Archi, lecture seule) ----------
+// Le contenu vient de seed/archi.json (via /api/archi) et ne change qu'avec le code.
+// Mise en page : une bande par couche (de haut en bas), une colonne par fonctionnalité ; positions calculées ici avec la vraie taille des boîtes.
+// Liens à angle droit : ils ne circulent que dans les couloirs entre colonnes et entre bandes, donc ne traversent jamais une boîte.
+const AR_OWNER = {Core:"tous", Network:"Théo", Gameplay:"Célian", Npc:"Olivier", World:"Olivier", UI:"Olivier", Editor:"tous"};
+const AR_STATUS = {ok:"Existe", mod:"À modifier", new:"À créer"};
+const AR_KINDS = [["ui","UI (MonoBehaviour d'interface)"],["mono","MonoBehaviour"],["net","NetworkBehaviour (réseau)"],["so","ScriptableObject"],["if","Interface"],["cs","Classe C# / static"],["en","Enum / struct"]];
+const AR_LINKS = {
+  assoc:{label:"Référence", text:"A garde une référence vers B", short:"réf", color:"var(--fg)", dash:"", head:"open"},
+  event:{label:"Event", text:"A s'abonne à un event de B", short:"event", color:"var(--celian)", dash:"2 4", head:"open"},
+  rpc:{label:"RPC", text:"A passe par une RPC de B", short:"RPC", color:"var(--theo)", dash:"9 4", head:"open"},
+  call:{label:"Utilise", text:"A appelle B sans garder de référence", short:"utilise", color:"var(--doing)", dash:"5 4", head:"open"},
+  realize:{label:"Implémente", text:"A implémente l'interface B", short:"implémente", color:"var(--k-if-b)", dash:"5 4", head:"triangle"},
+};
+const AR_W = 270, AR_SGX = 22, AR_GY = 14, AR_CG = 160, AR_RG = 150, AR_LANE = 14, AR_HEAD = 52, AR_PAD = 18, AR_TOP = 44, AR_SUB_AT = 4;
+const AR = {doc:null, loaded:false, loading:false, laidOut:false, sel:null, showAll:false, view:{x:20, y:20, k:.6},
+  sizes:new Map(), place:new Map(), bands:[], cols:[], rows:[]};
+const arNode = id => AR.doc.nodes.find(n=>n.id===id);
+const arEdge = id => AR.doc.edges.find(e=>e.id===id);
+const arLinkOf = e => AR_LINKS[e.type] || AR_LINKS.call;
+function arKind(n){
+  const s = n.stereo || "";
+  if(/interface/.test(s)) return "if";
+  if(/ScriptableObject/.test(s)) return "so";
+  if(/enum|struct/.test(s)) return "en";
+  if(/NetworkBehaviour|ObserverCondition/.test(s)) return "net";
+  if(/MonoBehaviour/.test(s)) return n.folder==="UI" ? "ui" : "mono";
+  return "cs";
+}
+
+async function arLoad(){
+  if(AR.loaded || AR.loading) return;
+  AR.loading = true;
+  try{
+    const j = await api("/api/archi");
+    AR.doc = {cols:j.cols||[], layers:j.layers||[], nodes:j.nodes||[], edges:j.edges||[]};
+    AR.loaded = true; arRender();
+  }catch(e){ if(e.message!=="auth") $("#ar-nodes").innerHTML = `<div class="empty" style="position:absolute;left:40px;top:40px;width:420px">Chargement impossible : ${esc(e.message)}</div>`; }
+  finally{ AR.loading = false; }
+}
+function arAfterLogin(){ if(!$("#p-archi").hidden) arLoad(); }
+
+// ---------- boîtes ----------
+// Une ligne de membre qui commence par "*" est à ajouter : affichée en couleur, sans l'étoile.
+const arMembers = txt => String(txt||"").split("\n").map(s=>s.trim()).filter(Boolean)
+  .map(s=>s.startsWith("*") ? `<li class="nw">${esc(s.slice(1))}</li>` : `<li>${esc(s)}</li>`).join("");
+function arNodeEl(n){
+  const d = el("div", `ar-node k-${arKind(n)} st-${n.status}`);
+  d.dataset.id = n.id;
+  const f = arMembers(n.fields), m = arMembers(n.methods);
+  d.innerHTML = `<div class="hd"><div class="stp">«${esc(n.stereo)}»</div><div class="n">${esc(n.name)}</div>`
+    + `<div class="meta"><span>${esc([n.owner || AR_OWNER[n.folder], n.tasks].filter(Boolean).join(" · "))}</span><span class="st">${AR_STATUS[n.status]||""}</span></div></div>`
+    + (f ? `<ul>${f}</ul>` : "") + (m ? `<ul>${m}</ul>` : "") + (n.note ? `<div class="nt">${esc(n.note)}</div>` : "");
+  return d;
+}
+function arRender(){
+  if(!AR.doc || $("#p-archi").hidden) return;
+  const box = $("#ar-nodes"); box.innerHTML = "";
+  AR.doc.nodes.forEach(n=>box.append(arNodeEl(n)));
+  arPlace();
+  if(!AR.laidOut){ AR.laidOut = true; arFit(true); } else arApplyView();
+  // Les polices du site arrivent parfois après la première mesure : les boîtes grandissent, on replace tout.
+  if(document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(()=>{ if(!$("#p-archi").hidden) arPlace(); });
+}
+function arPlace(){
+  const box = $("#ar-nodes");
+  arLayout();
+  box.querySelectorAll(".ar-node").forEach(d=>{ const n = arNode(d.dataset.id); d.style.left = n.x+"px"; d.style.top = n.y+"px"; });
+  const W = AR.cols.length ? AR.cols.at(-1).x + AR.cols.at(-1).w + AR_CG/2 : 0;
+  $("#ar-bands").innerHTML = AR.cols.map(c=>`<div class="ar-colh" style="left:${c.x}px;top:6px;width:${c.w}px">${esc(c.title)}</div>`).join("")
+    + AR.rows.map(r=>`<div class="ar-band" style="left:0;top:${r.y}px;width:${W}px;height:${r.h}px"><h4>${esc(r.title)}<small>${esc(r.desc||"")}</small></h4></div>`).join("");
+  arUpdate();
+}
+// Grille : la largeur d'une colonne et la hauteur d'une bande s'adaptent à leur plus grosse cellule.
+// Une cellule de plus de AR_SUB_AT - 1 classes passe sur deux sous-colonnes.
+function arLayout(){
+  AR.sizes.clear(); AR.place.clear();
+  document.querySelectorAll("#ar-nodes .ar-node").forEach(d=>AR.sizes.set(d.dataset.id, {w:d.offsetWidth||AR_W, h:d.offsetHeight||80}));
+  const cols = AR.doc.cols, layers = AR.doc.layers;
+  const cell = (c, l)=>AR.doc.nodes.filter(n=>n.col===c && n.layer===l);
+  const split = list=>{ const sub = list.length >= AR_SUB_AT ? 2 : 1, per = Math.ceil(list.length/sub); return Array.from({length:sub}, (_, k)=>list.slice(k*per, (k+1)*per)); };
+  const hOf = ids=>ids.reduce((s, n)=>s + (AR.sizes.get(n.id)||{h:80}).h + AR_GY, 0) - (ids.length ? AR_GY : 0);
+  AR.cols = []; let x = AR_CG/2;
+  cols.forEach(c=>{
+    const w = Math.max(AR_W, ...layers.map(l=>{ const s = split(cell(c.id, l.id)); return s.length*AR_W + (s.length-1)*AR_SGX; }));
+    AR.cols.push({id:c.id, title:c.title, x, w}); x += w + AR_CG;
+  });
+  AR.rows = []; let y = AR_TOP;
+  layers.forEach((l, ri)=>{
+    const contentH = Math.max(60, ...cols.map(c=>Math.max(0, ...split(cell(c.id, l.id)).map(hOf))));
+    const h = AR_HEAD + contentH + AR_PAD;
+    AR.rows.push({id:l.id, title:l.title, desc:l.desc, y, h});
+    AR.cols.forEach((col, ci)=>{
+      const subs = split(cell(col.id, l.id)), cw = subs.length*AR_W + (subs.length-1)*AR_SGX, cx = col.x + (col.w - cw)/2;
+      subs.forEach((list, k)=>{
+        let cy = y + AR_HEAD;
+        list.forEach(n=>{
+          n.x = Math.round(cx + k*(AR_W+AR_SGX)); n.y = Math.round(cy); cy += (AR.sizes.get(n.id)||{h:80}).h + AR_GY;
+          // Côtés qui donnent sur un couloir : sur deux sous-colonnes, chaque boîte ne sort que par l'extérieur.
+          AR.place.set(n.id, {ci, ri, sides: subs.length===1 ? ["l","r"] : (k===0 ? ["l"] : ["r"])});
+        });
+      });
+    });
+    y += h + AR_RG;
+  });
+}
+
+// ---------- liens ----------
+// Visibles : ceux de la sélection, sinon ceux d'une même colonne (ou tous si le bouton est actif).
+function arVisible(){
+  const sel = AR.sel, vis = new Map();
+  AR.doc.edges.forEach(e=>{
+    if(sel){ if(sel.k==="n" ? (e.from===sel.id || e.to===sel.id) : e.id===sel.id) vis.set(e.id, "on"); }
+    else if(AR.showAll || AR.place.get(e.from)?.ci===AR.place.get(e.to)?.ci) vis.set(e.id, "show");
+  });
+  return vis;
+}
+const arChan = (ci, side)=>{ const c = AR.cols[ci]; return side==="l" ? c.x - AR_CG/2 : c.x + c.w + AR_CG/2; };
+const arGapBelow = ri=>{ const r = AR.rows[ri]; return r.y + r.h + AR_RG/2; };
+const arGapAbove = ri=> ri===0 ? AR_TOP - AR_RG/4 : arGapBelow(ri-1);
+// Chemin à angle droit avec coins arrondis.
+function arPath(pts){
+  const R = 7; let d = `M${pts[0][0]},${pts[0][1]}`;
+  for(let i=1; i<pts.length-1; i++){
+    const [x0,y0] = pts[i-1], [x1,y1] = pts[i], [x2,y2] = pts[i+1];
+    const r = Math.min(R, Math.hypot(x1-x0,y1-y0)/2, Math.hypot(x2-x1,y2-y1)/2);
+    const ax = x1 - Math.sign(x1-x0)*r, ay = y1 - Math.sign(y1-y0)*r, bx = x1 + Math.sign(x2-x1)*r, by = y1 + Math.sign(y2-y1)*r;
+    d += ` L${ax},${ay} Q${x1},${y1} ${bx},${by}`;
+  }
+  const [xe,ye] = pts.at(-1); return d + ` L${xe},${ye}`;
+}
+function arDrawEdges(vis){
+  const svg = $("#ar-edges"), NS = "http://www.w3.org/2000/svg";
+  const box = id=>{ const n = arNode(id), s = AR.sizes.get(id)||{w:AR_W,h:80}; return {x:n.x, y:n.y, w:s.w, h:s.h, cy:n.y+s.h/2}; };
+  // 1. Pour chaque lien visible : côtés de sortie et d'entrée qui raccourcissent le trajet par les couloirs.
+  const items = [];
+  AR.doc.edges.forEach(e=>{
+    if(!vis.has(e.id)) return;
+    const pa = AR.place.get(e.from), pb = AR.place.get(e.to); if(!pa || !pb) return;
+    const a = box(e.from), b = box(e.to);
+    let best = null;
+    pa.sides.forEach(sa=>pb.sides.forEach(sb=>{
+      const xa = arChan(pa.ci, sa), xb = arChan(pb.ci, sb);
+      const cost = Math.abs(xa-xb) + Math.abs((sa==="r"?a.x+a.w:a.x)-xa) + Math.abs((sb==="r"?b.x+b.w:b.x)-xb) + (xa===xb ? 0 : 60);
+      if(!best || cost < best.cost) best = {sa, sb, xa, xb, cost};
+    }));
+    items.push({e, a, b, pa, pb, ...best});
+  });
+  // 2. Points d'attache répartis le long des bords, triés par la hauteur de l'autre bout.
+  const ports = new Map();
+  const addPort = (id, side, other, it, key)=>{ const k = id+"|"+side; if(!ports.has(k)) ports.set(k, []); ports.get(k).push({other, it, key}); };
+  items.forEach(it=>{ addPort(it.e.from, it.sa, it.b.cy, it, "ya"); addPort(it.e.to, it.sb, it.a.cy, it, "yb"); });
+  ports.forEach((list, k)=>{
+    const b = box(k.split("|")[0]); list.sort((p, q)=>p.other-q.other);
+    const top = b.y + Math.min(30, b.h/3);
+    list.forEach((p, i)=>{ p.it[p.key] = Math.round(top + (b.y + b.h - 10 - top)*(i+1)/(list.length+1)); });
+  });
+  // 3. Couloirs : chaque lien a sa propre voie, réparties sur toute la largeur du couloir (AR_LANE px au plus entre deux voies).
+  //    Les voies sont triées par direction (vers la gauche à gauche, vers le haut en haut) pour limiter les croisements.
+  items.forEach(it=>{
+    it.gy = it.pa.ri===it.pb.ri ? arGapBelow(it.pb.ri) : it.pa.ri < it.pb.ri ? arGapAbove(it.pb.ri) : arGapBelow(it.pb.ri);
+    it.keys = it.xa===it.xb ? [["c"+it.xa, (it.ya+it.yb)/2]] : [["c"+it.xa, it.xb], ["g"+it.gy, Math.min(it.xa, it.xb)], ["c"+it.xb, it.xa]];
+  });
+  const users = new Map();
+  items.forEach(it=>it.keys.forEach(([k, order])=>{ if(!users.has(k)) users.set(k, []); users.get(k).push({it, order}); }));
+  const lanes = new Map();
+  users.forEach((list, k)=>{
+    list.sort((p, q)=>p.order-q.order);
+    const step = Math.min(AR_LANE, ((k[0]==="c" ? AR_CG : AR_RG) - 30) / Math.max(1, list.length-1));
+    list.forEach((u, i)=>lanes.set(k+"|"+u.it.e.id, Math.round((i - (list.length-1)/2) * step)));
+  });
+  const lane = (key, it)=>lanes.get(key+"|"+it.e.id) || 0;
+  svg.innerHTML = `<defs>${Object.entries(AR_LINKS).map(([k,t])=> t.head==="triangle"
+    ? `<marker id="ar-m-${k}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto"><path d="M1,1 L11,6 L1,11 z" style="fill:var(--surface);stroke:${t.color}" stroke-width="1.4"/></marker>`
+    : `<marker id="ar-m-${k}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M1,1 L11,6 L1,11" style="fill:none;stroke:${t.color}" stroke-width="1.6"/></marker>`).join("")}</defs>`;
+  items.forEach(it=>{
+    const {e, a, b, pa, pb, sa, sb, xa, xb, ya, yb} = it, t = arLinkOf(e), type = e.type in AR_LINKS ? e.type : "call";
+    const x1 = sa==="r" ? a.x+a.w : a.x, x2 = sb==="r" ? b.x+b.w : b.x;
+    const la = xa + lane("c"+xa, it), pts = [[x1, ya], [la, ya]];
+    let mid;
+    if(xa===xb){ pts.push([la, yb]); mid = [la, (ya+yb)/2]; }
+    else {
+      const gy = it.gy, g = gy + lane("g"+gy, it), lb = xb + lane("c"+xb, it);
+      pts.push([la, g], [lb, g], [lb, yb]); mid = [(la+lb)/2, g];
+    }
+    pts.push([x2, yb]);
+    const g = document.createElementNS(NS,"g"); g.dataset.id = e.id; g.setAttribute("class", vis.get(e.id));
+    g.innerHTML = `<path class="v" d="${arPath(pts)}" style="stroke:${t.color}" ${t.dash?`stroke-dasharray="${t.dash}"`:""} marker-end="url(#ar-m-${type})"/>`;
+    if(e.mult){ // multiplicité près de la flèche, comme en UML
+      const tx = document.createElementNS(NS,"text"); tx.setAttribute("x", x2 + (sb==="l" ? -14 : 14)); tx.setAttribute("y", yb - 6);
+      tx.setAttribute("text-anchor", sb==="l" ? "end" : "start"); tx.style.fill = t.color; tx.textContent = e.mult; g.append(tx);
+    }
+    const lb = document.createElementNS(NS,"text"); lb.setAttribute("class","lb"); lb.setAttribute("x", mid[0]); lb.setAttribute("y", mid[1] - 6);
+    lb.setAttribute("text-anchor","middle"); lb.style.fill = t.color; lb.textContent = [e.via || t.short, e.label].filter(Boolean).join(" · ");
+    g.append(lb); svg.append(g);
+  });
+}
+function arUpdate(){
+  const vis = arVisible(); arDrawEdges(vis);
+  const sel = AR.sel, focus = sel && sel.k==="n" ? sel.id : null, near = new Set();
+  if(sel) AR.doc.edges.forEach(e=>{ if(vis.get(e.id)==="on"){ near.add(e.from); near.add(e.to); } });
+  document.querySelectorAll("#ar-nodes .ar-node").forEach(d=>{
+    const id = d.dataset.id;
+    d.classList.toggle("sel", id===focus);
+    d.classList.toggle("near", !!sel && near.has(id) && id!==focus);
+    d.classList.toggle("dim", !!sel && !near.has(id) && id!==focus);
+  });
+  arPanel();
+}
+function arLegend(){
+  const line = t=>`<svg width="44" height="12" aria-hidden="true"><line x1="1" y1="6" x2="36" y2="6" style="stroke:${t.color}" stroke-width="1.8" ${t.dash?`stroke-dasharray="${t.dash}"`:""}/>`
+    + (t.head==="triangle" ? `<path d="M33,1 L43,6 L33,11 z" style="fill:var(--surface);stroke:${t.color}" stroke-width="1.4"/>` : `<path d="M36,1.5 L43,6 L36,10.5" style="fill:none;stroke:${t.color}" stroke-width="1.6"/>`) + `</svg>`;
+  $("#ar-legend").innerHTML =
+      `<div class="card"><h5>Sortes de classes</h5>${AR_KINDS.map(([k,l])=>`<div class="it k-${k}"><i class="chip"></i>${esc(l)}</div>`).join("")}</div>`
+    + `<div class="card"><h5>Liens (A → B)</h5>${Object.values(AR_LINKS).map(t=>`<div class="it">${line(t)}<span><b style="color:var(--fg)">${esc(t.label)}</b> : ${esc(t.text)}</span></div>`).join("")}`
+    + `<div>Sur une référence : <code>1</code> une · <code>0..1</code> zéro ou une · <code>1..*</code> au moins une</div></div>`
+    + `<div class="card"><h5>Lire une boîte</h5><div><code>«NetworkBehaviour»</code> : la classe de base</div><div><code>+</code> public · <code>-</code> privé</div>`
+    + `<div><span class="nw">en orange</span> : membre à ajouter</div><div><span class="chip" style="display:inline-block;vertical-align:middle;--kb:var(--ar-note);--kc:var(--ar-note-fg)"></span> note : le pourquoi</div>`
+    + `<div>Badge : Existe · À modifier · À créer</div></div>`
+    + `<div class="card"><h5>Couches</h5><div>Les références descendent : Présentation → Gameplay → Réseau → Core.</div><div>Vers le haut, on passe par des events.</div>`
+    + `<div>Le responsable est écrit dans chaque boîte (Théo, Célian, Olivier, Hanaé).</div></div>`;
+}
+
+// ---------- panneau de détail ----------
+function arPanel(){
+  const p = $("#ar-panel"), sel = AR.sel;
+  const it = sel ? (sel.k==="n" ? arNode(sel.id) : arEdge(sel.id)) : null;
+  if(!it){ p.hidden = true; p.innerHTML = ""; return; }
+  p.hidden = false; p.innerHTML = "";
+  const head = el("div","row"), close = el("button","ghost small ar-x","Fermer"); close.type = "button";
+  close.addEventListener("click",()=>arSelect(null));
+  const linkBtn = (n, html)=>{ const b = el("button",null,html); b.type = "button"; b.addEventListener("click",()=>{ if(!n) return; arSelect({k:"n", id:n.id}); arFocus(n.id); }); return b; };
+  const n = it;
+  head.append(el("h3",null,esc(n.name)), close); p.append(head);
+  p.append(el("p","note",esc([`«${n.stereo}»`, n.folder, n.owner || AR_OWNER[n.folder], AR_STATUS[n.status], n.tasks].filter(Boolean).join(" · "))));
+  if(n.note) p.append(el("p","ro nt",esc(n.note)));
+  if(n.fields){ p.append(el("h4",null,n.stereo==="enum" ? "Valeurs" : "Champs")); p.append(el("ul",null,arMembers(n.fields))); }
+  if(n.methods){ p.append(el("h4",null,"Méthodes")); p.append(el("ul",null,arMembers(n.methods))); }
+  const item = (e, out)=>{ const o = arNode(out ? e.to : e.from), t = arLinkOf(e);
+    return linkBtn(o, `${out?"→":"←"} <b>${esc(o?o.name:"?")}</b> <i style="color:${t.color}">${esc([e.via || t.short, e.mult, e.label].filter(Boolean).join(" · "))}</i>`); };
+  [["Implémente", e=>e.from===n.id && e.type==="realize", true], ["Utilise", e=>e.from===n.id && e.type!=="realize", true],
+   ["Implémentée par", e=>e.to===n.id && e.type==="realize", false], ["Utilisée par", e=>e.to===n.id && e.type!=="realize", false]]
+    .forEach(([title, test, out])=>{
+      const list = AR.doc.edges.filter(test); if(!list.length) return;
+      const box = el("div","ar-links"); list.forEach(e=>box.append(item(e, out)));
+      p.append(el("h4",null,title), box);
+    });
+}
+function arSelect(sel){ AR.sel = sel; arUpdate(); }
+
+// ---------- vue : déplacement, zoom ----------
+// Taille du plan, pour ne jamais perdre le schéma hors du cadre (on en garde toujours un bout visible).
+function arWorld(){ return AR.rows.length ? {w:AR.cols.at(-1).x + AR.cols.at(-1).w + AR_CG/2, h:AR.rows.at(-1).y + AR.rows.at(-1).h + AR_RG/2} : {w:1, h:1}; }
+function arApplyView(){
+  const c = $("#ar-canvas"), v = AR.view, wd = arWorld(), keep = 140;
+  if(c.clientWidth){
+    v.x = Math.min(c.clientWidth - keep, Math.max(keep - wd.w*v.k, v.x));
+    v.y = Math.min(c.clientHeight - keep, Math.max(keep - wd.h*v.k, v.y));
+  }
+  $("#ar-world").style.transform = `translate(${v.x}px,${v.y}px) scale(${v.k})`;
+}
+// Transitions douces pour les sauts de vue (boutons, recentrage) ; instantané si l'utilisateur réduit les animations.
+let arAnim = 0;
+function arAnimateTo(target){
+  cancelAnimationFrame(arAnim);
+  const from = {...AR.view}, t0 = performance.now(), dur = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 260;
+  const step = now=>{
+    const t = dur ? Math.min(1, (now - t0)/dur) : 1, e = 1 - Math.pow(1 - t, 3);
+    AR.view = {x:from.x + (target.x-from.x)*e, y:from.y + (target.y-from.y)*e, k:from.k + (target.k-from.k)*e}; arApplyView();
+    if(t < 1) arAnim = requestAnimationFrame(step);
+  };
+  arAnim = requestAnimationFrame(step);
+}
+const arClampK = k=>Math.min(1.8, Math.max(.1, k));
+function arZoomTarget(k, px, py){ const v = AR.view, nk = arClampK(k); return {k:nk, x:px - (px - v.x)*nk/v.k, y:py - (py - v.y)*nk/v.k}; }
+function arZoomAt(k, px, py){ cancelAnimationFrame(arAnim); AR.view = arZoomTarget(k, px, py); arApplyView(); }
+// Centre la vue sur une classe (double-clic, ou clic sur un lien dans le panneau). Une boîte plus haute que le cadre est calée par le haut.
+function arFocus(id, minK){
+  const n = arNode(id), s = AR.sizes.get(id), c = $("#ar-canvas"); if(!n || !s) return;
+  const k = Math.max(AR.view.k, minK || .6), h = Math.min(s.h, (c.clientHeight - 60)/k);
+  arAnimateTo({k, x:c.clientWidth/2 - (n.x + s.w/2)*k, y:c.clientHeight/2 - (n.y + h/2)*k});
+}
+// start : vue de départ lisible (zoom ≥ 0,55 calé en haut à gauche) ; sinon tout le schéma tient dans le cadre.
+function arFit(start){
+  const c = $("#ar-canvas"); if(!AR.rows.length || !c.clientWidth) return;
+  const wd = arWorld(), fit = Math.min((c.clientWidth-40)/wd.w, (c.clientHeight-40)/wd.h);
+  if(start){ const k = Math.min(1, Math.max(.55, fit)); AR.view = {k, x:20, y:20}; arApplyView(); }
+  else { const k = Math.min(1, Math.max(.1, fit)); arAnimateTo({k, x:(c.clientWidth-wd.w*k)/2, y:20}); }
+}
+(function arInit(){
+  const c = $("#ar-canvas"); if(!c) return;
+  arLegend();
+  // Glisser = déplacer le plan. preventDefault bloque la sélection de texte et le glisser natif du navigateur
+  // (c'est lui qui « attrapait l'image »). Deux doigts sur écran tactile = zoom.
+  const pts = new Map(); let drag = null, pinch = null;
+  c.addEventListener("dragstart", e=>e.preventDefault());
+  c.addEventListener("pointerdown", e=>{
+    if(e.target.closest(".ar-zoom") || (e.button!==0 && e.button!==1)) return;
+    e.preventDefault(); cancelAnimationFrame(arAnim);
+    c.setPointerCapture(e.pointerId); c.focus({preventScroll:true});
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pts.size===2){
+      const [p, q] = [...pts.values()];
+      pinch = {d:Math.hypot(p.x-q.x, p.y-q.y) || 1, k:AR.view.k, view:{...AR.view}, mx:(p.x+q.x)/2, my:(p.y+q.y)/2}; drag = null; return;
+    }
+    const nd = e.target.closest(".ar-node");
+    drag = {id:nd && e.button===0 ? nd.dataset.id : null, sx:e.clientX, sy:e.clientY, ox:AR.view.x, oy:AR.view.y, moved:false};
+  });
+  c.addEventListener("pointermove", e=>{
+    if(!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pinch && pts.size===2){
+      const [p, q] = [...pts.values()], r = c.getBoundingClientRect();
+      AR.view = {...pinch.view}; AR.view = arZoomTarget(pinch.k * Math.hypot(p.x-q.x, p.y-q.y)/pinch.d, pinch.mx-r.left, pinch.my-r.top);
+      AR.view.x += (p.x+q.x)/2 - pinch.mx; AR.view.y += (p.y+q.y)/2 - pinch.my; arApplyView(); return;
+    }
+    if(!drag) return;
+    const dx = e.clientX-drag.sx, dy = e.clientY-drag.sy;
+    if(!drag.moved && Math.hypot(dx,dy) < 4) return;
+    if(!drag.moved){ drag.moved = true; c.classList.add("panning"); }
+    AR.view.x = drag.ox+dx; AR.view.y = drag.oy+dy; arApplyView();
+  });
+  const end = e=>{
+    pts.delete(e.pointerId); if(pts.size < 2) pinch = null;
+    if(!drag) return; const d = drag; drag = null; c.classList.remove("panning");
+    if(d.moved || e.type==="pointercancel") return;
+    // Re-cliquer la classe sélectionnée (ou le fond) désélectionne.
+    arSelect(d.id && !(AR.sel && AR.sel.id===d.id) ? {k:"n", id:d.id} : null);
+  };
+  c.addEventListener("pointerup", end); c.addEventListener("pointercancel", end);
+  c.addEventListener("dblclick", e=>{
+    const nd = e.target.closest(".ar-node"), r = c.getBoundingClientRect();
+    if(nd){ AR.sel = {k:"n", id:nd.dataset.id}; arUpdate(); arFocus(nd.dataset.id, .9); }
+    else arAnimateTo(arZoomTarget(AR.view.k*1.6, e.clientX-r.left, e.clientY-r.top));
+  });
+  // Molette de souris = zoom ; pavé tactile à deux doigts = déplacement ; pincer (ou Ctrl + molette) = zoom.
+  c.addEventListener("wheel", e=>{
+    e.preventDefault(); cancelAnimationFrame(arAnim);
+    const r = c.getBoundingClientRect();
+    const isMouse = e.deltaMode===1 || (e.deltaX===0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 40);
+    if(e.ctrlKey || e.metaKey || (isMouse && !e.shiftKey)){
+      arZoomAt(AR.view.k * Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : e.ctrlKey && !isMouse ? 0.01 : 0.0015)), e.clientX-r.left, e.clientY-r.top);
+    } else {
+      const horiz = e.shiftKey && !e.deltaX;
+      AR.view.x -= horiz ? e.deltaY : e.deltaX; AR.view.y -= horiz ? 0 : e.deltaY; arApplyView();
+    }
+  }, {passive:false});
+  $("#ar-zin").addEventListener("click",()=>arAnimateTo(arZoomTarget(AR.view.k*1.3, c.clientWidth/2, c.clientHeight/2)));
+  $("#ar-zout").addEventListener("click",()=>arAnimateTo(arZoomTarget(AR.view.k/1.3, c.clientWidth/2, c.clientHeight/2)));
+  $("#ar-fit").addEventListener("click",()=>arFit(false));
+  $("#ar-all").addEventListener("click",e=>{ AR.showAll = !AR.showAll; e.currentTarget.setAttribute("aria-pressed", String(AR.showAll)); if(AR.doc) arUpdate(); });
+  // Clavier (schéma sélectionné) : flèches = déplacer, + / - = zoom, 0 = tout voir, Échap = désélectionner.
+  c.addEventListener("keydown", e=>{
+    const P = 90, mv = {ArrowLeft:[P,0], ArrowRight:[-P,0], ArrowUp:[0,P], ArrowDown:[0,-P]}[e.key];
+    if(mv){ e.preventDefault(); arAnimateTo({...AR.view, x:AR.view.x+mv[0], y:AR.view.y+mv[1]}); }
+    else if(e.key==="+" || e.key==="="){ e.preventDefault(); $("#ar-zin").click(); }
+    else if(e.key==="-"){ e.preventDefault(); $("#ar-zout").click(); }
+    else if(e.key==="0"){ e.preventDefault(); arFit(false); }
+  });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("#p-archi").hidden) arSelect(null); });
+  window.addEventListener("resize", ()=>{ if(AR.laidOut) arApplyView(); });
+  // Chargement et mise en page à l'affichage de l'onglet : cachées, les boîtes n'ont pas de taille mesurable.
+  const panel = $("#p-archi");
+  new MutationObserver(()=>{ if(panel.hidden) return; if(AR.loaded && !AR.laidOut) arRender(); arLoad(); }).observe(panel, {attributes:true, attributeFilter:["hidden"]});
+  if(!panel.hidden) arLoad();
+})();
+</script></body></html>
