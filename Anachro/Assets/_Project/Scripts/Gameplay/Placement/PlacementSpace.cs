@@ -46,7 +46,7 @@ namespace Anachronism.Gameplay
         }
 
         // Part (0-1) de la face posee qui touche vraiment la surface : on tire un quadrillage de rayons sous la face.
-        private static float SupportRatio(PlacementRequest request, Vector3 dimensions, Quaternion rotation,
+        public static float SupportRatio(PlacementRequest request, Vector3 dimensions, Quaternion rotation,
             GameplayTuning tuning, int obstacleMask, int placedObjectsMask)
         {
             bool isWall = PlacementRules.ClassifySurface(request.Normal, tuning) == PlacementSurfaceType.Wall;
