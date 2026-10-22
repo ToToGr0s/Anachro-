@@ -1,4 +1,7 @@
+using Anachronism.World;
+using FishNet.Object;
 using UnityEngine;
+using UnityEngine.AI;
 #if UNITY_EDITOR
 
 namespace Anachronism.Gameplay
@@ -9,14 +12,23 @@ namespace Anachronism.Gameplay
     {
         [SerializeField] private FugitivePlacer _placer;
         [SerializeField] private GameplayTuning _tuning;
+        [SerializeField] private WorldObject _worldObjectPrefab;
+
+        private Transform _inactiveParent;
 
         private void Awake()
         {
-            if (_placer == null || _tuning == null)
+            if (_placer == null || _tuning == null || _worldObjectPrefab == null)
             {
-                Debug.LogError("SandboxPlacementSpawner : placer ou reglages manquant.", this);
+                Debug.LogError("SandboxPlacementSpawner : placer, reglages ou prefab WorldObject manquant.", this);
                 enabled = false;
+                return;
             }
+
+            // Parent inactif : une copie du prefab y reste sans Awake tant qu'on n'a pas retire ses composants reseau.
+            _inactiveParent = new GameObject("Parent inactif (copies de test)").transform;
+            _inactiveParent.SetParent(transform, false);
+            _inactiveParent.gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -37,23 +49,24 @@ namespace Anachronism.Gameplay
                 return;
             }
 
-            // WorldObject porte un NetworkObject : l'instancier hors reseau fait lever une erreur FishNet.
-            // On recree donc son visuel et sa boite sous un objet vide, place comme le serveur le placera.
-            GameObject placed = new GameObject(definition.DisplayName + " (test)", typeof(MeshFilter), typeof(MeshRenderer), typeof(BoxCollider));
+            // Meme prefab que le jeu (WorldObject) : memes composants, meme calque, meme obstacle de NavMesh.
+            // Il porte un NetworkObject et un NetworkBehaviour qui levent une erreur FishNet hors reseau : on instancie donc
+            // sous un parent inactif (aucun Awake), on retire ces deux composants, puis on sort la copie du parent.
+            WorldObject copy = Instantiate(_worldObjectPrefab, _inactiveParent);
+            GameObject placed = copy.gameObject;
+            DestroyImmediate(copy);
+            DestroyImmediate(placed.GetComponent<NetworkObject>());
+            placed.name = definition.DisplayName + " (test)";
+
             Quaternion rotation = PlacementRules.RotationFor(request.Normal, _tuning);
             // PositionFor donne le centre de la boite ; le pivot du mesh en est decale de BoundsCenter.
+            placed.transform.SetParent(null, false);
             placed.transform.SetPositionAndRotation(
                 PlacementRules.PositionFor(request.Position, request.Normal, definition.Dimensions, _tuning) - rotation * definition.BoundsCenter,
                 rotation);
-            placed.GetComponent<MeshFilter>().sharedMesh = definition.Mesh;
-            placed.GetComponent<MeshRenderer>().sharedMaterial = definition.Material;
-            BoxCollider box = placed.GetComponent<BoxCollider>();
-            box.center = definition.BoundsCenter;
-            box.size = definition.Dimensions;
-            // Meme calque que WorldObject : la pose suivante le traite comme un objet deja pose.
-            int placedMask = _tuning.PlacedObjectsMask.value;
-            if (placedMask != 0)
-                placed.layer = (int)Mathf.Log(placedMask & -placedMask, 2);
+
+            WorldObject.ApplyDefinition(definition, placed.GetComponent<MeshFilter>(), placed.GetComponent<MeshRenderer>(),
+                placed.GetComponent<BoxCollider>(), placed.GetComponent<NavMeshObstacle>(), this);
         }
     }
 }

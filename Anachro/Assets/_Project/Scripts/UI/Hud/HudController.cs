@@ -2,6 +2,7 @@ using Anachronism.Network;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
+using Anachronism.Gameplay;
 
 namespace Anachronism.UI
 {
@@ -18,9 +19,7 @@ namespace Anachronism.UI
 
         [SerializeField] private float[] _disruptionTierThresholds = { 0.25f, 0.5f, 0.75f };
 
-        // TODO (Olivier) : [SerializeField] private FugitivePlacer _placer, abonné à CooldownChanged (Archi), quand
-        // Célian l'aura créé (C04). Il manque aussi un moyen de savoir quelle taille est choisie : à demander à Célian
-        // (event SelectedSizeChanged ou propriété SelectedSize), sinon le HUD ne peut pas surligner l'emplacement.
+        private FugitivePlacer _placer;
         // CooldownChanged doit aussi donner la durée totale de la recharge (ou le HUD la lit dans l'AnachronismDefinition) :
         // ItemBarView.SetCooldown(taille, restant, total) ne la devine plus.
 
@@ -104,6 +103,9 @@ namespace Anachronism.UI
             ResetShownValues();
             _isShown = true;
             SetShown(false);
+
+            FugitivePlacer.Enabled += BindPlacer;
+            FugitivePlacer.Disabled += UnbindPlacer;
         }
 
         private void Start()
@@ -113,6 +115,10 @@ namespace Anachronism.UI
 
         private void OnDisable()
         {
+            FugitivePlacer.Enabled -= BindPlacer;
+            FugitivePlacer.Disabled -= UnbindPlacer;
+            UnbindPlacer(_placer);
+
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
             Unbind();
@@ -340,6 +346,35 @@ namespace Anachronism.UI
             }
 
             _itemBar.Tick(Time.deltaTime);
+        }
+
+        private void BindPlacer(FugitivePlacer placer)
+        {
+            UnbindPlacer(_placer);
+            _placer = placer;
+            _placer.SizeSelected += OnSizeSelected;
+            _placer.CooldownChanged += OnCooldownChanged;
+            _itemBar.SetSelected((int)_placer.SelectedSize);
+        }
+
+        private void UnbindPlacer(FugitivePlacer placer)
+        {
+            if (placer == null || placer != _placer)
+                return;
+
+            _placer.SizeSelected -= OnSizeSelected;
+            _placer.CooldownChanged -= OnCooldownChanged;
+            _placer = null;
+        }
+
+        private void OnSizeSelected(AnachronismSize size) => _itemBar.SetSelected((int)size);
+
+        // La recharge est globale : poser un objet bloque les trois emplacements, quelle que soit sa taille.
+        // ItemBarView décompte ensuite tout seul (Tick).
+        private void OnCooldownChanged(AnachronismSize size, float duration)
+        {
+            for (int i = 0; i < ItemBarView.SlotCount; i++)
+                _itemBar.SetCooldown(i, duration, duration);
         }
     }
 }

@@ -40,6 +40,10 @@ namespace Anachronism.Gameplay
         // Local seulement : l'objet tenu au moment de la pose (spawner de test, HUD). Ne pas l'envoyer au serveur.
         public event Action<PlacementRequest, AnachronismDefinition> ItemPlaced;
         public event Action<AnachronismSize> SizeSelected;
+        // Le HUD (persistant, hors scene) ne peut pas porter de reference vers le joueur : il suit le placer qui s'active.
+        // Seul l'owner l'active (PlayerNetworkSetup), donc c'est toujours le placer du joueur local.
+        public static event Action<FugitivePlacer> Enabled;
+        public static event Action<FugitivePlacer> Disabled;
 
         private void Awake()
         {
@@ -51,6 +55,11 @@ namespace Anachronism.Gameplay
 
             if (_era == null)
                 Debug.LogError("FugitivePlacer : epoque non assignee, aucun objet ne sera tire.", this);
+        }
+
+        private void OnEnable()
+        {
+            Enabled?.Invoke(this);
         }
 
         private void Start()
@@ -105,6 +114,8 @@ namespace Anachronism.Gameplay
         // Domain reload desactive : une pose interrompue ne doit pas rester coincee au Play suivant.
         private void OnDisable()
         {
+            Disabled?.Invoke(this);
+
             if (!_isPlacing)
                 return;
 
