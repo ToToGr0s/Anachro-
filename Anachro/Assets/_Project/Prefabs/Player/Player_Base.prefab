@@ -593,6 +593,7 @@ GameObject:
   - component: {fileID: 530670655246137570}
   - component: {fileID: 2168415380857481803}
   - component: {fileID: 7422036158301977208}
+  - component: {fileID: 1926796262582979614}
   m_Layer: 9
   m_Name: Network
   m_TagString: Untagged
@@ -660,6 +661,26 @@ MonoBehaviour:
   _skins: {fileID: 11400000, guid: 0de02c0d456cda74f8a7d16f69ca8e64, type: 2}
   _settings: {fileID: 11400000, guid: 277c5246d3431694ea154502c5a8d292, type: 2}
   _skin: {fileID: 2949540036812197049}
+--- !u!114 &1926796262582979614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7281196890802485186}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06ee3c048c0565542a17393e0bc9f384, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Network.NetworkPlacement
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 765951197041507023}
+  _networkObjectCache: {fileID: 0}
+  _placer: {fileID: 952805693337423203}
+  _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
+  _registry: {fileID: 11400000, guid: da76e3981776e664db2dc16bdb739686, type: 2}
+  _era: {fileID: 11400000, guid: 620ee05ee27f84f49a9f66bdad47f447, type: 2}
+  _eye: {fileID: 5526224817007714654}
 --- !u!1 &7650865602896415800
 GameObject:
   m_ObjectHideFlags: 0

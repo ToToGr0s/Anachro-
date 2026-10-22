@@ -59,6 +59,8 @@ namespace Anachronism.Network
         }
 
         public GamePhase Phase => _phase.Value;
+        /// <summary>Manche en cours (repérage, chasse, dernière chance) : hors lobby et écran de fin.</summary>
+        public bool IsPlayingPhase => _phase.Value == GamePhase.Scouting || _phase.Value == GamePhase.Searching || _phase.Value == GamePhase.LastChance;
         public float Degradation => IsSpawned ? ComputeDegradation(TimeManager.Tick) : 0f;
         public Winner Winner => _winner.Value;
 
@@ -124,6 +126,38 @@ namespace Anachronism.Network
         [Server]
         public PlayerRole GetRoleServer(NetworkConnection connection) =>
             connection != null && _roles.TryGetValue(connection, out PlayerRole role) ? role : PlayerRole.None;
+
+        /// <summary>Fugitif de la partie encore en jeu (ni capturé, ni parti) : seul lui peut poser (T07).</summary>
+        [Server]
+        public bool IsActiveVillainServer(NetworkConnection connection) =>
+            GetRoleServer(connection) == PlayerRole.Villain && !_neutralizedVillains.Contains(connection);
+
+        /// <summary>Fugitifs de la partie, capturés compris : la part de barre d'une pose en dépend (GameplayTuning.GetDisruption).</summary>
+        [Server]
+        public int CountVillainsServer()
+        {
+            int count = 0;
+            foreach (PlayerRole role in _roles.Values)
+            {
+                if (role == PlayerRole.Villain)
+                    count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>Pose validée et spawnée (T07) : la barre monte, et la première pose du repérage lance la chasse.</summary>
+        [Server]
+        public void RegisterPlacement(float degradation)
+        {
+            if (!IsPlayingPhase)
+                return;
+
+            AddDegradation(degradation);
+            // La pose a pu remplir la barre : la partie est alors finie, pas de chasse à lancer.
+            if (_phase.Value == GamePhase.Scouting)
+                EnterSearching();
+        }
 
         /// <summary>Partie de test : un joueur seul, sans minimum de joueurs, qui choisit son rôle. Même règle pour l'UI et le lancement.</summary>
         public static bool IsSoloTest(int activePlayerCount) => activePlayerCount == 1;
@@ -262,7 +296,8 @@ namespace Anachronism.Network
             if (_phaseEndTick.Value == 0 || TimeManager.Tick < _phaseEndTick.Value)
                 return;
 
-            // TODO (Théo) : avec T07, placer automatiquement les objets que les fugitifs n'ont pas posés à temps.
+            // Personne n'a posé avant la fin du chrono : la chasse commence quand même.
+            // TODO (Théo) : placer automatiquement les objets que les fugitifs n'ont pas posés à temps (C09).
             if (phase == GamePhase.Scouting)
                 EnterSearching();
             // Filet de sécurité : la barre est recalée sur le chrono, mais un arrondi de tick peut la laisser juste sous 100 %.
@@ -270,7 +305,7 @@ namespace Anachronism.Network
                 EndMatch(Winner.Villains);
         }
 
-        /// <summary>Seule entrée dans le repérage : T07 n'aura qu'un endroit à compléter.</summary>
+        /// <summary>Seule entrée dans le repérage. Il se termine à la première pose (RegisterPlacement) ou à la fin du chrono.</summary>
         [Server]
         private void EnterScouting()
         {

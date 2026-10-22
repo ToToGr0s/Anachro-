@@ -209,6 +209,25 @@ namespace Anachronism.World
             return !Physics.CheckBox(center, halfExtents, rotation, ~0, QueryTriggerInteraction.Ignore);
         }
 
+        /// <summary>
+        /// Objet posé par un fugitif (T07), déjà validé par NetworkPlacement. Suivi comme les objets de la map :
+        /// il disparaît au retour au lobby ou au lancement suivant. Faux si les clients ne sauraient pas l'afficher.
+        /// </summary>
+        [Server]
+        public bool SpawnPlaced(AnachronismDefinition definition, Vector3 position, Quaternion rotation)
+        {
+            if (_prefab == null || !_prefab.CanDisplay(definition))
+                return false;
+
+            WorldObject worldObject = Instantiate(_prefab, position, rotation);
+            worldObject.SetSpawnDefinition(definition);
+            ServerManager.Spawn(worldObject.NetworkObject, null, gameObject.scene);
+            _spawned.Add(worldObject);
+            // La pose suivante, dans la même frame, doit voir son collider.
+            Physics.SyncTransforms();
+            return true;
+        }
+
         [Server]
         private void DespawnAll()
         {
