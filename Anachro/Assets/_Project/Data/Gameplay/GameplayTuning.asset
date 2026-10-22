@@ -18,6 +18,15 @@ MonoBehaviour:
   _interactionDistance: 2
   _shootDistance: 5
   _maxPhotos: 5
+  _floorMinNormalY: 0.7
+  _wallMaxAbsNormalY: 0.3
+  _minSupportRatio: 0.7
+  _placementMask:
+    serializedVersion: 2
+    m_Bits: 257
+  _placedObjectsMask:
+    serializedVersion: 2
+    m_Bits: 256
   _smallReloadSeconds: 15
   _mediumReloadSeconds: 30
   _largeReloadSeconds: 45

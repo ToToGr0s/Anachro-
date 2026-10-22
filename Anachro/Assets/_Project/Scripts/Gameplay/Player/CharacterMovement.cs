@@ -31,6 +31,7 @@ namespace Anachronism.Gameplay
         private bool _isRunning; // course demandee ET en mouvement (sert aux effets de camera)
         private float _verticalVelocity;
         private bool _isGrounded;
+        private bool _isLocked;
 
         public bool IsGrounded => _isGrounded;
         public bool IsSprinting => _isRunning;
@@ -78,6 +79,8 @@ namespace Anachronism.Gameplay
 
         public void Jump()
         {
+            if (_isLocked) return;
+
             _jumpRequested = true;
         }
 
@@ -93,6 +96,7 @@ namespace Anachronism.Gameplay
         {
             _isSprinting = false;
             _isRunning = false;
+            _isLocked = false;
         }
 
         // ---------- Geometrie de la capsule et requetes ----------
@@ -273,7 +277,8 @@ namespace Anachronism.Gameplay
             _jumpRequested = false;
 
             // 1) Deplacement horizontal (relatif a l'orientation du joueur, la souris tourne le corps)
-            Vector3 input = Vector3.ClampMagnitude(new Vector3(_movementInput.x, 0f, _movementInput.z), 1f);
+            Vector3 raw = _isLocked ? Vector3.zero : _movementInput;
+            Vector3 input = Vector3.ClampMagnitude(new Vector3(raw.x, 0f, raw.z), 1f);
             Vector3 direction = _body.right * input.x + _body.forward * input.z;
             _isRunning = _isSprinting && direction.sqrMagnitude > 0.0001f;
             if (direction.sqrMagnitude > 0.0001f)
@@ -326,6 +331,14 @@ namespace Anachronism.Gameplay
             _cameraOffsetY = Mathf.Lerp(_cameraOffsetY, 0f, 1f - Mathf.Exp(-_settings.StepSmoothing * dt));
             if (_cameraTransform != null)
                 _cameraTransform.localPosition = _cameraBaseLocalPosition + Vector3.up * _cameraOffsetY;
+        }
+
+        // Immobilise le joueur (pose d'un objet) ; le regard reste libre.
+        public void SetMovementLocked(bool isLocked)
+        {
+            _isLocked = isLocked;
+            if (isLocked)
+                _jumpRequested = false;
         }
     }
 }

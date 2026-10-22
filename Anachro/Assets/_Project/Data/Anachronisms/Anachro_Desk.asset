@@ -18,3 +18,4 @@ MonoBehaviour:
   _icon: {fileID: 0}
   _mesh: {fileID: 0}
   _material: {fileID: 0}
+  _allowedSurfaces: 1

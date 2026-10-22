@@ -191,8 +191,9 @@ namespace Anachronism.World
                 return false;
             // Seulement sur le décor : pas sur un objet déjà posé, un PNJ ou un joueur (tous des objets réseau),
             // ni sur une pente ou l'arête d'un mur.
-            // TODO (Olivier) : passer à PlacementRules.ClassifySurface une fois la pose de Célian (#30) mergée.
-            if (hit.normal.y < _tuning.FloorMinNormalY || hit.collider.GetComponentInParent<NetworkObject>() != null)
+            // Même règle « sol » que la pose des fugitifs.
+            if (PlacementRules.ClassifySurface(hit.normal, _tuning) != PlacementSurfaceType.Floor
+                || hit.collider.GetComponentInParent<NetworkObject>() != null)
                 return false;
 
             // Le bas du mesh sur la surface, quel que soit son pivot.
