@@ -1,5 +1,6 @@
 using Anachronism.Gameplay;
 using Anachronism.World;
+using FishNet.Managing.Timing;
 using FishNet.Object;
 using UnityEngine;
 
@@ -21,6 +22,15 @@ namespace Anachronism.Network
         [SerializeField] private Transform _eye;
 
         private ObjectSpawner _objects;
+        // Côté serveur : premier tick où ce fugitif peut de nouveau poser (durée de pose + recharge de la taille posée).
+        private uint _nextPlaceTick;
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            // Avec le pool, l'instance peut resservir à un autre joueur.
+            _nextPlaceTick = 0;
+        }
 
         public override void OnStartClient()
         {
@@ -49,15 +59,13 @@ namespace Anachronism.Network
         }
 
         // RequireOwnership (par défaut) : un client ne peut pas poser au nom d'un autre joueur.
-        // TODO (Théo) : aucune cadence vérifiée ici (choix du 22/10) ; un client modifié peut enchaîner les poses
-        // et remplir la barre. À fermer avec une recharge côté hôte (GameplayTuning.GetReloadSeconds, en ticks).
         [ServerRpc]
         private void PlaceServerRpc(byte definitionId, Vector3 position, Vector3 normal)
         {
             MatchManager match = MatchManager.Instance;
             if (!CanPlace(match, definitionId, position, normal, out AnachronismDefinition definition, out string reason))
             {
-                Debug.LogWarning($"[NetworkPlacement] Pose refusée (client {Owner.ClientId}) : {reason}.", this);
+                RefusedRequests.Report("Pose", Owner.ClientId, reason, this);
                 return;
             }
 
@@ -78,10 +86,13 @@ namespace Anachronism.Network
                 return;
             }
 
+            // Même recharge que le client (FugitivePlacer) : la pose dure, puis la taille posée fixe l'attente (T07-4).
+            float wait = (_tuning.PlacementDuration + _tuning.GetReloadSeconds(definition.Size)) * _tuning.ServerCooldownTolerance;
+            _nextPlaceTick = TimeManager.Tick + TimeManager.TimeToTicks(wait, TickRounding.RoundDown);
             match.RegisterPlacement(_tuning.GetDisruption(definition.Size, match.CountVillainsServer()));
         }
 
-        // Toute la RPC est hostile (règle réseau 2) : rôle, phase, objet, distance, surface, ligne de vue, appui, place libre.
+        // Toute la RPC est hostile (règle réseau 2) : rôle, phase, recharge, objet, distance, surface, ligne de vue, appui, place libre.
         [Server]
         private bool CanPlace(MatchManager match, byte definitionId, Vector3 position, Vector3 normal,
             out AnachronismDefinition definition, out string reason)
@@ -103,6 +114,12 @@ namespace Anachronism.Network
             if (!match.IsActiveVillainServer(Owner))
             {
                 reason = "pas un fugitif en jeu";
+                return false;
+            }
+
+            if (TimeManager.Tick < _nextPlaceTick)
+            {
+                reason = "recharge";
                 return false;
             }
 

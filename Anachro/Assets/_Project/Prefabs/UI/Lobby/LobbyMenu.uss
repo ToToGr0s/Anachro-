@@ -165,3 +165,19 @@
     color: rgb(240, 120, 120);
     -unity-text-align: middle-center;
 }
+
+/* Réglages de l'hôte (T09) : champs pour l'hôte, résumé pour les autres. */
+.settings {
+    margin: 8px 0;
+}
+
+.setting {
+    margin: 4px 0;
+    font-size: 18px;
+    color: rgb(233, 235, 241);
+}
+
+.setting > .unity-label {
+    min-width: 280px;
+    color: rgb(155, 161, 179);
+}

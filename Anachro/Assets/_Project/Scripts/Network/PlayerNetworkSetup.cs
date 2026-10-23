@@ -1,4 +1,6 @@
 using Anachronism.Core;
+using Anachronism.Gameplay;
+using FishNet.Connection;
 using FishNet.Object;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -26,10 +28,20 @@ namespace Anachronism.Network
         [SerializeField] private PlayerInput _playerInput;
 
         private GameObject _hiddenSceneCamera;
+        // Le corps déplacé par la téléportation (bureau ↔ carte) : l'enfant « Controller » du prefab.
+        private CharacterMovement _movement;
         // Mémorisé plutôt que relu dans IsOwner : à l'arrêt (déconnexion, despawn), l'ownership peut déjà être retirée.
         private bool _hasLocalControl;
         // Mémorisé : MatchManager.Instance peut déjà être détruit quand on se désabonne (fin de partie, retour au menu).
         private MatchManager _match;
+
+        /// <summary>Côté serveur : l'avatar est au bureau (T19). Évite de renvoyer un joueur là où il est déjà.</summary>
+        public bool IsInOfficeServer { get; private set; }
+
+        private void Awake()
+        {
+            _movement = transform.root.GetComponentInChildren<CharacterMovement>(true);
+        }
 
         private void Start()
         {
@@ -72,7 +84,7 @@ namespace Anachronism.Network
         {
             // Filet de sécurité : l'événement est statique, un abonnement oublié appellerait un objet détruit.
             if (_hasLocalControl)
-                GameMenuState.OpenChanged -= OnMenuOpenChanged;
+                GameMenuState.InputBlockedChanged -= OnMenuOpenChanged;
             if (_match != null)
             {
                 _match.LocalRoleAssigned -= OnLocalRoleAssigned;
@@ -87,8 +99,8 @@ namespace Anachronism.Network
 
             _hasLocalControl = true;
             SetComponentsEnabled(_ownerOnlyComponents, true);
-            GameMenuState.OpenChanged += OnMenuOpenChanged;
-            OnMenuOpenChanged(GameMenuState.IsOpen);
+            GameMenuState.InputBlockedChanged += OnMenuOpenChanged;
+            OnMenuOpenChanged(GameMenuState.IsInputBlocked);
 
             // Hors ligne il n'y a ni rôle ni phase : la copie de test prend le rôle choisi dans l'inspecteur.
             if (!GetIsNetworked())
@@ -107,7 +119,7 @@ namespace Anachronism.Network
 
             _match.LocalRoleAssigned += OnLocalRoleAssigned;
             _match.PhaseChanged += OnPhaseChanged;
-            RefreshRoleComponents();
+            OnPhaseChanged(_match.Phase);
         }
 
         private void DisableLocalControl()
@@ -116,7 +128,8 @@ namespace Anachronism.Network
                 return;
 
             _hasLocalControl = false;
-            GameMenuState.OpenChanged -= OnMenuOpenChanged;
+            GameMenuState.InputBlockedChanged -= OnMenuOpenChanged;
+            GameMenuState.SetEndScreen(false);
             if (_match != null)
             {
                 _match.LocalRoleAssigned -= OnLocalRoleAssigned;
@@ -135,7 +148,7 @@ namespace Anachronism.Network
             Cursor.visible = true;
         }
 
-        // Menu Échap ouvert : souris libre pour cliquer, et plus d'entrées (le joueur s'arrête au lieu de garder
+        // Menu Échap ouvert ou écran de fin : souris libre pour cliquer, et plus d'entrées (le joueur s'arrête au lieu de garder
         // la dernière touche enfoncée : désactiver les actions envoie leur « canceled »).
         private void OnMenuOpenChanged(bool isOpen)
         {
@@ -153,7 +166,37 @@ namespace Anachronism.Network
 
         private void OnLocalRoleAssigned(PlayerRole role) => RefreshRoleComponents();
 
-        private void OnPhaseChanged(GamePhase phase) => RefreshRoleComponents();
+        private void OnPhaseChanged(GamePhase phase)
+        {
+            RefreshRoleComponents();
+            // Fin de partie : on attend au bureau, la souris sert au menu du lobby (Rejouer).
+            GameMenuState.SetEndScreen(phase == GamePhase.End);
+        }
+
+        /// <summary>Appelé par MatchPlayerSpawner juste avant le spawn : l'avatar apparaît directement au bureau ou non.</summary>
+        [Server]
+        public void SetSpawnedInOffice(bool isInOffice) => IsInOfficeServer = isInOffice;
+
+        /// <summary>
+        /// Envoie l'avatar au bureau ou sur la carte (T19). Le mouvement est client-autoritaire (règle réseau 8) : seul
+        /// l'owner peut déplacer son corps, l'hôte le lui demande. Il le place aussi chez lui pour ne pas attendre le
+        /// prochain envoi du NetworkTransform.
+        /// </summary>
+        [Server]
+        public void TeleportServer(Vector3 position, Quaternion rotation, bool isInOffice)
+        {
+            IsInOfficeServer = isInOffice;
+            if (_movement != null)
+                _movement.Teleport(position, rotation);
+            TargetTeleport(Owner, position, rotation);
+        }
+
+        [TargetRpc]
+        private void TargetTeleport(NetworkConnection connection, Vector3 position, Quaternion rotation)
+        {
+            if (_movement != null)
+                _movement.Teleport(position, rotation);
+        }
 
         // Côté client seulement, pour l'affichage et les entrées : l'hôte revérifie rôle et phase à chaque pose et chaque tir.
         private void RefreshRoleComponents()

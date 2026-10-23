@@ -8,8 +8,10 @@ using UnityEngine;
 namespace Anachronism.Network
 {
     /// <summary>
-    /// Pas de joueur au lobby : les avatars apparaissent au lancement de la partie et disparaissent à la fin,
-    /// pour que le menu du lobby (et « Rejouer ») reste cliquable, souris libre, sur la vue d'ensemble de la map.
+    /// Pas de joueur au lobby : les avatars apparaissent au lancement de la partie.
+    /// Avec un bureau sur la map (MapSpawnPoints, T19) : les chasseurs y attendent pendant le repérage, sont envoyés sur
+    /// la carte à la première pose, et tout le monde y revient à la fin (souris libre pour le menu du lobby).
+    /// Sans bureau : tout le monde sur la carte, et plus d'avatar à la fin (vue d'ensemble de la map).
     /// Un joueur qui revient en pleine partie avec son rôle (MatchManager.PlayerRejoined) réapparaît aussitôt.
     /// </summary>
     // TODO (Théo) : un client modifié distingue encore un avatar de joueur d'un PNJ (owner dans le message de spawn,
@@ -61,10 +63,61 @@ namespace Anachronism.Network
             if (!IsServerInitialized)
                 return;
 
-            if (phase == GamePhase.Lobby || phase == GamePhase.End)
-                DespawnPlayers();
-            else
-                SpawnMissingPlayers();
+            switch (phase)
+            {
+                case GamePhase.Lobby:
+                    DespawnPlayers();
+                    break;
+                case GamePhase.End:
+                    if (HasOffice)
+                        MoveExistingPlayers();
+                    else
+                        DespawnPlayers();
+                    break;
+                case GamePhase.Scouting:
+                    // « Rejouer » depuis le bureau : les avatars restent, chacun repart selon son nouveau rôle.
+                    _spawnCount = 0;
+                    MoveExistingPlayers();
+                    SpawnMissingPlayers();
+                    break;
+                default:
+                    // Chasse : les chasseurs quittent le bureau pour la carte.
+                    MoveExistingPlayers();
+                    SpawnMissingPlayers();
+                    break;
+            }
+        }
+
+        private bool HasOffice => _spawnPoints != null && _spawnPoints.HasOffice;
+
+        // Une fois par changement de phase : la recherche du composant reste ponctuelle.
+        [Server]
+        private void MoveExistingPlayers()
+        {
+            foreach (KeyValuePair<NetworkConnection, NetworkObject> pair in _players)
+            {
+                if (pair.Value == null || !pair.Value.IsSpawned)
+                    continue;
+
+                bool isInOffice = IsInOffice(pair.Key);
+                PlayerNetworkSetup setup = pair.Value.GetComponentInChildren<PlayerNetworkSetup>(true);
+                if (setup == null || setup.IsInOfficeServer == isInOffice)
+                    continue;
+
+                GetSpawn(pair.Key, _spawnCount++, out Vector3 position, out Quaternion rotation);
+                setup.TeleportServer(position, rotation, isInOffice);
+            }
+        }
+
+        // Bureau : les chasseurs pendant le repérage, tout le monde à la fin.
+        private bool IsInOffice(NetworkConnection connection)
+        {
+            if (!HasOffice)
+                return false;
+
+            GamePhase phase = _match.Phase;
+            return phase == GamePhase.End
+                || (phase == GamePhase.Scouting && _match.GetRoleServer(connection) == PlayerRole.Guardian);
         }
 
         private void OnPlayerRejoined(NetworkConnection connection)
@@ -104,8 +157,11 @@ namespace Anachronism.Network
                 return;
             }
 
-            GetSpawn(_spawnCount++, out Vector3 position, out Quaternion rotation);
+            GetSpawn(connection, _spawnCount++, out Vector3 position, out Quaternion rotation);
             NetworkObject player = NetworkManager.GetPooledInstantiated(_playerPrefab, position, rotation, true);
+            PlayerNetworkSetup setup = player.GetComponentInChildren<PlayerNetworkSetup>(true);
+            if (setup != null)
+                setup.SetSpawnedInOffice(IsInOffice(connection));
             ServerManager.Spawn(player, connection, gameObject.scene);
             _players[connection] = player;
         }
@@ -113,8 +169,16 @@ namespace Anachronism.Network
         private bool HasAvatar(NetworkConnection connection) =>
             _players.TryGetValue(connection, out NetworkObject player) && player != null && player.IsSpawned;
 
-        private void GetSpawn(int index, out Vector3 position, out Quaternion rotation)
+        private void GetSpawn(NetworkConnection connection, int index, out Vector3 position, out Quaternion rotation)
         {
+            Transform office = IsInOffice(connection) ? _spawnPoints.GetOfficeSpawn(index) : null;
+            if (office != null)
+            {
+                position = office.position;
+                rotation = office.rotation;
+                return;
+            }
+
             if (_npcs != null && _npcs.TryGetRandomPoint(out Vector3 point))
             {
                 position = point + Vector3.up * SpawnHeightAboveGround;

@@ -29,10 +29,15 @@ namespace Anachronism.World
         /// <summary>Objet affiché (null tant que l'objet n'est pas réseau ou si l'id est invalide).</summary>
         public AnachronismDefinition Definition { get; private set; }
 
+        /// <summary>Côté serveur : posé par un fugitif (pas généré avec la map). Caché aux chasseurs pendant le repérage (T05).</summary>
+        public bool IsPlacedServer { get; private set; }
+
         /// <summary>Appelé par le serveur juste avant ServerManager.Spawn (l'objet n'est pas encore réseau).</summary>
-        public void SetSpawnDefinition(AnachronismDefinition definition)
+        public void SetSpawnDefinition(AnachronismDefinition definition, bool isPlaced = false)
         {
             _pendingDefinition = definition;
+            // Posé tout de suite : les observateurs sont calculés pendant le spawn.
+            IsPlacedServer = isPlaced;
         }
 
         /// <summary>Vrai si les clients sauront afficher cet objet (présent dans le registre). À tester avant le spawn.</summary>
@@ -93,6 +98,7 @@ namespace Anachronism.World
             base.OnStopNetwork();
             // Un objet remis dans la réserve ne doit pas garder l'identité de sa vie précédente.
             Definition = null;
+            IsPlacedServer = false;
         }
 
         private void Apply(AnachronismDefinition definition)

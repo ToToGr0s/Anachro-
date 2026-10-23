@@ -239,7 +239,7 @@ namespace Anachronism.World
                 return false;
 
             WorldObject worldObject = Instantiate(_prefab, position, rotation);
-            worldObject.SetSpawnDefinition(definition);
+            worldObject.SetSpawnDefinition(definition, true);
             ServerManager.Spawn(worldObject.NetworkObject, null, gameObject.scene);
             _spawned.Add(worldObject);
             // La pose suivante, dans la même frame, doit voir son collider.

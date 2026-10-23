@@ -30,6 +30,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   _shootCooldown: 1
+  _serverCooldownTolerance: 0.8
   _shootMask:
     serializedVersion: 2
     m_Bits: 1793

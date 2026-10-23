@@ -27,6 +27,8 @@ namespace Anachronism.Gameplay
         [Tooltip("Couche des objets deja poses : ils ne sont ni une surface valide ni un appui.")]
         [SerializeField] private LayerMask _placedObjectsMask;
         [SerializeField, Min(0f)] private float _shootCooldown = 1f;
+        [Tooltip("Part des recharges (tir, pose) que l'hôte exige vraiment : les demandes arrivent avec la gigue du réseau, deux tirs envoyés à 1 s d'écart peuvent arriver à 0,9 s.")]
+        [SerializeField, Range(0.5f, 1f)] private float _serverCooldownTolerance = 0.8f;
         [SerializeField] private LayerMask _shootMask = 1;
         [SerializeField, Min(0f)] private float _smallReloadSeconds = 15f;
         [SerializeField, Min(0f)] private float _mediumReloadSeconds = 30f;
@@ -51,6 +53,7 @@ namespace Anachronism.Gameplay
         public LayerMask PlacementMask => _placementMask;
         public LayerMask PlacedObjectsMask => _placedObjectsMask;
         public float ShootCooldown => _shootCooldown;
+        public float ServerCooldownTolerance => _serverCooldownTolerance;
         public LayerMask ShootMask => _shootMask;
         public float GetReloadSeconds(AnachronismSize size)
         {
