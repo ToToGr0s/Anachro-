@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.World.ObjectSpawnSettings
   _minCount: 15
   _maxCount: 200
-  _minSpacing: 0.5
+  _minSpacing: 0.75
   _attemptsPerObject: 20
   _surfaceLayers:
     serializedVersion: 2
