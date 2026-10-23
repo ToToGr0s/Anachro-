@@ -181,3 +181,25 @@
     min-width: 280px;
     color: rgb(155, 161, 179);
 }
+
+/* Champ de saisie et liste déroulante : fond sombre, texte clair (le thème par défaut les met en blanc). */
+.setting > .unity-base-field__input {
+    min-height: 40px;
+    padding: 0 12px;
+    background-color: rgb(36, 40, 51);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: rgb(233, 235, 241);
+    font-size: 18px;
+}
+
+.setting .unity-text-element,
+.setting #unity-text-input {
+    color: rgb(233, 235, 241);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.setting .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: rgb(233, 235, 241);
+}
