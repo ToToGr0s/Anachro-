@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.Build.Profile;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -12,8 +14,9 @@ using Debug = UnityEngine.Debug;
 namespace Anachronism.Editor
 {
     /// <summary>
-    /// Après chaque build non Development réussi (Windows ou Linux), zippe le build et le publie en pré-release
-    /// GitHub ; le workflow build-discord.yml l'annonce ensuite dans #releases.
+    /// Publie les builds en pré-release GitHub (zip par plateforme) ; le workflow build-discord.yml l'annonce dans #releases.
+    /// - « Anachro > Build > Windows + Linux → #releases » : build des deux Build Profiles, une seule release, un seul message ;
+    /// - tout autre build non Development (bouton Build d'un Build Profile) : publié seul.
     /// Les builds Development (DevBuild) sont ignorés : ils servent aux tests multi en local et partiraient à chaque essai.
     /// L'envoi tourne dans une fenêtre PowerShell à part pour ne pas bloquer l'éditeur pendant l'upload.
     /// </summary>
@@ -22,6 +25,16 @@ namespace Anachronism.Editor
         private const string MenuPath = "Anachro/Build/Publier les builds sur #releases";
         private const string EnabledPrefKey = "Anachro.BuildPublisher.Enabled";
         private const string ScriptRelativePath = "../Tools/publish-build.ps1";
+
+        // Dossiers séparés : les deux builds écrivent un dossier Anachro_Data qui s'écraserait.
+        private static readonly (string Platform, string ProfilePath, string OutputPath)[] AllPlatforms =
+        {
+            ("Windows", "Assets/Settings/Build Profiles/Windows.asset", "Builds/Windows/Anachro.exe"),
+            ("Linux", "Assets/Settings/Build Profiles/Linux.asset", "Builds/Linux/Anachro.x86_64")
+        };
+
+        // Pendant le build des deux plateformes, le post-process ne publie pas : la release commune part à la fin.
+        private static bool _isBuildingAll;
 
         public int callbackOrder => 1000;
 
@@ -44,10 +57,59 @@ namespace Anachronism.Editor
             return true;
         }
 
+        [MenuItem("Anachro/Build/Windows + Linux → #releases")]
+        public static void BuildAllAndPublish()
+        {
+            string projectPath = Path.GetDirectoryName(Application.dataPath);
+            var manifest = new List<string>();
+
+            _isBuildingAll = true;
+            try
+            {
+                foreach ((string platform, string profilePath, string outputPath) in AllPlatforms)
+                {
+                    BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
+                    if (profile == null)
+                    {
+                        Debug.LogError($"[BuildPublisher] Build Profile {profilePath} introuvable : rien n'est publié.");
+                        return;
+                    }
+
+                    string executablePath = Path.Combine(projectPath, outputPath);
+                    BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerWithProfileOptions
+                    {
+                        buildProfile = profile,
+                        locationPathName = executablePath,
+                        options = BuildOptions.None
+                    });
+
+                    if (report.summary.result != BuildResult.Succeeded)
+                    {
+                        Debug.LogError($"[BuildPublisher] Build {platform} : {report.summary.result}, rien n'est publié.");
+                        return;
+                    }
+
+                    if ((report.summary.options & BuildOptions.Development) != 0)
+                    {
+                        Debug.LogError($"[BuildPublisher] Le Build Profile {platform} est en Development : décocher « Development Build », rien n'est publié.");
+                        return;
+                    }
+
+                    manifest.Add(GetManifestLine(platform, executablePath));
+                }
+            }
+            finally
+            {
+                _isBuildingAll = false;
+            }
+
+            Publish(projectPath, manifest, "windows-linux");
+        }
+
         public void OnPostprocessBuild(BuildReport report)
         {
             BuildSummary summary = report.summary;
-            if (!IsEnabled || (summary.options & BuildOptions.Development) != 0)
+            if (_isBuildingAll || !IsEnabled || (summary.options & BuildOptions.Development) != 0)
                 return;
 
             string platform = summary.platform switch
@@ -60,6 +122,19 @@ namespace Anachronism.Editor
                 return;
 
             string projectPath = Path.GetDirectoryName(Application.dataPath);
+            Publish(projectPath, new List<string> { GetManifestLine(platform, Path.GetFullPath(summary.outputPath)) }, platform);
+        }
+
+        // Une ligne par plateforme : « Plateforme|dossier du build|entrée|entrée… », lue par publish-build.ps1.
+        private static string GetManifestLine(string platform, string executablePath)
+        {
+            string buildFolder = Path.GetDirectoryName(Path.GetFullPath(executablePath));
+            IEnumerable<string> entries = GetPlayerEntries(buildFolder, Path.GetFileNameWithoutExtension(executablePath));
+            return string.Join("|", new[] { platform, buildFolder }.Concat(entries));
+        }
+
+        private static void Publish(string projectPath, List<string> manifest, string label)
+        {
             string scriptPath = Path.GetFullPath(Path.Combine(projectPath, ScriptRelativePath));
             if (!File.Exists(scriptPath))
             {
@@ -67,20 +142,24 @@ namespace Anachronism.Editor
                 return;
             }
 
-            string executablePath = Path.GetFullPath(summary.outputPath);
-            string buildFolder = Path.GetDirectoryName(executablePath);
-            string entriesFile = Path.Combine(Path.GetTempPath(), $"anachro-build-{platform}.txt");
-            File.WriteAllLines(entriesFile, GetPlayerEntries(buildFolder, Path.GetFileNameWithoutExtension(executablePath)));
+            string manifestPath = Path.Combine(Path.GetTempPath(), $"anachro-build-{label.ToLowerInvariant()}.txt");
+            File.WriteAllLines(manifestPath, manifest);
 
-            Process.Start(new ProcessStartInfo
+            try
             {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -Platform {platform} " +
-                            $"-BuildFolder \"{buildFolder}\" -EntriesFile \"{entriesFile}\" -ProjectFolder \"{projectPath}\"",
-                WorkingDirectory = projectPath,
-                UseShellExecute = true
-            });
-            Debug.Log($"[BuildPublisher] Publication du build {platform} lancée (fenêtre PowerShell).");
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -Manifest \"{manifestPath}\" -ProjectFolder \"{projectPath}\"",
+                    WorkingDirectory = projectPath,
+                    UseShellExecute = true
+                });
+                Debug.Log($"[BuildPublisher] Publication lancée ({label}, fenêtre PowerShell).");
+            }
+            catch (Win32Exception exception)
+            {
+                Debug.LogError($"[BuildPublisher] PowerShell introuvable (éditeur Windows seulement) : build non publié. {exception.Message}");
+            }
         }
 
         // Seulement les fichiers du player : le dossier de sortie peut contenir d'autres builds (ex : Builds/Dev),
