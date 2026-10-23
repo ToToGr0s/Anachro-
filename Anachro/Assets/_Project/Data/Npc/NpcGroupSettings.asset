@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56bce6a89eb9b5616faf029812ac7974, type: 3}
   m_Name: NpcGroupSettings
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Npc.NpcGroupSettings
-  _maxGroupSize: 6
+  _maxGroupSize: 10
   _awarenessRadius: 4
   _destinationZoneRadius: 6
-  _joinChance: 0.271
+  _joinChance: 0.3
   _retryDelay: 5
-  _formationSpacing: 1.5
-  _catchUpDistance: 1.2
-  _discussChance: 0.343
-  _discussDurationRange: {x: 4, y: 9}
+  _formationSpacing: 1.2
+  _catchUpDistance: 1.5
+  _discussChance: 0.738
+  _discussDurationRange: {x: 3, y: 8}
