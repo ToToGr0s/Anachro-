@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace Anachronism.Gameplay
 {
     public enum ShotResult
@@ -8,6 +6,7 @@ namespace Anachronism.Gameplay
         RightObjectFound,
         WrongObjectFound,
         Innocent,
-        Villain
+        Villain,
+        Teammate
     }
 }

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Anachronism.Gameplay
 {
     // TEST LOCAL SEULEMENT (scenes Sandbox) : fait le travail du serveur pour le tir, sans reseau.
-    // Il refait le rayon depuis l'intention, comme le fera le serveur (T06, Theo), et renvoie le resultat a l'outil.
+    // Il refait le rayon depuis l'intention, comme le fait l'hote (NetworkShooting), et renvoie le resultat a l'outil.
     public class SandboxShotResolver : MonoBehaviour
     {
         [SerializeField] private HunterTool _tool;
@@ -42,7 +42,7 @@ namespace Anachronism.Gameplay
                 return;
 
             ShotTargetKind kind = ShotTargetKind.Nothing;
-            if (ShotRules.Raycast(request, _tuning, out RaycastHit hit))
+            if (ShotRules.Raycast(request, _tuning, _tool.ShooterRoot, null, out RaycastHit hit))
             {
                 // Une fois par tir (pas dans Update) : le GetComponentInParent reste ponctuel.
                 SandboxShotTarget target = hit.collider.GetComponentInParent<SandboxShotTarget>();

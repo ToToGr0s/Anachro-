@@ -247,6 +247,19 @@ namespace Anachronism.World
             return true;
         }
 
+        /// <summary>Objet détruit par le tir d'un chasseur (T06, NetworkShooting), déjà validé par l'hôte.</summary>
+        [Server]
+        public void DespawnShot(WorldObject worldObject)
+        {
+            if (worldObject == null || !worldObject.IsSpawned)
+                return;
+
+            _spawned.Remove(worldObject);
+            // Le tir suivant, dans la même frame, ne doit plus le toucher.
+            worldObject.DisableCollision();
+            ServerManager.Despawn(worldObject.NetworkObject);
+        }
+
         [Server]
         private void DespawnAll()
         {

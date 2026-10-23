@@ -35,7 +35,7 @@ namespace Anachronism.Gameplay
             if (!context.started || Cursor.lockState != CursorLockMode.Locked)
                 return;
 
-            // Un seul outil actif a la fois (RoleTools) : la pose pour le mechant, le tir pour le chasseur.
+            // Un seul outil actif a la fois (PlayerNetworkSetup) : la pose pour le mechant, le tir pour le chasseur.
             if (_placer != null && _placer.enabled)
                 _placer.TryPlace();
             else if (_hunterTool != null && _hunterTool.enabled)

@@ -15,6 +15,7 @@ MonoBehaviour:
   _carrierRatio: 0.25
   _placementDuration: 0.5
   _wrongShotPenalty: 0.04
+  _teammateShotPenalty: 0.02
   _interactionDistance: 2
   _shootDistance: 5
   _placementDistanceMargin: 0.5

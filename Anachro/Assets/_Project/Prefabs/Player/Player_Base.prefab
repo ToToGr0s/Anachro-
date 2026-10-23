@@ -876,7 +876,6 @@ GameObject:
   - component: {fileID: 1302982904787285523}
   - component: {fileID: 7684215167097867623}
   - component: {fileID: 8009602161001763171}
-  - component: {fileID: 8819785601065448664}
   m_Layer: 0
   m_Name: Tir
   m_TagString: Untagged
@@ -932,21 +931,6 @@ MonoBehaviour:
   _audioSource: {fileID: 3713820532913169406}
   _shotClip: {fileID: 0}
   _fxDuration: 0.1
---- !u!114 &8819785601065448664
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4581919383033754652}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cdd3e7b04f1fc0345b67acade08418d8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.RoleTools
-  _placer: {fileID: 952805693337423203}
-  _hunterTool: {fileID: 7684215167097867623}
-  _offlineRole: 1
 --- !u!1 &7281196890802485186
 GameObject:
   m_ObjectHideFlags: 0
@@ -959,6 +943,7 @@ GameObject:
   - component: {fileID: 2168415380857481803}
   - component: {fileID: 7422036158301977208}
   - component: {fileID: 1926796262582979614}
+  - component: {fileID: 4116481568614202441}
   m_Layer: 9
   m_Name: Network
   m_TagString: Untagged
@@ -1003,8 +988,11 @@ MonoBehaviour:
   - {fileID: 4839028056385098332}
   - {fileID: 5595452329960202124}
   - {fileID: 4673662947706412388}
-  - {fileID: 8819785601065448664}
-  _fugitiveOnlyComponents: []
+  _fugitiveOnlyComponents:
+  - {fileID: 952805693337423203}
+  _hunterOnlyComponents:
+  - {fileID: 7684215167097867623}
+  _offlineRole: 2
   _capsule: {fileID: 8017830287955416054}
   _camera: {fileID: 5595452329960202124}
   _playerInput: {fileID: 6961015964762917232}
@@ -1044,6 +1032,25 @@ MonoBehaviour:
   _placer: {fileID: 952805693337423203}
   _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
   _registry: {fileID: 11400000, guid: da76e3981776e664db2dc16bdb739686, type: 2}
+  _era: {fileID: 11400000, guid: 620ee05ee27f84f49a9f66bdad47f447, type: 2}
+  _eye: {fileID: 5526224817007714654}
+--- !u!114 &4116481568614202441
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7281196890802485186}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5973cbfd7b5445adb3ed9a29e694a088, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Network.NetworkShooting
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 765951197041507023}
+  _networkObjectCache: {fileID: 0}
+  _tool: {fileID: 7684215167097867623}
+  _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
   _era: {fileID: 11400000, guid: 620ee05ee27f84f49a9f66bdad47f447, type: 2}
   _eye: {fileID: 5526224817007714654}
 --- !u!1 &7650865602896415800

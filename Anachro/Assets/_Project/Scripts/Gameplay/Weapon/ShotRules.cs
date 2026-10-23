@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Anachronism.Gameplay
@@ -5,20 +6,14 @@ namespace Anachronism.Gameplay
     // Regle partagee client/serveur (regle de code 6) : fonction pure. Le serveur l'appelle avant de refaire son propre rayon.
     public static class ShotRules
     {
-        // viewerPosition : la camera du joueur (client) ; cote serveur, sa position connue + hauteur d'oeil fixe.
-        public static bool IsValid(ShotRequest request, Vector3 viewerPosition, GameplayTuning tuning, out ShotError error)
+        // Pas de controle de distance : cote serveur, l'origine est l'oeil connu de l'hote (NetworkShooting), jamais
+        // celle du client. Une origine du client, meme bornee, laisserait tirer depuis l'autre cote d'un mur fin.
+        public static bool IsValid(ShotRequest request, out ShotError error)
         {
             if (!IsFinite(request.Origin) || !IsFinite(request.Direction)
                 || Mathf.Abs(request.Direction.sqrMagnitude - 1f) > 0.01f)
             {
                 error = ShotError.Invalid;
-                return false;
-            }
-
-            // Mouvement client-autoritaire et latence : marge propre au tir (GameplayTuning).
-            if (Vector3.Distance(viewerPosition, request.Origin) > tuning.ShootOriginMargin)
-            {
-                error = ShotError.TooFarFromPlayer;
                 return false;
             }
 
@@ -34,8 +29,7 @@ namespace Anachronism.Gameplay
                 case ShotTargetKind.Anachronism: return ShotResult.RightObjectFound;
                 case ShotTargetKind.PeriodObject: return ShotResult.WrongObjectFound;
                 case ShotTargetKind.Npc: return ShotResult.Innocent;
-                // TODO (Celian) : tirer sur un coequipier = innocent pour l'instant, a valider avec l'equipe.
-                case ShotTargetKind.Guardian: return ShotResult.Innocent;
+                case ShotTargetKind.Guardian: return ShotResult.Teammate;
                 case ShotTargetKind.Villain: return ShotResult.Villain;
                 default: return ShotResult.Missed;
             }
@@ -62,7 +56,10 @@ namespace Anachronism.Gameplay
         }
 
         // Meme rayon partout (client, test hors ligne, serveur) : sinon l'impact affiche et le resultat pourraient diverger.
-        public static bool Raycast(ShotRequest request, GameplayTuning tuning, out RaycastHit hit)
+        // shooter : racine du tireur, ignoree. La camera est au-dessus de la capsule : un tir vers le bas la toucherait.
+        // passThrough (optionnel) : ce que le rayon traverse sans s'arreter (cote serveur, les fugitifs captures).
+        public static bool Raycast(ShotRequest request, GameplayTuning tuning, Transform shooter,
+            Func<Collider, bool> passThrough, out RaycastHit hit)
         {
             // Triggers inclus : la capsule d'un joueur est en trigger chez son proprietaire (CharacterMovement), donc sur
             // l'hote pour le joueur de l'hote. Sans eux, un tir sur un fugitif heberge traverserait son corps.
@@ -76,6 +73,10 @@ namespace Anachronism.Gameplay
                 Collider collider = Hits[i].collider;
                 // Les autres triggers (zones, etc.) ne bloquent pas le tir.
                 if (collider.isTrigger && collider.gameObject.layer != CharacterLayer)
+                    continue;
+                if (shooter != null && collider.transform.IsChildOf(shooter))
+                    continue;
+                if (passThrough != null && passThrough(collider))
                     continue;
 
                 // RaycastNonAlloc ne trie pas ses resultats : on garde le plus proche.

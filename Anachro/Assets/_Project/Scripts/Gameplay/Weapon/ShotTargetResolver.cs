@@ -7,12 +7,12 @@ using UnityEngine;
 namespace Anachronism.Gameplay
 {
     // COTE SERVEUR SEULEMENT : dit ce que le rayon du serveur a touche. Lit le role des joueurs, que seul l'hote connait
-    // (regle reseau 3) : un client n'appelle jamais ce code, il recoit seulement le ShotResult.
+    // (regle reseau 3) : un client n'appelle jamais ce code, il recoit seulement le ShotResult (NetworkShooting).
     public static class ShotTargetResolver
     {
         public static ShotTargetKind KindOf(Collider hit, Era mapEra, MatchManager match)
         {
-            if (hit == null)
+            if (hit == null || match == null)
                 return ShotTargetKind.Nothing;
 
             // Objet de la map ou pose par un fugitif : son epoque, comparee a celle de la map, suffit (EraRules).
@@ -42,29 +42,29 @@ namespace Anachronism.Gameplay
                     : ShotTargetKind.Nothing;
             }
 
-            // TODO (Theo) : mechant deja capture ou parti -> a decider avec T06 (_neutralizedVillains).
             switch (match.GetRoleServer(networkObject.Owner))
             {
-                case PlayerRole.Villain: return ShotTargetKind.Villain;
+                // Un fugitif capture est traverse par le rayon (IsCapturedVillain) : ce cas ne sert que de filet.
+                case PlayerRole.Villain:
+                    return match.IsActiveVillainServer(networkObject.Owner) ? ShotTargetKind.Villain : ShotTargetKind.Nothing;
                 case PlayerRole.Guardian: return ShotTargetKind.Guardian;
                 default: return ShotTargetKind.Nothing;
             }
         }
 
-        // Ce que la RPC (T06, Theo) appelle : meme validation et meme rayon que le client (ShotRules), puis la regle.
-        // eyePosition : position du joueur connue du serveur + hauteur d'oeil, jamais une valeur envoyee par le client.
-        // hit : ce qui a ete touche, pour les consequences (detruire l'objet, capturer le mechant) sans second rayon.
-        public static ShotResult Resolve(ShotRequest request, Vector3 eyePosition, GameplayTuning tuning, Era mapEra,
-            MatchManager match, out ShotError error, out Collider hit)
+        // Fugitif capture : un fantome que les chasseurs ne voient pas, le tir doit passer a travers (ShotRules.Raycast).
+        // Appele pour chaque collider touche par un tir : GetComponentInParent reste ponctuel.
+        public static bool IsCapturedVillain(Collider collider, MatchManager match)
         {
-            hit = null;
-            if (!ShotRules.IsValid(request, eyePosition, tuning, out error))
-                return ShotResult.Missed;
+            if (match == null)
+                return false;
 
-            if (ShotRules.Raycast(request, tuning, out RaycastHit info))
-                hit = info.collider;
+            NetworkObject networkObject = collider.GetComponentInParent<NetworkObject>();
+            if (networkObject == null || !networkObject.Owner.IsValid)
+                return false;
 
-            return ShotRules.ResultFor(KindOf(hit, mapEra, match));
+            return match.GetRoleServer(networkObject.Owner) == PlayerRole.Villain
+                && !match.IsActiveVillainServer(networkObject.Owner);
         }
     }
 }

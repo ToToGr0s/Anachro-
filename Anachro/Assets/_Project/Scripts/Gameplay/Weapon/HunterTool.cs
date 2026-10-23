@@ -1,10 +1,11 @@
 using System;
+using FishNet.Object;
 using UnityEngine;
 
 namespace Anachronism.Gameplay
 {
     // Cote client du chasseur : vise, tire un rayon et prepare l'intention de tir.
-    // Le serveur (T06, Theo) refait le rayon et decide du resultat : ici on ne decide rien de definitif.
+    // L'hote (NetworkShooting) refait le rayon et decide du resultat : ici on ne decide rien de definitif.
     public class HunterTool : MonoBehaviour
     {
         [SerializeField] private Camera _camera;
@@ -12,20 +13,23 @@ namespace Anachronism.Gameplay
 
         // TODO (Celian) : temps de jeu en ticks (TimeManager) pour le cooldown (regle reseau 6).
         private float _readyTime;
+        // Le rayon ignore le corps du tireur : la camera est au-dessus de sa capsule.
+        private Transform _shooterRoot;
 
-        // L'intention de tir : le reseau (Theo) l'enverra au serveur avec ShootServerRpc.
+        // L'intention de tir : NetworkShooting l'envoie a l'hote (ShootServerRpc).
         public event Action<ShotRequest> ShotRequested;
-        // Local, pour les FX et le son : hasHit = le rayon local a touche quelque chose (pas le resultat du serveur).
+        // FX et son : hasHit = le rayon a touche quelque chose (pas le resultat). Local chez le tireur, envoye par l'hote chez les autres.
         public event Action<bool, Vector3> ShotFired;
         // Resultat renvoye par le serveur, pour le retour visuel.
         public event Action<ShotResult> ShotResolved;
-        // Le HUD (persistant, hors scene) suit l'outil qui s'active : seul celui du joueur local l'est (RoleTools).
+        // Le HUD (persistant, hors scene) suit l'outil qui s'active : seul celui du joueur local l'est (PlayerNetworkSetup).
         public static event Action<HunterTool> Enabled;
         public static event Action<HunterTool> Disabled;
         // Pour un abonne arrive apres l'activation (HUD reactive) : il rattrape l'outil deja actif.
         public static HunterTool Current { get; private set; }
 
         public bool IsReady => Time.time >= _readyTime;
+        public Transform ShooterRoot => _shooterRoot;
 
         private void Awake()
         {
@@ -34,6 +38,10 @@ namespace Anachronism.Gameplay
                 Debug.LogError("HunterTool : camera ou reglages manquant.", this);
                 enabled = false;
             }
+
+            // Hors ligne (scene de test sans NetworkObject), la racine de la hierarchie fait office de corps.
+            NetworkObject body = GetComponentInParent<NetworkObject>(true);
+            _shooterRoot = body != null ? body.transform : transform.root;
         }
 
         // Domain reload desactive dans ce projet : sans ce reset, un abonne reste branche d'un Play a l'autre.
@@ -60,16 +68,16 @@ namespace Anachronism.Gameplay
 
         public bool TryShoot()
         {
-            // RoleTools peut rallumer l'outil meme si Awake l'a eteint (camera ou reglages manquants) : on ne tire pas.
+            // PlayerNetworkSetup peut rallumer l'outil meme si Awake l'a eteint (camera ou reglages manquants) : on ne tire pas.
             if (!enabled || !IsReady || _camera == null || _tuning == null)
                 return false;
 
             Transform view = _camera.transform;
             ShotRequest request = new ShotRequest(view.position, view.forward);
-            if (!ShotRules.IsValid(request, view.position, _tuning, out _))
+            if (!ShotRules.IsValid(request, out _))
                 return false;
 
-            bool hasHit = ShotRules.Raycast(request, _tuning, out RaycastHit hit);
+            bool hasHit = ShotRules.Raycast(request, _tuning, _shooterRoot, null, out RaycastHit hit);
             Vector3 point = hasHit ? hit.point : request.Origin + request.Direction * _tuning.ShootDistance;
 
             _readyTime = Time.time + _tuning.ShootCooldown;
@@ -84,12 +92,19 @@ namespace Anachronism.Gameplay
             ShotResolved?.Invoke(result);
         }
 
+        // Tir d'un autre joueur, vu chez nous : memes FX que le tireur, point d'impact calcule par l'hote.
+        public void ShowRemoteShot(bool hasHit, Vector3 point)
+        {
+            ShotFired?.Invoke(hasHit, point);
+        }
+
 #if UNITY_EDITOR
         // Test sans serveur (menu du composant, en Play) : simule la reponse du serveur.
         [ContextMenu("Test : objet trouve")] private void TestObjectFound() => ApplyResult(ShotResult.RightObjectFound);
         [ContextMenu("Test : objet d'epoque")] private void TestPeriodObject() => ApplyResult(ShotResult.WrongObjectFound);
         [ContextMenu("Test : innocent")] private void TestInnocent() => ApplyResult(ShotResult.Innocent);
         [ContextMenu("Test : mechant")] private void TestVillain() => ApplyResult(ShotResult.Villain);
+        [ContextMenu("Test : coequipier")] private void TestTeammate() => ApplyResult(ShotResult.Teammate);
 #endif
     }
 }

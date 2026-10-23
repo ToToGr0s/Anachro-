@@ -12,7 +12,7 @@ namespace Anachronism.Network
     /// <summary>
     /// Objet réseau de scène (dans la map). Seul l'hôte décide : phases, rôles, chrono, victoire.
     /// Les SyncVar ne contiennent rien de secret : chaque rôle n'est envoyé qu'à son joueur (TargetRpc).
-    /// Tir et anachronismes arrivent avec T06 / T07.
+    /// Le tir (T06, NetworkShooting) et la pose (T07, NetworkPlacement) passent par ici pour la barre et la capture.
     /// </summary>
     public sealed class MatchManager : NetworkBehaviour
     {
@@ -157,6 +157,28 @@ namespace Anachronism.Network
             // La pose a pu remplir la barre : la partie est alors finie, pas de chasse à lancer.
             if (_phase.Value == GamePhase.Scouting)
                 EnterSearching();
+        }
+
+        /// <summary>Tir validé (T06) : positif pour une erreur du chasseur, négatif pour un anachronisme détruit.</summary>
+        [Server]
+        public void RegisterShot(float degradation)
+        {
+            if (_phase.Value != GamePhase.Searching && _phase.Value != GamePhase.LastChance)
+                return;
+
+            AddDegradation(degradation);
+        }
+
+        /// <summary>Fugitif touché par un chasseur (T06). Ignoré s'il est déjà capturé ou parti.</summary>
+        // TODO (Célian) : C06, fantôme visible des seuls fugitifs, micro actif. Le tir le traverse déjà (ShotTargetResolver).
+        [Server]
+        public void CaptureVillain(NetworkConnection villain)
+        {
+            if (_phase.Value != GamePhase.Searching && _phase.Value != GamePhase.LastChance)
+                return;
+
+            if (IsActiveVillainServer(villain))
+                NeutralizeVillain(villain);
         }
 
         /// <summary>Partie de test : un joueur seul, sans minimum de joueurs, qui choisit son rôle. Même règle pour l'UI et le lancement.</summary>

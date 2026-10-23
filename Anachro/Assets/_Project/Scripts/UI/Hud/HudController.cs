@@ -22,7 +22,7 @@ namespace Anachronism.UI
         private FugitivePlacer _placer;
 
         private const float ShotResultDuration = 0.5f;
-        private static readonly string[] ShotResultClasses = { "", "reticle--found", "reticle--period", "reticle--innocent", "reticle--villain" };
+        private static readonly string[] ShotResultClasses = { "reticle--found", "reticle--period", "reticle--innocent", "reticle--villain" };
 
         private HunterTool _hunterTool;
         private VisualElement _reticle;
@@ -414,10 +414,25 @@ namespace Anachronism.UI
             if (_reticle == null)
                 return;
 
-            for (int i = 1; i < ShotResultClasses.Length; i++)
-                _reticle.EnableInClassList(ShotResultClasses[i], i == (int)result);
+            string shown = ShotResultClass(result);
+            foreach (string resultClass in ShotResultClasses)
+                _reticle.EnableInClassList(resultClass, resultClass == shown);
             if (result == ShotResult.Missed)
                 _shotResultEndTime = 0f;
+        }
+
+        // Un coéquipier touché s'affiche comme un innocent : une erreur, quelle qu'elle soit.
+        private static string ShotResultClass(ShotResult result)
+        {
+            switch (result)
+            {
+                case ShotResult.RightObjectFound: return "reticle--found";
+                case ShotResult.WrongObjectFound: return "reticle--period";
+                case ShotResult.Innocent:
+                case ShotResult.Teammate: return "reticle--innocent";
+                case ShotResult.Villain: return "reticle--villain";
+                default: return null;
+            }
         }
 
         // Le placer garde sa taille et sa recharge quand le HUD est caché ou réinitialisé : la barre se recale dessus.
