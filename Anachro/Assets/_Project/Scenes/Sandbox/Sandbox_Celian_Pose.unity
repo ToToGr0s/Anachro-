@@ -628,7 +628,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.FugitivePlacer
   _camera: {fileID: 1066069024842939168}
   _ghost: {fileID: 1850089908}
-  _registry: {fileID: 11400000, guid: da76e3981776e664db2dc16bdb739686, type: 2}
   _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
   _era: {fileID: 11400000, guid: c91422a9d33a1934190e73d7b97df1c7, type: 2}
 --- !u!1 &1090077937
@@ -711,6 +710,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Gameplay.SandboxPlacementSpawner
   _placer: {fileID: 794989478}
   _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
+  _worldObjectPrefab: {fileID: 0}
 --- !u!1 &1850089907
 GameObject:
   m_ObjectHideFlags: 0
@@ -1063,7 +1063,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2043134887362578313}
         m_TargetAssemblyTypeName: Anachronism.Gameplay.InputManager, Anachronism.Runtime
-        m_MethodName: OnPlace
+        m_MethodName: OnPrimaryAction
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

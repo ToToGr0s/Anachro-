@@ -6,6 +6,39 @@
     right: 0;
 }
 
+/* Reticule en + au centre de l'ecran, pour les deux roles. */
+.hud-reticle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    translate: -50% -50%;
+}
+
+.hud-reticle__line {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.6);
+    border-width: 1px;
+}
+
+.hud-reticle__line--horizontal {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 4px;
+    translate: 0 -50%;
+}
+
+.hud-reticle__line--vertical {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 4px;
+    translate: -50% 0;
+}
+
 .hud-role {
     left: auto;
     right: 20px;
@@ -157,4 +190,16 @@
 
 .item-slot--cooling .hud-slot__name {
     opacity: 0.4;
+}
+
+/* Retour du serveur apres un tir : la couleur du reticule, une demi-seconde.
+   Mechant touche = meme vert qu'un bon objet : une bonne trouvaille, quelle qu'elle soit. */
+.reticle--found .hud-reticle__line,
+.reticle--villain .hud-reticle__line {
+    background-color: rgb(92, 201, 148);
+}
+
+.reticle--period .hud-reticle__line,
+.reticle--innocent .hud-reticle__line {
+    background-color: rgb(229, 84, 84);
 }
