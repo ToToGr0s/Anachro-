@@ -364,6 +364,7 @@ GameObject:
   - component: {fileID: 4087627149725565834}
   - component: {fileID: 2643947051784240257}
   - component: {fileID: 1481080266970355080}
+  - component: {fileID: 7310485629174830512}
   m_Layer: 9
   m_Name: Network
   m_TagString: Untagged
@@ -430,6 +431,23 @@ MonoBehaviour:
   _meshFilter: {fileID: 4514192724197029223}
   _meshRenderer: {fileID: 2069378121028163130}
   _placer: {fileID: 0}
+--- !u!114 &7310485629174830512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5577620330241530039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99d082c2678a4a71b2f976f0676ce560, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Network.HitFlash
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 8538370366875570768}
+  _networkObjectCache: {fileID: 0}
+  _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
+  _skin: {fileID: 4779792842858117658}
 --- !u!1 &5794871781598722691
 GameObject:
   m_ObjectHideFlags: 0
