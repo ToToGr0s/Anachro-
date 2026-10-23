@@ -41,10 +41,25 @@ namespace Anachronism.Gameplay
             }
         }
 
-        // Capsules des joueurs et des PNJ.
-        private static readonly int CharacterLayer = LayerMask.NameToLayer("Character");
-        // Tampon reutilise : pas d'allocation a chaque tir.
-        private static readonly RaycastHit[] Hits = new RaycastHit[16];
+        // Resolue au premier tir : NameToLayer renvoie -1 sans erreur si la couche est renommee, on le signale alors.
+        private static int _characterLayer = int.MinValue;
+        // Tampon reutilise : pas d'allocation a chaque tir. Triggers compris, une zone dense peut renvoyer beaucoup de touches.
+        private static readonly RaycastHit[] Hits = new RaycastHit[32];
+
+        private static int CharacterLayer
+        {
+            get
+            {
+                if (_characterLayer == int.MinValue)
+                {
+                    _characterLayer = LayerMask.NameToLayer("Character");
+                    if (_characterLayer < 0)
+                        Debug.LogError("ShotRules : couche Character introuvable, les capsules en trigger ne seront pas touchees.");
+                }
+
+                return _characterLayer;
+            }
+        }
 
         // Meme rayon partout (client, test hors ligne, serveur) : sinon l'impact affiche et le resultat pourraient diverger.
         public static bool Raycast(ShotRequest request, GameplayTuning tuning, out RaycastHit hit)

@@ -31,7 +31,7 @@ MonoBehaviour:
   _shootCooldown: 1
   _shootMask:
     serializedVersion: 2
-    m_Bits: 769
+    m_Bits: 1793
   _smallReloadSeconds: 15
   _mediumReloadSeconds: 30
   _largeReloadSeconds: 45

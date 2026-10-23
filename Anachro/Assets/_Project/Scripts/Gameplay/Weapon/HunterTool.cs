@@ -60,7 +60,8 @@ namespace Anachronism.Gameplay
 
         public bool TryShoot()
         {
-            if (!enabled || !IsReady)
+            // RoleTools peut rallumer l'outil meme si Awake l'a eteint (camera ou reglages manquants) : on ne tire pas.
+            if (!enabled || !IsReady || _camera == null || _tuning == null)
                 return false;
 
             Transform view = _camera.transform;
