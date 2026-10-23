@@ -15,18 +15,27 @@ MonoBehaviour:
   _carrierRatio: 0.25
   _placementDuration: 0.5
   _wrongShotPenalty: 0.04
+  _teammateShotPenalty: 0.02
   _interactionDistance: 2
   _shootDistance: 5
+  _placementDistanceMargin: 0.5
   _maxPhotos: 5
   _floorMinNormalY: 0.7
   _wallMaxAbsNormalY: 0.3
   _minSupportRatio: 0.7
   _placementMask:
     serializedVersion: 2
-    m_Bits: 257
+    m_Bits: 1281
   _placedObjectsMask:
     serializedVersion: 2
     m_Bits: 256
+  _shootCooldown: 1
+  _shootMask:
+    serializedVersion: 2
+    m_Bits: 1793
   _smallReloadSeconds: 15
   _mediumReloadSeconds: 30
   _largeReloadSeconds: 45
+  _smallDisruption: 0.07
+  _mediumDisruption: 0.14
+  _largeDisruption: 0.21

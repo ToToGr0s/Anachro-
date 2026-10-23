@@ -7,7 +7,10 @@ namespace Anachronism.Gameplay
     {
         [SerializeField, Range(0f, 1f)] private float _carrierRatio = 0.25f;
         [SerializeField, Min(0f)] private float _placementDuration = 0.5f;
+        [Tooltip("Part de barre ajoutee par un tir sur un PNJ ou un objet de l'epoque de la map.")]
         [SerializeField, Range(0f, 1f)] private float _wrongShotPenalty = 0.04f;
+        [Tooltip("Part de barre ajoutee par un tir sur un autre chasseur.")]
+        [SerializeField, Range(0f, 1f)] private float _teammateShotPenalty = 0.02f;
         [SerializeField, Min(0f)] private float _interactionDistance = 2f;
         [SerializeField, Min(0f)] private float _shootDistance = 5f;
         [Tooltip("Marge ajoutee a la distance de pose pour la validation : le mouvement est client-autoritaire (latence) et le serveur ne connait pas la camera.")]
@@ -23,6 +26,8 @@ namespace Anachronism.Gameplay
         [SerializeField] private LayerMask _placementMask = 1;
         [Tooltip("Couche des objets deja poses : ils ne sont ni une surface valide ni un appui.")]
         [SerializeField] private LayerMask _placedObjectsMask;
+        [SerializeField, Min(0f)] private float _shootCooldown = 1f;
+        [SerializeField] private LayerMask _shootMask = 1;
         [SerializeField, Min(0f)] private float _smallReloadSeconds = 15f;
         [SerializeField, Min(0f)] private float _mediumReloadSeconds = 30f;
         [SerializeField, Min(0f)] private float _largeReloadSeconds = 45f;
@@ -35,6 +40,7 @@ namespace Anachronism.Gameplay
         public float CarrierRatio => _carrierRatio;
         public float PlacementDuration => _placementDuration;
         public float WrongShotPenalty => _wrongShotPenalty;
+        public float TeammateShotPenalty => _teammateShotPenalty;
         public float InteractionDistance => _interactionDistance;
         public float ShootDistance => _shootDistance;
         public float PlacementDistanceMargin => _placementDistanceMargin;
@@ -44,6 +50,8 @@ namespace Anachronism.Gameplay
         public float MinSupportRatio => _minSupportRatio;
         public LayerMask PlacementMask => _placementMask;
         public LayerMask PlacedObjectsMask => _placedObjectsMask;
+        public float ShootCooldown => _shootCooldown;
+        public LayerMask ShootMask => _shootMask;
         public float GetReloadSeconds(AnachronismSize size)
         {
             switch (size)

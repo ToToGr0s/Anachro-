@@ -11,6 +11,7 @@ namespace Anachronism.Gameplay
         [SerializeField] private CharacterMovement _characterMovement;
 
         [SerializeField] private FugitivePlacer _placer;   // optionnel : seul le fugitif en a un
+        [SerializeField] private HunterTool _hunterTool;   // optionnel : seul le chasseur en a un
 
         private void OnEnable()
         {
@@ -28,13 +29,17 @@ namespace Anachronism.Gameplay
                 _characterMovement.SetMovementLocked(false);
         }
 
-        public void OnPlace(InputAction.CallbackContext context)
+        public void OnPrimaryAction(InputAction.CallbackContext context)
         {
-            // Le clic qui reprend la souris (MouseLook) ne doit pas poser un objet.
-            if (!context.started || _placer == null || Cursor.lockState != CursorLockMode.Locked)
+            // Le clic qui reprend la souris (MouseLook) ne doit ni poser ni tirer.
+            if (!context.started || Cursor.lockState != CursorLockMode.Locked)
                 return;
 
-            _placer.TryPlace();
+            // Un seul outil actif a la fois (PlayerNetworkSetup) : la pose pour le mechant, le tir pour le chasseur.
+            if (_placer != null && _placer.enabled)
+                _placer.TryPlace();
+            else if (_hunterTool != null && _hunterTool.enabled)
+                _hunterTool.TryShoot();
         }
 
         public void OnSelectSize(InputAction.CallbackContext context)

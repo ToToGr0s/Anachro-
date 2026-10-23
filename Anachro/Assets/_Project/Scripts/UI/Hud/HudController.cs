@@ -21,6 +21,13 @@ namespace Anachronism.UI
 
         private FugitivePlacer _placer;
 
+        private const float ShotResultDuration = 0.5f;
+        private static readonly string[] ShotResultClasses = { "reticle--found", "reticle--period", "reticle--innocent", "reticle--villain" };
+
+        private HunterTool _hunterTool;
+        private VisualElement _reticle;
+        private float _shotResultEndTime;
+
         [Header("Aperçu sans réseau (menu ⋮ du composant, en Play)")]
         [SerializeField] private float[] _previewCooldowns = { 15f, 30f, 45f };
 
@@ -89,6 +96,7 @@ namespace Anachronism.UI
             _roleLabel = documentRoot.Q<Label>("role-label");
             _endCountdownBar = documentRoot.Q<VisualElement>("end-countdown-bar");
             _endCountdown = documentRoot.Q<Label>("end-countdown");
+            _reticle = documentRoot.Q<VisualElement>("reticle");
             _itemBar = new ItemBarView(documentRoot);
 
             if (_root == null)
@@ -107,6 +115,11 @@ namespace Anachronism.UI
             // HUD réactivé alors que le joueur est déjà là : l'event Enabled est passé sans nous.
             if (FugitivePlacer.Current != null)
                 BindPlacer(FugitivePlacer.Current);
+
+            HunterTool.Enabled += BindHunterTool;
+            HunterTool.Disabled += UnbindHunterTool;
+            if (HunterTool.Current != null)
+                BindHunterTool(HunterTool.Current);
         }
 
         private void Start()
@@ -120,6 +133,10 @@ namespace Anachronism.UI
             FugitivePlacer.Disabled -= UnbindPlacer;
             UnbindPlacer(_placer);
 
+            HunterTool.Enabled -= BindHunterTool;
+            HunterTool.Disabled -= UnbindHunterTool;
+            UnbindHunterTool(_hunterTool);
+
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
             Unbind();
@@ -127,6 +144,9 @@ namespace Anachronism.UI
 
         private void Update()
         {
+            if (_shotResultEndTime > 0f && Time.time >= _shotResultEndTime)
+                ShowShotResult(ShotResult.Missed);
+
             if (IsPreviewing)
             {
                 UpdatePreview();
@@ -364,6 +384,55 @@ namespace Anachronism.UI
             _placer.SizeSelected += OnSizeSelected;
             _placer.CooldownChanged += OnCooldownChanged;
             SyncWithPlacer();
+        }
+
+        private void BindHunterTool(HunterTool tool)
+        {
+            UnbindHunterTool(_hunterTool);
+            _hunterTool = tool;
+            _hunterTool.ShotResolved += OnShotResolved;
+        }
+
+        private void UnbindHunterTool(HunterTool tool)
+        {
+            if (tool == null || tool != _hunterTool)
+                return;
+
+            _hunterTool.ShotResolved -= OnShotResolved;
+            _hunterTool = null;
+        }
+
+        // Reponse du serveur seulement : jamais pendant la visee, sinon le reticule trahirait le mechant.
+        private void OnShotResolved(ShotResult result)
+        {
+            ShowShotResult(result);
+            _shotResultEndTime = result == ShotResult.Missed ? 0f : Time.time + ShotResultDuration;
+        }
+
+        private void ShowShotResult(ShotResult result)
+        {
+            if (_reticle == null)
+                return;
+
+            string shown = ShotResultClass(result);
+            foreach (string resultClass in ShotResultClasses)
+                _reticle.EnableInClassList(resultClass, resultClass == shown);
+            if (result == ShotResult.Missed)
+                _shotResultEndTime = 0f;
+        }
+
+        // Un coéquipier touché s'affiche comme un innocent : une erreur, quelle qu'elle soit.
+        private static string ShotResultClass(ShotResult result)
+        {
+            switch (result)
+            {
+                case ShotResult.RightObjectFound: return "reticle--found";
+                case ShotResult.WrongObjectFound: return "reticle--period";
+                case ShotResult.Innocent:
+                case ShotResult.Teammate: return "reticle--innocent";
+                case ShotResult.Villain: return "reticle--villain";
+                default: return null;
+            }
         }
 
         // Le placer garde sa taille et sa recharge quand le HUD est caché ou réinitialisé : la barre se recale dessus.

@@ -15,8 +15,12 @@ namespace Anachronism.Network
     {
         [Tooltip("Composants actifs seulement chez l'owner : PlayerInput, InputManager, CharacterMovement, MouseLook, Camera, AudioListener.")]
         [SerializeField] private Behaviour[] _ownerOnlyComponents = new Behaviour[0];
-        [Tooltip("Composants actifs seulement chez l'owner fugitif (FugitivePlacer). Hors ligne : toujours actifs, pour tester la pose.")]
+        [Tooltip("Composants actifs seulement chez l'owner fugitif (FugitivePlacer).")]
         [SerializeField] private Behaviour[] _fugitiveOnlyComponents = new Behaviour[0];
+        [Tooltip("Composants actifs seulement chez l'owner chasseur, une fois arrivé sur la map (chasse et dernière chance) : HunterTool.")]
+        [SerializeField] private Behaviour[] _hunterOnlyComponents = new Behaviour[0];
+        [Tooltip("Copie hors ligne (scène de test) : rôle dont elle allume les composants.")]
+        [SerializeField] private PlayerRole _offlineRole = PlayerRole.Villain;
         [SerializeField] private CapsuleCollider _capsule;
         [SerializeField] private Camera _camera;
         [SerializeField] private PlayerInput _playerInput;
@@ -70,7 +74,10 @@ namespace Anachronism.Network
             if (_hasLocalControl)
                 GameMenuState.OpenChanged -= OnMenuOpenChanged;
             if (_match != null)
+            {
                 _match.LocalRoleAssigned -= OnLocalRoleAssigned;
+                _match.PhaseChanged -= OnPhaseChanged;
+            }
         }
 
         private void EnableLocalControl()
@@ -83,10 +90,10 @@ namespace Anachronism.Network
             GameMenuState.OpenChanged += OnMenuOpenChanged;
             OnMenuOpenChanged(GameMenuState.IsOpen);
 
-            // Hors ligne il n'y a pas de rôle : la copie de test peut toujours poser.
+            // Hors ligne il n'y a ni rôle ni phase : la copie de test prend le rôle choisi dans l'inspecteur.
             if (!GetIsNetworked())
             {
-                SetComponentsEnabled(_fugitiveOnlyComponents, true);
+                SetRoleComponentsEnabled(_offlineRole, true);
                 return;
             }
 
@@ -94,12 +101,13 @@ namespace Anachronism.Network
             _match = MatchManager.Instance;
             if (_match == null)
             {
-                Debug.LogWarning("[PlayerNetworkSetup] Pas de MatchManager : les composants du fugitif restent éteints.", this);
+                Debug.LogWarning("[PlayerNetworkSetup] Pas de MatchManager : les outils du fugitif et du chasseur restent éteints.", this);
                 return;
             }
 
             _match.LocalRoleAssigned += OnLocalRoleAssigned;
-            OnLocalRoleAssigned(_match.LocalRole);
+            _match.PhaseChanged += OnPhaseChanged;
+            RefreshRoleComponents();
         }
 
         private void DisableLocalControl()
@@ -110,9 +118,13 @@ namespace Anachronism.Network
             _hasLocalControl = false;
             GameMenuState.OpenChanged -= OnMenuOpenChanged;
             if (_match != null)
+            {
                 _match.LocalRoleAssigned -= OnLocalRoleAssigned;
+                _match.PhaseChanged -= OnPhaseChanged;
+            }
             _match = null;
             SetComponentsEnabled(_fugitiveOnlyComponents, false);
+            SetComponentsEnabled(_hunterOnlyComponents, false);
             SetComponentsEnabled(_ownerOnlyComponents, false);
             if (_hiddenSceneCamera != null)
                 _hiddenSceneCamera.SetActive(true);
@@ -139,9 +151,24 @@ namespace Anachronism.Network
             Cursor.visible = isOpen;
         }
 
-        // Côté client seulement, pour l'affichage et les entrées : l'hôte revérifie le rôle à chaque pose.
-        private void OnLocalRoleAssigned(PlayerRole role) =>
+        private void OnLocalRoleAssigned(PlayerRole role) => RefreshRoleComponents();
+
+        private void OnPhaseChanged(GamePhase phase) => RefreshRoleComponents();
+
+        // Côté client seulement, pour l'affichage et les entrées : l'hôte revérifie rôle et phase à chaque pose et chaque tir.
+        private void RefreshRoleComponents()
+        {
+            GamePhase phase = _match.Phase;
+            SetRoleComponentsEnabled(_match.LocalRole, phase == GamePhase.Searching || phase == GamePhase.LastChance);
+        }
+
+        // Jamais les deux outils à la fois : le clic principal pose (fugitif) ou tire (chasseur), voir InputManager.
+        // Le chasseur n'arrive sur la map qu'à la chasse : pas de tir pendant le repérage.
+        private void SetRoleComponentsEnabled(PlayerRole role, bool isHunterOnMap)
+        {
             SetComponentsEnabled(_fugitiveOnlyComponents, role == PlayerRole.Villain);
+            SetComponentsEnabled(_hunterOnlyComponents, role == PlayerRole.Guardian && isHunterOnMap);
+        }
 
         private static void SetComponentsEnabled(Behaviour[] components, bool isEnabled)
         {
