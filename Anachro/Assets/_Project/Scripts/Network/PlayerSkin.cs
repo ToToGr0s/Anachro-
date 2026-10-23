@@ -17,12 +17,30 @@ namespace Anachronism.Network
         [SerializeField] private PlayerControllerSettings _settings;
         [Tooltip("NpcSkin de l'enfant « Model ».")]
         [SerializeField] private NpcSkin _skin;
+        [Tooltip("Teinte de la stase (C06) : fugitif capturé, figé sur place.")]
+        [SerializeField] private Color _stasisTint = new Color(0.45f, 0.8f, 1f, 1f);
+
+        // URP Lit (_BaseColor) et anciens shaders (_Color) : la teinte passe par un MaterialPropertyBlock, sans copier les matériaux.
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         // Mêmes données publiques que NetworkNpc (index de skin + vitesse de base) : rien de secret, c'est ce que tout le monde voit.
         private readonly SyncVar<byte> _skinIndex = new SyncVar<byte>();
         private readonly SyncVar<float> _baseSpeed = new SyncVar<float>();
 
         private Vector3 _lastPosition;
+        private bool _isFrozen;
+        private MaterialPropertyBlock _stasisBlock;
+
+        /// <summary>
+        /// Stase du fugitif capturé (C06), vue par tous : pose figée et teinte. L'owner, passé sur la caméra de la scène,
+        /// voit alors son propre corps.
+        /// </summary>
+        public void SetFrozen(bool isFrozen)
+        {
+            _isFrozen = isFrozen;
+            ApplyFrozen();
+        }
 
         private void Awake()
         {
@@ -82,12 +100,40 @@ namespace Anachronism.Network
                 foreach (Renderer modelRenderer in _skin.Model.GetComponentsInChildren<Renderer>(true))
                     modelRenderer.enabled = false;
             }
+
+            // Nouveau modèle : la stase en cours doit s'y appliquer.
+            ApplyFrozen();
+        }
+
+        private void ApplyFrozen()
+        {
+            GameObject model = _skin != null ? _skin.Model : null;
+            if (model == null)
+                return;
+
+            Animator animator = model.GetComponentInChildren<Animator>();
+            if (animator != null)
+                animator.speed = _isFrozen ? 0f : _skin.AppliedSkin.AnimPlaybackSpeed;
+
+            if (_stasisBlock == null)
+            {
+                _stasisBlock = new MaterialPropertyBlock();
+                _stasisBlock.SetColor(BaseColorId, _stasisTint);
+                _stasisBlock.SetColor(ColorId, _stasisTint);
+            }
+
+            foreach (Renderer modelRenderer in model.GetComponentsInChildren<Renderer>(true))
+            {
+                modelRenderer.SetPropertyBlock(_isFrozen ? _stasisBlock : null);
+                if (IsOwner)
+                    modelRenderer.enabled = _isFrozen;
+            }
         }
 
         private void Update()
         {
-            // L'owner ne voit pas son corps : inutile d'animer.
-            if (!IsClientInitialized || IsOwner)
+            // L'owner ne voit pas son corps : inutile d'animer. Figé : la pose ne bouge plus.
+            if (!IsClientInitialized || IsOwner || _isFrozen)
                 return;
 
             float dt = Time.deltaTime;

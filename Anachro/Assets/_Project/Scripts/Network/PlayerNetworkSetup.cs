@@ -2,6 +2,8 @@ using Anachronism.Core;
 using Anachronism.Gameplay;
 using FishNet.Connection;
 using FishNet.Object;
+using FishNet.Component.Transforming;
+using FishNet.Object.Synchronizing;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -27,7 +29,20 @@ namespace Anachronism.Network
         [SerializeField] private Camera _camera;
         [SerializeField] private PlayerInput _playerInput;
 
+        // Fugitif capturé (C06) : public, tout le monde voit sa statue. Écrit par l'hôte seulement (MatchPlayerSpawner).
+        private readonly SyncVar<bool> _isCaptured = new SyncVar<bool>();
+
         private GameObject _hiddenSceneCamera;
+        private PlayerSkin _skin;
+        // Contrôle local coupé par la capture : l'owner regarde par la caméra de la scène.
+        private bool _isControlCaptured;
+        // Côté hôte : positions envoyées par l'owner, vérifiées à la réception (anti-triche, règle réseau 2).
+        private NetworkTransform _networkTransform;
+        private MovementValidator _validator;
+        private double _nextRecaleTime;
+
+        // Un recalage au plus toutes les 0,5 s : un tricheur qui insiste n'inonde ni le réseau ni le journal.
+        private const double RecaleInterval = 0.5;
         // Le corps déplacé par la téléportation (bureau ↔ carte) : l'enfant « Controller » du prefab.
         private CharacterMovement _movement;
         // Mémorisé plutôt que relu dans IsOwner : à l'arrêt (déconnexion, despawn), l'ownership peut déjà être retirée.
@@ -41,6 +56,9 @@ namespace Anachronism.Network
         private void Awake()
         {
             _movement = transform.root.GetComponentInChildren<CharacterMovement>(true);
+            _skin = GetComponent<PlayerSkin>();
+            _networkTransform = transform.root.GetComponent<NetworkTransform>();
+            _isCaptured.OnChange += OnCapturedChange;
         }
 
         private void Start()
@@ -48,6 +66,64 @@ namespace Anachronism.Network
             // Jamais initialisée par FishNet : c'est la copie d'une scène de test hors ligne.
             if (!GetIsNetworked())
                 EnableLocalControl();
+        }
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            // Avatar sorti du pool : il ne doit pas revenir figé de la partie précédente.
+            _isCaptured.Value = false;
+
+            // La position de l'owner fait foi pour l'hôte (rayons, poses, captures) : on la vérifie avant de l'accepter.
+            if (_networkTransform != null && _movement != null && _capsule != null)
+            {
+                float centerToFeet = _capsule.height * _capsule.transform.lossyScale.y / 2f - _capsule.center.y;
+                _validator = new MovementValidator(_movement.Settings, centerToFeet);
+                _validator.Reset(transform.root.position, ServerTime);
+                _networkTransform.OnDataReceived += OnTransformReceived;
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerNetworkSetup] NetworkTransform, CharacterMovement ou capsule manquant : mouvement non vérifié.", this);
+            }
+        }
+
+        public override void OnStopServer()
+        {
+            base.OnStopServer();
+            if (_networkTransform != null)
+                _networkTransform.OnDataReceived -= OnTransformReceived;
+            _validator = null;
+        }
+
+        private double ServerTime => TimeManager.TicksToTime(TimeManager.LocalTick);
+
+        // Hôte : chaque paquet de position de l'owner. Refusé → l'hôte garde la dernière position valide (ses tirs, poses et
+        // captures partent de là) et demande à l'owner d'y revenir. Les autres clients reçoivent le paquet brut de FishNet :
+        // un client modifié qui ignore le recalage peut encore y paraître ailleurs.
+        private void OnTransformReceived(NetworkTransform.TransformData previous, NetworkTransform.TransformData next)
+        {
+            if (_validator == null || !IsServerInitialized || Owner.IsLocalClient)
+                return;
+
+            double now = ServerTime;
+            if (_validator.TryAccept(next.Position, now, out string reason))
+                return;
+
+            next.Position = _validator.LastValid;
+            if (now < _nextRecaleTime)
+                return;
+
+            _nextRecaleTime = now + RecaleInterval;
+            RefusedRequests.Report("Mouvement", Owner.ClientId, reason, this);
+            TargetRecale(Owner, _validator.LastValid);
+        }
+
+        [TargetRpc]
+        private void TargetRecale(NetworkConnection connection, Vector3 position)
+        {
+            if (_movement != null)
+                _movement.Teleport(position, transform.root.rotation);
         }
 
         public override void OnStartClient()
@@ -60,18 +136,21 @@ namespace Anachronism.Network
             if (_capsule != null)
                 _capsule.isTrigger = IsOwner;
 
-            if (!IsOwner)
-                return;
-
-            // La caméra de vue d'ensemble de la map rendrait par-dessus la nôtre et doublerait l'AudioListener.
-            Camera sceneCamera = Camera.main;
-            if (sceneCamera != null && sceneCamera != _camera)
+            if (IsOwner)
             {
-                _hiddenSceneCamera = sceneCamera.gameObject;
-                _hiddenSceneCamera.SetActive(false);
+                // La caméra de vue d'ensemble de la map rendrait par-dessus la nôtre et doublerait l'AudioListener.
+                Camera sceneCamera = Camera.main;
+                if (sceneCamera != null && sceneCamera != _camera)
+                {
+                    _hiddenSceneCamera = sceneCamera.gameObject;
+                    _hiddenSceneCamera.SetActive(false);
+                }
+
+                EnableLocalControl();
             }
 
-            EnableLocalControl();
+            // Toujours appliqué : un avatar du pool peut arriver figé, ou déjà capturé (observers reconstruits).
+            ApplyCaptured(_isCaptured.Value);
         }
 
         public override void OnStopClient()
@@ -82,6 +161,7 @@ namespace Anachronism.Network
 
         private void OnDestroy()
         {
+            _isCaptured.OnChange -= OnCapturedChange;
             // Filet de sécurité : l'événement est statique, un abonnement oublié appellerait un objet détruit.
             if (_hasLocalControl)
                 GameMenuState.InputBlockedChanged -= OnMenuOpenChanged;
@@ -128,6 +208,7 @@ namespace Anachronism.Network
                 return;
 
             _hasLocalControl = false;
+            _isControlCaptured = false;
             GameMenuState.InputBlockedChanged -= OnMenuOpenChanged;
             GameMenuState.SetEndScreen(false);
             if (_match != null)
@@ -152,7 +233,8 @@ namespace Anachronism.Network
         // la dernière touche enfoncée : désactiver les actions envoie leur « canceled »).
         private void OnMenuOpenChanged(bool isOpen)
         {
-            if (_playerInput != null)
+            // Capturé : PlayerInput est éteint et doit le rester, seule la souris suit le menu.
+            if (_playerInput != null && !_isControlCaptured)
             {
                 if (isOpen)
                     _playerInput.DeactivateInput();
@@ -173,6 +255,53 @@ namespace Anachronism.Network
             GameMenuState.SetEndScreen(phase == GamePhase.End);
         }
 
+        /// <summary>Capture (C06) ou libération (fin de partie, « Rejouer »). La décision vient de MatchManager.</summary>
+        [Server]
+        public void SetCapturedServer(bool isCaptured)
+        {
+            _isCaptured.Value = isCaptured;
+            _validator?.SetFrozen(isCaptured);
+        }
+
+        private void OnCapturedChange(bool previous, bool next, bool asServer)
+        {
+            // Sur l'hôte, OnChange passe côté serveur puis côté client : on n'applique qu'une fois, côté client.
+            if (asServer || !IsClientInitialized)
+                return;
+
+            ApplyCaptured(next);
+        }
+
+        // Chez tout le monde : statue figée (PlayerSkin). Chez l'owner : plus d'entrées, d'outils ni de caméra à soi,
+        // la caméra de la scène reprend la main.
+        private void ApplyCaptured(bool isCaptured)
+        {
+            if (_skin != null)
+                _skin.SetFrozen(isCaptured);
+
+            if (!_hasLocalControl || isCaptured == _isControlCaptured)
+                return;
+
+            _isControlCaptured = isCaptured;
+            if (isCaptured)
+            {
+                SetRoleComponentsEnabled(PlayerRole.None, false);
+                SetComponentsEnabled(_ownerOnlyComponents, false);
+            }
+            else
+            {
+                SetComponentsEnabled(_ownerOnlyComponents, true);
+                OnMenuOpenChanged(GameMenuState.IsInputBlocked);
+                if (_match != null)
+                    RefreshRoleComponents();
+            }
+
+            if (_hiddenSceneCamera != null)
+                _hiddenSceneCamera.SetActive(isCaptured);
+            else if (isCaptured)
+                Debug.LogWarning("[PlayerNetworkSetup] Pas de caméra de scène (tag MainCamera) : le fugitif capturé ne voit plus rien.", this);
+        }
+
         /// <summary>Appelé par MatchPlayerSpawner juste avant le spawn : l'avatar apparaît directement au bureau ou non.</summary>
         [Server]
         public void SetSpawnedInOffice(bool isInOffice) => IsInOfficeServer = isInOffice;
@@ -186,6 +315,7 @@ namespace Anachronism.Network
         public void TeleportServer(Vector3 position, Quaternion rotation, bool isInOffice)
         {
             IsInOfficeServer = isInOffice;
+            _validator?.Reset(position, ServerTime);
             if (_movement != null)
                 _movement.Teleport(position, rotation);
             TargetTeleport(Owner, position, rotation);
@@ -201,6 +331,9 @@ namespace Anachronism.Network
         // Côté client seulement, pour l'affichage et les entrées : l'hôte revérifie rôle et phase à chaque pose et chaque tir.
         private void RefreshRoleComponents()
         {
+            if (_isControlCaptured)
+                return;
+
             GamePhase phase = _match.Phase;
             SetRoleComponentsEnabled(_match.LocalRole, phase == GamePhase.Searching || phase == GamePhase.LastChance);
         }

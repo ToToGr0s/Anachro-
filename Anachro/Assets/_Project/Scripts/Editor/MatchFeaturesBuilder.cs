@@ -32,9 +32,9 @@ namespace Anachronism.Editor
         private const string HandName = "HeldItem";
         private const string OverlayName = "Overlay";
 
-        // Main tenue devant le corps, à 0,8 m du sol. Le pivot du joueur est au centre de sa capsule (1,35 m),
+        // Main tenue devant le corps, à 0,8 m du sol. Le pivot du joueur est au centre de sa capsule (1,8 m),
         // celui du PNJ à ses pieds : même hauteur dans le monde, donc même silhouette (règle réseau 5).
-        private static readonly Vector3 PlayerHandPosition = new Vector3(0.3f, 0.125f, 0.3f);
+        private static readonly Vector3 PlayerHandPosition = new Vector3(0.3f, -0.1f, 0.3f);
         private static readonly Vector3 NpcHandPosition = new Vector3(0.3f, 0.8f, 0.3f);
 
         [MenuItem("Anachro/Setup/Brancher visibilité, objet tenu, cartes et panel F5")]

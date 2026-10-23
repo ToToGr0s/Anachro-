@@ -18,9 +18,11 @@ namespace Anachronism.Gameplay
         private const float MaxDeltaTime = 0.05f;        // evite de traverser le decor apres un gros lag
         private const int MaxSlideIterations = 4;
 
-        private readonly Collider[] _overlaps = new Collider[8];
+        // Large : au milieu d'un groupe de PNJ, le sol pouvait sortir des 8 premiers et n'était plus repoussé.
+        private readonly Collider[] _overlaps = new Collider[16];
 
         private CapsuleCollider _capsule;
+        private int _characterLayer;
         private Transform _cameraTransform;
         private Vector3 _cameraBaseLocalPosition;
         private float _cameraOffsetY; // decalage visuel de la camera (<= 0 apres une montee), ramene vers 0 en douceur
@@ -35,6 +37,8 @@ namespace Anachronism.Gameplay
 
         public bool IsGrounded => _isGrounded;
         public bool IsSprinting => _isRunning;
+        /// <summary>Regles de deplacement, relues par l'hote pour verifier les positions envoyees (MovementValidator).</summary>
+        public PlayerControllerSettings Settings => _settings;
 
         private float Radius => _capsule.radius * Mathf.Max(_body.lossyScale.x, _body.lossyScale.z);
         private float Height => Mathf.Max(_capsule.height * _body.lossyScale.y, Radius * 2f);
@@ -50,6 +54,8 @@ namespace Anachronism.Gameplay
 
             if (_body == null)
                 _body = transform;
+
+            _characterLayer = LayerMask.NameToLayer("Character");
 
             _capsule = _body.GetComponent<CapsuleCollider>();
             if (_capsule == null)
@@ -148,6 +154,16 @@ namespace Anachronism.Gameplay
                             other, other.transform.position, other.transform.rotation,
                             out Vector3 direction, out float distance))
                     {
+                        // Un autre personnage (joueur, PNJ) ne pousse qu'à l'horizontale : posé un peu plus haut (NavMesh
+                        // approximatif) ou en plein saut, il enfonçait nos pieds sous le sol, que les casts ne voient plus.
+                        if (other.gameObject.layer == _characterLayer)
+                        {
+                            direction.y = 0f;
+                            if (direction.sqrMagnitude < 0.0001f)
+                                continue;
+                            direction.Normalize();
+                        }
+
                         // + SkinWidth: pile contre la surface, les casts ne la detectent plus (le sol "disparait",
                         // la gravite s'accumule et le joueur reste enfonce). Avec la marge, il est pose normalement.
                         position += direction * (distance + SkinWidth);
