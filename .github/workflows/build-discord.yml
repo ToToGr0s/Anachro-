@@ -1,0 +1,24 @@
+# Annonce dans le salon Discord #releases chaque build publié par Tools/publish-build.ps1
+# (pré-release GitHub au tag build-…, créée après un build Unity non Development).
+name: Build sur Discord
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    if: github.event.release.prerelease && startsWith(github.event.release.tag_name, 'build-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Annonce Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_RELEASES }}
+        run: python3 .github/scripts/build_discord.py
