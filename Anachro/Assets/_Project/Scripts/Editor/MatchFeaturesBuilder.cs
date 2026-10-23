@@ -27,7 +27,7 @@ namespace Anachronism.Editor
         private const string WorldObjectPrefabPath = "Assets/_Project/Prefabs/Props/WorldObject.prefab";
         private const string ConditionFolder = "Assets/_Project/Data/Network";
         private const string ConditionPath = ConditionFolder + "/HiddenWhileHidingCondition.asset";
-        private const string BootScenePath = "Assets/_Project/Scenes/Boot.unity";
+        private const string BootScenePath = "Assets/_Project/Scenes/Maps/Boot.unity";
         private const string MapsFolder = "Assets/_Project/Scenes/Maps/";
         private const string HandName = "HeldItem";
         private const string OverlayName = "Overlay";
@@ -262,7 +262,8 @@ namespace Anachronism.Editor
         }
 
         private static string[] MapScenePaths() => EditorBuildSettings.scenes
-            .Where(scene => scene.enabled && scene.path.StartsWith(MapsFolder))
+            // Boot est rangé dans le même dossier que les cartes : ce n'en est pas une.
+            .Where(scene => scene.enabled && scene.path.StartsWith(MapsFolder) && scene.path != BootScenePath)
             .Select(scene => scene.path)
             .ToArray();
     }

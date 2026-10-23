@@ -25,7 +25,7 @@ namespace Anachronism.Editor
     /// </summary>
     public static class OnlineGameplayBuilder
     {
-        private const string BootScenePath = "Assets/_Project/Scenes/Boot.unity";
+        private const string BootScenePath = "Assets/_Project/Scenes/Maps/Boot.unity";
         private const string MapScenePath = "Assets/_Project/Scenes/Maps/Map_Greybox.unity";
         private const string NpcTestScenePath = "Assets/_Project/Scenes/Pnj_v0.unity";
         private const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player/Player_Base.prefab";
