@@ -82,7 +82,8 @@ namespace Anachronism.Gameplay
             if (Mouse.current == null) return;
 
             // Echap ouvre le menu (UI/PauseMenu), qui libere la souris : pas de regard tant qu'il est ouvert.
-            if (GameMenuState.IsOpen) return;
+            // Pareil a l'ecran de fin : la souris sert au menu du lobby.
+            if (GameMenuState.IsInputBlocked) return;
 
             // Scene de test sans Boot, donc sans menu : Echap libere la souris lui-meme.
             if (!GameMenuState.IsAvailable && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
@@ -106,8 +107,8 @@ namespace Anachronism.Gameplay
             _pitch = Mathf.Clamp(_pitch - delta.y, -_settings.MaxPitch, _settings.MaxPitch);
             transform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
 
-            // Gauche/droite: tourne le corps
-            _yaw += delta.x;
+            // Gauche/droite: tourne le corps. Relu sur le corps : une teleportation (CharacterMovement.Teleport) a pu le tourner.
+            _yaw = _playerBody.eulerAngles.y + delta.x;
             _playerBody.rotation = Quaternion.Euler(0f, _yaw, 0f);
         }
 

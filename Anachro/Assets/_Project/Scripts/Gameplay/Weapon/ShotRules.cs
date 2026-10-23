@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace Anachronism.Gameplay
 {
-    // Regle partagee client/serveur (regle de code 6) : fonction pure. Le serveur l'appelle avant de refaire son propre rayon.
+    // Regles partagees client/serveur (regle de code 6). IsValid et ResultFor sont pures ; Raycast depend de la physique
+    // de la scene (et d'un tampon statique), mais reste le meme rayon partout.
     public static class ShotRules
     {
         // Pas de controle de distance : cote serveur, l'origine est l'oeil connu de l'hote (NetworkShooting), jamais

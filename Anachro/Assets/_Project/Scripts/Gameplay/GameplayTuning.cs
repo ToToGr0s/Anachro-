@@ -5,7 +5,10 @@ namespace Anachronism.Gameplay
     [CreateAssetMenu(fileName = "GameplayTuning", menuName = "Anachronism/GameplayTuning")]
     public class GameplayTuning : ScriptableObject
     {
+        [Tooltip("Part des PNJ qui tiennent un objet de l'époque : tenir un objet ne prouve pas qu'on est fugitif.")]
         [SerializeField, Range(0f, 1f)] private float _carrierRatio = 0.25f;
+        [Tooltip("Plus grande dimension d'un objet tenu en main (m) : un gros objet est réduit pour ne pas cacher le personnage.")]
+        [SerializeField, Min(0.05f)] private float _heldItemMaxSize = 0.4f;
         [SerializeField, Min(0f)] private float _placementDuration = 0.5f;
         [Tooltip("Part de barre ajoutee par un tir sur un PNJ ou un objet de l'epoque de la map.")]
         [SerializeField, Range(0f, 1f)] private float _wrongShotPenalty = 0.04f;
@@ -27,6 +30,8 @@ namespace Anachronism.Gameplay
         [Tooltip("Couche des objets deja poses : ils ne sont ni une surface valide ni un appui.")]
         [SerializeField] private LayerMask _placedObjectsMask;
         [SerializeField, Min(0f)] private float _shootCooldown = 1f;
+        [Tooltip("Part des recharges (tir, pose) que l'hôte exige vraiment : les demandes arrivent avec la gigue du réseau, deux tirs envoyés à 1 s d'écart peuvent arriver à 0,9 s.")]
+        [SerializeField, Range(0.5f, 1f)] private float _serverCooldownTolerance = 0.8f;
         [SerializeField] private LayerMask _shootMask = 1;
         [SerializeField, Min(0f)] private float _smallReloadSeconds = 15f;
         [SerializeField, Min(0f)] private float _mediumReloadSeconds = 30f;
@@ -38,6 +43,7 @@ namespace Anachronism.Gameplay
         [SerializeField, Range(0f, 1f)] private float _largeDisruption = 0.21f;
 
         public float CarrierRatio => _carrierRatio;
+        public float HeldItemMaxSize => _heldItemMaxSize;
         public float PlacementDuration => _placementDuration;
         public float WrongShotPenalty => _wrongShotPenalty;
         public float TeammateShotPenalty => _teammateShotPenalty;
@@ -51,6 +57,7 @@ namespace Anachronism.Gameplay
         public LayerMask PlacementMask => _placementMask;
         public LayerMask PlacedObjectsMask => _placedObjectsMask;
         public float ShootCooldown => _shootCooldown;
+        public float ServerCooldownTolerance => _serverCooldownTolerance;
         public LayerMask ShootMask => _shootMask;
         public float GetReloadSeconds(AnachronismSize size)
         {

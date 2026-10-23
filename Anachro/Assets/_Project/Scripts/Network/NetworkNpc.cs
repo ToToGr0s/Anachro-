@@ -18,6 +18,8 @@ namespace Anachronism.Network
         [Tooltip("Profils de comportement que ce prefab peut prendre. Seul l'index est envoyé aux clients.")]
         [SerializeField] private NpcProfile[] _profiles = new NpcProfile[0];
         [SerializeField] private NpcSkinTable _skins;
+        [Tooltip("Objet tenu (T04-5), même composant que sur le fugitif.")]
+        [SerializeField] private HeldItem _heldItem;
 
         /// <summary>PNJ présents chez ce client (affichage debug).</summary>
         public static int ClientCount { get; private set; }
@@ -63,6 +65,8 @@ namespace Anachronism.Network
             _profileIndex.Value = (byte)index;
             _baseSpeed.Value = _agent.BaseSpeed;
             RerollSkin();
+            if (_heldItem != null)
+                _heldItem.PickRandomPeriodItemServer();
         }
 
         /// <summary>Nouveau skin au hasard (réglages de l'hôte). Le comportement du PNJ ne change pas.</summary>

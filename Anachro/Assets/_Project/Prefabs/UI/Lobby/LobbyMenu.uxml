@@ -5,6 +5,7 @@
         <ui:VisualElement name="home-panel" class="panel">
             <ui:Label text="ANACHRO" class="title" />
             <ui:Label text="Trouve l'erreur… temporelle" class="subtitle" />
+            <ui:DropdownField name="map-field" label="Carte" class="setting" />
             <ui:Button name="create-button" text="Créer une partie" class="button button--primary" />
             <ui:Label text="Rejoindre avec un code" class="caption" />
             <ui:VisualElement class="row">
@@ -33,6 +34,15 @@
             </ui:VisualElement>
             <ui:Label name="player-count" class="info" />
             <ui:Label name="result-label" class="result" />
+            <ui:VisualElement name="settings-panel" class="settings">
+                <ui:Label text="Réglages de la partie" class="caption" />
+                <ui:IntegerField name="villains-field" label="Fugitifs" class="setting" />
+                <ui:IntegerField name="objects-field" label="Objets par fugitif" class="setting" />
+                <ui:IntegerField name="scouting-field" label="Repérage (s)" class="setting" />
+                <ui:IntegerField name="searching-field" label="Chasse (min, cachée aux joueurs)" class="setting" />
+                <ui:IntegerField name="last-chance-field" label="Dernière chance (s)" class="setting" />
+                <ui:Label name="settings-summary" class="info" />
+            </ui:VisualElement>
             <ui:Button name="solo-role-button" text="Test solo : chasseur" class="button button--small" />
             <ui:Button name="start-button" text="Lancer la partie" class="button button--primary" />
             <ui:Label name="waiting-label" text="En attente de l'hôte…" class="info" />

@@ -22,10 +22,6 @@ namespace Anachronism.Network
         // Œil du joueur : chez l'hôte la caméra d'un autre joueur est éteinte, mais son transform suit le NetworkTransform.
         [SerializeField] private Transform _eye;
 
-        // Les tirs partent à la cadence du client mais arrivent avec la gigue du réseau : deux tirs envoyés à 1 s d'écart
-        // peuvent arriver à 0,9 s. L'hôte accepte donc une cadence un peu plus rapide que le réglage.
-        private const float CooldownTolerance = 0.8f;
-
         // Côté serveur : premier tick où ce joueur peut de nouveau tirer.
         private uint _nextShotTick;
         private ObjectSpawner _objects;
@@ -42,6 +38,8 @@ namespace Anachronism.Network
             base.OnStartServer();
             // Avec le pool, l'instance peut resservir à un autre joueur.
             _nextShotTick = 0;
+            // Résolu une fois : le tir ne cherche plus dans la scène (l'ObjectSpawner est dans la map, comme ce joueur).
+            _objects = FindAnyObjectByType<ObjectSpawner>();
         }
 
         public override void OnStartClient()
@@ -72,19 +70,22 @@ namespace Anachronism.Network
             var request = new ShotRequest(_eye != null ? _eye.position : Vector3.zero, direction);
             if (!CanShoot(match, request, out string reason))
             {
-                Debug.LogWarning($"[NetworkShooting] Tir refusé (client {Owner.ClientId}) : {reason}.", this);
+                RefusedRequests.Report("Tir", Owner.ClientId, reason, this);
                 return;
             }
 
             _nextShotTick = TimeManager.Tick
-                + TimeManager.TimeToTicks(_tuning.ShootCooldown * CooldownTolerance, TickRounding.RoundDown);
+                + TimeManager.TimeToTicks(_tuning.ShootCooldown * _tuning.ServerCooldownTolerance, TickRounding.RoundDown);
 
             bool hasHit = ShotRules.Raycast(request, _tuning, NetworkObject.transform, _isCapturedVillain, out RaycastHit hit);
             ShotTargetKind kind = hasHit ? ShotTargetResolver.KindOf(hit.collider, _era.Era, match) : ShotTargetKind.Nothing;
             Vector3 point = hasHit ? hit.point : request.Origin + request.Direction * _tuning.ShootDistance;
 
+            ShotResult result = ShotRules.ResultFor(kind);
+            ShotDebugLog.Record(Owner.ClientId, request.Origin, point, hasHit, result);
+
             // Avant les conséquences : une capture peut finir la partie, le tireur doit quand même voir son résultat.
-            TargetShotResult(Owner, ShotRules.ResultFor(kind));
+            TargetShotResult(Owner, result);
             ObserversShotFired(hasHit, point);
             ApplyConsequences(match, kind, hasHit ? hit.collider : null);
         }
@@ -160,8 +161,6 @@ namespace Anachronism.Network
         [Server]
         private void DespawnShot(WorldObject worldObject)
         {
-            if (_objects == null)
-                _objects = FindAnyObjectByType<ObjectSpawner>();
             if (_objects == null)
             {
                 Debug.LogError("[NetworkShooting] Pas d'ObjectSpawner dans la map : objet touché laissé en place.", this);

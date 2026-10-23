@@ -333,6 +333,15 @@ namespace Anachronism.Gameplay
                 _cameraTransform.localPosition = _cameraBaseLocalPosition + Vector3.up * _cameraOffsetY;
         }
 
+        /// <summary>Déplacement instantané (bureau ↔ carte, demandé par l'hôte). MouseLook relit l'orientation du corps.</summary>
+        public void Teleport(Vector3 position, Quaternion rotation)
+        {
+            _body.SetPositionAndRotation(position, rotation);
+            _verticalVelocity = 0f;
+            _cameraOffsetY = 0f;
+            _jumpRequested = false;
+        }
+
         // Immobilise le joueur (pose d'un objet) ; le regard reste libre.
         public void SetMovementLocked(bool isLocked)
         {
