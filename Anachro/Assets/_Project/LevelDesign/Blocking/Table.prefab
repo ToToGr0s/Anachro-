@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 2295682485834875175}
   - component: {fileID: 5902479890796464683}
   - component: {fileID: 6984021628751335592}
+  - component: {fileID: 5426684535312005582}
   m_Layer: 10
   m_Name: Cube (8)
   m_TagString: Untagged
@@ -28,7 +29,7 @@ Transform:
   m_GameObject: {fileID: 76895226980756088}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -2.125, y: 0.125, z: -0.00023412704}
+  m_LocalPosition: {x: -2, y: 0.375, z: -0.08510494}
   m_LocalScale: {x: 0.75, y: 0.75, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -67,7 +68,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 6c805cfce8423b7478bf1a09343a2e59, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -112,6 +113,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5426684535312005582
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 76895226980756088}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
 --- !u!1 &100483176326953457
 GameObject:
   m_ObjectHideFlags: 0
@@ -124,6 +145,7 @@ GameObject:
   - component: {fileID: 4295990747295259425}
   - component: {fileID: 4276471513196327230}
   - component: {fileID: 3788911109349167156}
+  - component: {fileID: 8689577402927290085}
   m_Layer: 10
   m_Name: Cube (2)
   m_TagString: Untagged
@@ -140,7 +162,7 @@ Transform:
   m_GameObject: {fileID: 100483176326953457}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.22136, y: 0.375, z: -1.25}
+  m_LocalPosition: {x: -0.09636, y: 0.625, z: -1.3348708}
   m_LocalScale: {x: 1.5, y: 1, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -179,7 +201,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 563b6e8dc9db026409dd10a90646763d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -224,6 +246,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8689577402927290085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100483176326953457}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
 --- !u!1 &196321519918245135
 GameObject:
   m_ObjectHideFlags: 0
@@ -236,6 +278,7 @@ GameObject:
   - component: {fileID: 9208296116601792492}
   - component: {fileID: 4339140027500026175}
   - component: {fileID: 3257034687208036935}
+  - component: {fileID: 5093096520249917343}
   m_Layer: 10
   m_Name: Cube (9)
   m_TagString: Untagged
@@ -252,7 +295,7 @@ Transform:
   m_GameObject: {fileID: 196321519918245135}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.15103239, z: -0, w: 0.9885288}
-  m_LocalPosition: {x: -2.125, y: 0.125, z: 1.4997659}
+  m_LocalPosition: {x: -2, y: 0.375, z: 1.414895}
   m_LocalScale: {x: 0.75, y: 0.75, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -291,7 +334,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 6c805cfce8423b7478bf1a09343a2e59, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -336,6 +379,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5093096520249917343
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 196321519918245135}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
 --- !u!1 &950214175390206616
 GameObject:
   m_ObjectHideFlags: 0
@@ -348,6 +411,7 @@ GameObject:
   - component: {fileID: 2369161561696388397}
   - component: {fileID: 319450585807344128}
   - component: {fileID: 2670307210507954915}
+  - component: {fileID: 8023691313339136922}
   m_Layer: 10
   m_Name: Cube (6)
   m_TagString: Untagged
@@ -364,7 +428,7 @@ Transform:
   m_GameObject: {fileID: 950214175390206616}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.570191, z: -0, w: 0.82151216}
-  m_LocalPosition: {x: 1.875, y: 0.125, z: 1.7497659}
+  m_LocalPosition: {x: 2, y: 0.375, z: 1.664895}
   m_LocalScale: {x: 0.75, y: 0.75, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -403,7 +467,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 6c805cfce8423b7478bf1a09343a2e59, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -448,6 +512,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8023691313339136922
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 950214175390206616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
 --- !u!1 &1636645389603349598
 GameObject:
   m_ObjectHideFlags: 0
@@ -460,6 +544,7 @@ GameObject:
   - component: {fileID: 534512020600723262}
   - component: {fileID: 179859341510054015}
   - component: {fileID: 1205543712159087184}
+  - component: {fileID: 5641678908056107777}
   m_Layer: 10
   m_Name: Cube (7)
   m_TagString: Untagged
@@ -476,7 +561,7 @@ Transform:
   m_GameObject: {fileID: 1636645389603349598}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.38268343, z: -0, w: 0.92387956}
-  m_LocalPosition: {x: -2.125, y: 0.125, z: -1.5002341}
+  m_LocalPosition: {x: -2, y: 0.375, z: -1.585105}
   m_LocalScale: {x: 0.75, y: 0.75, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -515,7 +600,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 6c805cfce8423b7478bf1a09343a2e59, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -560,6 +645,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5641678908056107777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1636645389603349598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
 --- !u!1 &1754659447184063253
 GameObject:
   m_ObjectHideFlags: 0
@@ -612,6 +717,7 @@ GameObject:
   - component: {fileID: 6612334162958300336}
   - component: {fileID: 3760628659625485673}
   - component: {fileID: 2014191557751051766}
+  - component: {fileID: 3160852791929092995}
   m_Layer: 10
   m_Name: Cube (4)
   m_TagString: Untagged
@@ -628,7 +734,7 @@ Transform:
   m_GameObject: {fileID: 2327325708106204638}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.15103239, z: -0, w: 0.9885288}
-  m_LocalPosition: {x: 1.875, y: 0.125, z: -1.2502341}
+  m_LocalPosition: {x: 2, y: 0.375, z: -1.335105}
   m_LocalScale: {x: 0.75, y: 0.75, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -667,7 +773,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 6c805cfce8423b7478bf1a09343a2e59, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -712,6 +818,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3160852791929092995
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2327325708106204638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
 --- !u!1 &2684786081776598560
 GameObject:
   m_ObjectHideFlags: 0
@@ -724,6 +850,7 @@ GameObject:
   - component: {fileID: 4825405992431479471}
   - component: {fileID: 5585567797754817263}
   - component: {fileID: 9137791758656161364}
+  - component: {fileID: 8254442824332442156}
   m_Layer: 10
   m_Name: Cube (3)
   m_TagString: Untagged
@@ -740,7 +867,7 @@ Transform:
   m_GameObject: {fileID: 2684786081776598560}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.22136, y: 0.875, z: 0}
+  m_LocalPosition: {x: -0.09636, y: 1.125, z: -0.084870815}
   m_LocalScale: {x: 2.25, y: 0.25, z: 4.125}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -779,7 +906,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 563b6e8dc9db026409dd10a90646763d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -824,6 +951,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8254442824332442156
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2684786081776598560}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
 --- !u!1 &4255749785925611444
 GameObject:
   m_ObjectHideFlags: 0
@@ -836,6 +983,7 @@ GameObject:
   - component: {fileID: 6302465338654160960}
   - component: {fileID: 6907357589332762796}
   - component: {fileID: 1803406962975175947}
+  - component: {fileID: 3761373044064965116}
   m_Layer: 10
   m_Name: Cube (5)
   m_TagString: Untagged
@@ -852,7 +1000,7 @@ Transform:
   m_GameObject: {fileID: 4255749785925611444}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.38268343, z: -0, w: 0.92387956}
-  m_LocalPosition: {x: 1.875, y: 0.125, z: 0.24976587}
+  m_LocalPosition: {x: 2, y: 0.375, z: 0.16489506}
   m_LocalScale: {x: 0.75, y: 0.75, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -891,7 +1039,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 6c805cfce8423b7478bf1a09343a2e59, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -936,6 +1084,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3761373044064965116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4255749785925611444}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
 --- !u!1 &5008894136264366555
 GameObject:
   m_ObjectHideFlags: 0
@@ -948,6 +1116,7 @@ GameObject:
   - component: {fileID: 1640763615591900946}
   - component: {fileID: 2610650043906099335}
   - component: {fileID: 3230673588068421437}
+  - component: {fileID: 5585994180840547538}
   m_Layer: 10
   m_Name: Cube (1)
   m_TagString: Untagged
@@ -964,7 +1133,7 @@ Transform:
   m_GameObject: {fileID: 5008894136264366555}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.22136, y: 0.375, z: 1.25}
+  m_LocalPosition: {x: -0.09636, y: 0.625, z: 1.1651292}
   m_LocalScale: {x: 1.5, y: 1, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1003,7 +1172,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: efe26027cacc84b409062a6cff9b90c4, type: 2}
+  - {fileID: 2100000, guid: 563b6e8dc9db026409dd10a90646763d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1048,3 +1217,23 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5585994180840547538
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5008894136264366555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffffi
