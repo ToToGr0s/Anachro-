@@ -33,6 +33,12 @@ namespace Anachronism.Gameplay
         [Tooltip("Part des recharges (tir, pose) que l'hôte exige vraiment : les demandes arrivent avec la gigue du réseau, deux tirs envoyés à 1 s d'écart peuvent arriver à 0,9 s.")]
         [SerializeField, Range(0.5f, 1f)] private float _serverCooldownTolerance = 0.8f;
         [SerializeField] private LayerMask _shootMask = 1;
+        [Tooltip("Couleur du personnage touché par un tir (PNJ ou joueur, même rendu pour tous).")]
+        [SerializeField] private Color _hitFlashColor = new Color(1f, 0.1f, 0.1f, 1f);
+        [Tooltip("Nombre de clignotements rouges d'un personnage touché.")]
+        [SerializeField, Min(1)] private int _hitFlashCount = 3;
+        [Tooltip("Durée totale du clignotement (s).")]
+        [SerializeField, Min(0.05f)] private float _hitFlashDuration = 0.6f;
         [SerializeField, Min(0f)] private float _smallReloadSeconds = 15f;
         [SerializeField, Min(0f)] private float _mediumReloadSeconds = 30f;
         [SerializeField, Min(0f)] private float _largeReloadSeconds = 45f;
@@ -59,6 +65,9 @@ namespace Anachronism.Gameplay
         public float ShootCooldown => _shootCooldown;
         public float ServerCooldownTolerance => _serverCooldownTolerance;
         public LayerMask ShootMask => _shootMask;
+        public Color HitFlashColor => _hitFlashColor;
+        public int HitFlashCount => _hitFlashCount;
+        public float HitFlashDuration => _hitFlashDuration;
         public float GetReloadSeconds(AnachronismSize size)
         {
             switch (size)

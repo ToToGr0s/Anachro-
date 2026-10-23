@@ -132,6 +132,10 @@ namespace Anachronism.Network
         [Server]
         private void ApplyConsequences(MatchManager match, ShotTargetKind kind, Collider hit)
         {
+            // Avant la capture, qui peut finir la partie et retirer l'avatar.
+            if (kind == ShotTargetKind.Npc || kind == ShotTargetKind.Guardian || kind == ShotTargetKind.Villain)
+                FlashHit(hit);
+
             switch (kind)
             {
                 case ShotTargetKind.Anachronism:
@@ -156,6 +160,18 @@ namespace Anachronism.Network
                     match.CaptureVillain(hit.GetComponentInParent<NetworkObject>().Owner);
                     break;
             }
+        }
+
+        // Tout personnage touché clignote chez ceux qui le voient, quel que soit son rôle : le flash ne trahit rien.
+        [Server]
+        private void FlashHit(Collider hit)
+        {
+            NetworkObject target = hit.GetComponentInParent<NetworkObject>();
+            HitFlash flash = target != null ? target.GetComponentInChildren<HitFlash>(true) : null;
+            if (flash != null)
+                flash.FlashServer();
+            else
+                Debug.LogWarning($"[NetworkShooting] {hit.name} touché sans HitFlash : lancer Anachro > Setup > Brancher visibilité, objet tenu, cartes et panel F5.", hit);
         }
 
         [Server]
