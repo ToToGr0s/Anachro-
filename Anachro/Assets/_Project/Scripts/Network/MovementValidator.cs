@@ -21,6 +21,9 @@ namespace Anachronism.Network
         private readonly PlayerControllerSettings _settings;
         private readonly float _centerToFeet;
         private readonly int _blockingMask;
+        private readonly int _groundMask;
+        private readonly Transform _self;
+        private readonly RaycastHit[] _groundHits = new RaycastHit[8];
 
         private float _budget;
         private double _lastTime;
@@ -31,12 +34,17 @@ namespace Anachronism.Network
         public Vector3 LastValid { get; private set; }
 
         /// <param name="centerToFeet">Distance du pivot (centre de la capsule) aux pieds.</param>
-        public MovementValidator(PlayerControllerSettings settings, float centerToFeet)
+        /// <param name="self">Racine de l'avatar vérifié : son propre corps ne compte pas comme sol.</param>
+        public MovementValidator(PlayerControllerSettings settings, float centerToFeet, Transform self)
         {
             _settings = settings;
             _centerToFeet = centerToFeet;
-            // Les autres personnages bougent sans arrêt et se poussent : seul le décor compte.
-            _blockingMask = ~((1 << LayerMask.NameToLayer("Character")) | (1 << LayerMask.NameToLayer("Ignore Raycast")));
+            _self = self;
+            int characterMask = 1 << LayerMask.NameToLayer("Character");
+            _groundMask = ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
+            // Les autres personnages bougent sans arrêt et se poussent : seul le décor bloque. Mais on peut tenir debout
+            // sur eux (CharacterMovement les prend pour du sol) : ils comptent pour le sol.
+            _blockingMask = _groundMask & ~characterMask;
         }
 
         private float MaxSpeed => _settings.WalkSpeed * _settings.SprintMultiplier * _settings.ServerSpeedTolerance;
@@ -80,8 +88,7 @@ namespace Anachronism.Network
                 return Refuse($"traverse {wall.collider.name}", out reason);
 
             float probe = _centerToFeet - GroundProbeRadius + GroundMargin;
-            bool isGrounded = Physics.SphereCast(next, GroundProbeRadius, Vector3.down, out _, probe, _blockingMask, QueryTriggerInteraction.Ignore);
-            if (isGrounded)
+            if (IsGrounded(next, probe))
             {
                 _takeoffY = next.y;
                 _airTime = 0f;
@@ -100,6 +107,20 @@ namespace Anachronism.Network
             }
 
             return Accept(next, horizontal, out reason);
+        }
+
+        // Sans son propre corps : la capsule de l'hôte, restée à la position d'avant, servirait de marche pour monter sans fin.
+        private bool IsGrounded(Vector3 position, float probe)
+        {
+            int count = Physics.SphereCastNonAlloc(position, GroundProbeRadius, Vector3.down, _groundHits, probe, _groundMask,
+                QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                if (!_groundHits[i].collider.transform.IsChildOf(_self))
+                    return true;
+            }
+
+            return false;
         }
 
         private bool Accept(Vector3 next, float horizontal, out string reason)

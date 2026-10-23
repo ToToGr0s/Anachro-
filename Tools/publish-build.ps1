@@ -29,6 +29,9 @@ try {
         $target = git rev-parse --verify -q "origin/$branch"
         if (-not $target) { $target = git rev-parse origin/Dev }
     }
+    # Le workflow qui poste sur Discord est lu dans le commit de la release : sans lui, la release partirait sans annonce.
+    # ls-tree plutôt que cat-file -e : rien sur stderr, que PowerShell 5.1 transformerait en erreur bloquante.
+    if (-not (git ls-tree --name-only $target .github/workflows/build-discord.yml)) { throw "Le commit $($target.Substring(0, 7)) n'a pas build-discord.yml : mettre la branche à jour depuis Dev, la pousser, puis rebuilder." }
 
     Write-Host "Compression du build $Platform…"
     # Le tar de Windows (bsdtar) sait écrire un zip ; celui de Git for Windows non, d'où le chemin complet.

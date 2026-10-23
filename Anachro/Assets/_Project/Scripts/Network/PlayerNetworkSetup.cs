@@ -40,9 +40,13 @@ namespace Anachronism.Network
         private NetworkTransform _networkTransform;
         private MovementValidator _validator;
         private double _nextRecaleTime;
+        private double _teleportGraceEnd;
 
         // Un recalage au plus toutes les 0,5 s : un tricheur qui insiste n'inonde ni le réseau ni le journal.
         private const double RecaleInterval = 0.5;
+        // Après une téléportation de l'hôte, les paquets partis avant que l'owner la reçoive arrivent encore de l'ancien
+        // endroit : refusés sans recalage ni signalement (TargetTeleport est déjà en route).
+        private const double TeleportGrace = 1.0;
         // Le corps déplacé par la téléportation (bureau ↔ carte) : l'enfant « Controller » du prefab.
         private CharacterMovement _movement;
         // Mémorisé plutôt que relu dans IsOwner : à l'arrêt (déconnexion, despawn), l'ownership peut déjà être retirée.
@@ -73,12 +77,15 @@ namespace Anachronism.Network
             base.OnStartServer();
             // Avatar sorti du pool : il ne doit pas revenir figé de la partie précédente.
             _isCaptured.Value = false;
+            // Dates de l'ancienne session d'hôte : le temps repart de zéro.
+            _nextRecaleTime = 0;
+            _teleportGraceEnd = 0;
 
             // La position de l'owner fait foi pour l'hôte (rayons, poses, captures) : on la vérifie avant de l'accepter.
             if (_networkTransform != null && _movement != null && _capsule != null)
             {
                 float centerToFeet = _capsule.height * _capsule.transform.lossyScale.y / 2f - _capsule.center.y;
-                _validator = new MovementValidator(_movement.Settings, centerToFeet);
+                _validator = new MovementValidator(_movement.Settings, centerToFeet, transform.root);
                 _validator.Reset(transform.root.position, ServerTime);
                 _networkTransform.OnDataReceived += OnTransformReceived;
             }
@@ -111,7 +118,7 @@ namespace Anachronism.Network
                 return;
 
             next.Position = _validator.LastValid;
-            if (now < _nextRecaleTime)
+            if (now < _nextRecaleTime || now < _teleportGraceEnd)
                 return;
 
             _nextRecaleTime = now + RecaleInterval;
@@ -316,6 +323,7 @@ namespace Anachronism.Network
         {
             IsInOfficeServer = isInOffice;
             _validator?.Reset(position, ServerTime);
+            _teleportGraceEnd = ServerTime + TeleportGrace;
             if (_movement != null)
                 _movement.Teleport(position, rotation);
             TargetTeleport(Owner, position, rotation);

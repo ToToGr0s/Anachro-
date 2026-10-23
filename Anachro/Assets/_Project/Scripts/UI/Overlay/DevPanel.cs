@@ -48,6 +48,7 @@ namespace Anachronism.UI
         private readonly StringBuilder _text = new StringBuilder(1024);
         private readonly List<CapsuleCollider> _capsules = new List<CapsuleCollider>();
         private readonly List<BoxCollider> _objectBoxes = new List<BoxCollider>();
+        private readonly Dictionary<BoxCollider, bool> _isObjectBox = new Dictionary<BoxCollider, bool>();
         // Tous les calques (murs compris) : assez grand pour ne pas perdre de personnage ou d'objet dans le lot.
         private readonly Collider[] _overlaps = new Collider[512];
 
@@ -534,9 +535,21 @@ namespace Anachronism.UI
                 Collider overlap = _overlaps[i];
                 if (overlap is CapsuleCollider capsule && overlap.gameObject.layer == characterLayer)
                     _capsules.Add(capsule);
-                else if (overlap is BoxCollider box && overlap.GetComponentInParent<WorldObject>() != null)
+                else if (overlap is BoxCollider box && IsObjectBox(box))
                     _objectBoxes.Add(box);
             }
+        }
+
+        // Mémorisé par collider : sinon un GetComponentInParent par boîte du décor à chaque rafraîchissement (règle de code 1).
+        private bool IsObjectBox(BoxCollider box)
+        {
+            if (!_isObjectBox.TryGetValue(box, out bool isObject))
+            {
+                isObject = box.GetComponentInParent<WorldObject>() != null;
+                _isObjectBox[box] = isObject;
+            }
+
+            return isObject;
         }
 
         private void CreateLineMaterial()
