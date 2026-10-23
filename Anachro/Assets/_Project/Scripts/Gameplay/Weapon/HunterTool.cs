@@ -84,10 +84,12 @@ namespace Anachronism.Gameplay
             ShotResolved?.Invoke(result);
         }
 
+#if UNITY_EDITOR
         // Test sans serveur (menu du composant, en Play) : simule la reponse du serveur.
         [ContextMenu("Test : objet trouve")] private void TestObjectFound() => ApplyResult(ShotResult.RightObjectFound);
         [ContextMenu("Test : objet d'epoque")] private void TestPeriodObject() => ApplyResult(ShotResult.WrongObjectFound);
         [ContextMenu("Test : innocent")] private void TestInnocent() => ApplyResult(ShotResult.Innocent);
         [ContextMenu("Test : mechant")] private void TestVillain() => ApplyResult(ShotResult.Villain);
+#endif
     }
 }

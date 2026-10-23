@@ -15,8 +15,8 @@ namespace Anachronism.Gameplay
                 return false;
             }
 
-            // Mouvement client-autoritaire et latence : meme marge que pour la pose.
-            if (Vector3.Distance(viewerPosition, request.Origin) > tuning.PlacementDistanceMargin)
+            // Mouvement client-autoritaire et latence : marge propre au tir (GameplayTuning).
+            if (Vector3.Distance(viewerPosition, request.Origin) > tuning.ShootOriginMargin)
             {
                 error = ShotError.TooFarFromPlayer;
                 return false;

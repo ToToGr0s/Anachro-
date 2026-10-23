@@ -1,6 +1,6 @@
+#if UNITY_EDITOR
 using FishNet.Object;
 using UnityEngine;
-#if UNITY_EDITOR
 
 namespace Anachronism.Gameplay
 {

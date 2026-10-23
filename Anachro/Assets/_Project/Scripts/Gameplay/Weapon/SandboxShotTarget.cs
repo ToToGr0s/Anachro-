@@ -1,5 +1,5 @@
-using UnityEngine;
 #if UNITY_EDITOR
+using UnityEngine;
 
 namespace Anachronism.Gameplay
 {

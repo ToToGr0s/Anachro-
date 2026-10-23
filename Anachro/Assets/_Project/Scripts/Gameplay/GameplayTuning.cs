@@ -25,6 +25,8 @@ namespace Anachronism.Gameplay
         [SerializeField] private LayerMask _placedObjectsMask;
         [SerializeField, Min(0f)] private float _shootCooldown = 1f;
         [SerializeField] private LayerMask _shootMask = 1;
+        [Tooltip("Ecart accepte entre l'origine du tir envoyee par le client et l'oeil du joueur connu du serveur (latence, mouvement client-autoritaire).")]
+        [SerializeField, Min(0f)] private float _shootOriginMargin = 0.5f;
         [SerializeField, Min(0f)] private float _smallReloadSeconds = 15f;
         [SerializeField, Min(0f)] private float _mediumReloadSeconds = 30f;
         [SerializeField, Min(0f)] private float _largeReloadSeconds = 45f;
@@ -48,6 +50,7 @@ namespace Anachronism.Gameplay
         public LayerMask PlacedObjectsMask => _placedObjectsMask;
         public float ShootCooldown => _shootCooldown;
         public LayerMask ShootMask => _shootMask;
+        public float ShootOriginMargin => _shootOriginMargin;
         public float GetReloadSeconds(AnachronismSize size)
         {
             switch (size)
