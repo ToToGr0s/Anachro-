@@ -489,6 +489,7 @@ GameObject:
   - component: {fileID: 1056042165}
   - component: {fileID: 1056042164}
   - component: {fileID: 1056042163}
+  - component: {fileID: 1056042168}
   m_Layer: 0
   m_Name: Overlay
   m_TagString: Untagged
@@ -573,6 +574,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1056042168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056042162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e10b2c7919b41304998a15f268c09a19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.UI.DevPanel
 --- !u!1 &1418230394
 GameObject:
   m_ObjectHideFlags: 0
@@ -590,6 +603,7 @@ GameObject:
   - component: {fileID: 1418230404}
   - component: {fileID: 1418230403}
   - component: {fileID: 1418230402}
+  - component: {fileID: 1418230405}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -749,6 +763,23 @@ MonoBehaviour:
   _port: 7770
   _maximumClients: 8
   _clientAddress: 127.0.0.1
+--- !u!114 &1418230405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1418230394}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77e95a274fe85bc498d7f775e15c2490, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Network.MapSelection
+  _maps:
+  - DisplayName: Map_Greybox
+    ScenePath: Assets/_Project/Scenes/Maps/Map_Greybox.unity
+  - DisplayName: Blocking
+    ScenePath: Assets/_Project/Scenes/Maps/Blocking.unity
 --- !u!1 &1729188264
 GameObject:
   m_ObjectHideFlags: 0

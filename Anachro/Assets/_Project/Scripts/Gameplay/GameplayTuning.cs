@@ -5,7 +5,10 @@ namespace Anachronism.Gameplay
     [CreateAssetMenu(fileName = "GameplayTuning", menuName = "Anachronism/GameplayTuning")]
     public class GameplayTuning : ScriptableObject
     {
+        [Tooltip("Part des PNJ qui tiennent un objet de l'époque : tenir un objet ne prouve pas qu'on est fugitif.")]
         [SerializeField, Range(0f, 1f)] private float _carrierRatio = 0.25f;
+        [Tooltip("Plus grande dimension d'un objet tenu en main (m) : un gros objet est réduit pour ne pas cacher le personnage.")]
+        [SerializeField, Min(0.05f)] private float _heldItemMaxSize = 0.4f;
         [SerializeField, Min(0f)] private float _placementDuration = 0.5f;
         [Tooltip("Part de barre ajoutee par un tir sur un PNJ ou un objet de l'epoque de la map.")]
         [SerializeField, Range(0f, 1f)] private float _wrongShotPenalty = 0.04f;
@@ -40,6 +43,7 @@ namespace Anachronism.Gameplay
         [SerializeField, Range(0f, 1f)] private float _largeDisruption = 0.21f;
 
         public float CarrierRatio => _carrierRatio;
+        public float HeldItemMaxSize => _heldItemMaxSize;
         public float PlacementDuration => _placementDuration;
         public float WrongShotPenalty => _wrongShotPenalty;
         public float TeammateShotPenalty => _teammateShotPenalty;

@@ -470,6 +470,64 @@ namespace Anachronism.Network
             SetPhase(GamePhase.End, 0f);
         }
 
+        // ================= Triches de test (panel F5) =================
+        // Refusées hors builds de dev (Debug.isDebugBuild : éditeur et « Development Build »), même appelées par un mod.
+
+        /// <summary>Passe à la phase suivante : repérage → chasse → dernière chance → victoire des fugitifs.</summary>
+        [Server]
+        public void DebugSkipPhase()
+        {
+            if (!Debug.isDebugBuild)
+                return;
+
+            switch (_phase.Value)
+            {
+                case GamePhase.Scouting: EnterSearching(); break;
+                case GamePhase.Searching: SetPhase(GamePhase.LastChance, _settings.LastChanceDuration); break;
+                case GamePhase.LastChance: EndMatch(Winner.Villains); break;
+            }
+        }
+
+        /// <summary>Ajoute (ou retire) une part de barre, comme une pose ou un tir.</summary>
+        [Server]
+        public void DebugAddDegradation(float amount)
+        {
+            if (Debug.isDebugBuild)
+                AddDegradation(amount);
+        }
+
+        /// <summary>Capture tous les fugitifs encore en jeu : victoire des chasseurs.</summary>
+        [Server]
+        public void DebugCaptureAllVillains()
+        {
+            if (!Debug.isDebugBuild)
+                return;
+
+            var villains = new List<NetworkConnection>();
+            foreach (KeyValuePair<NetworkConnection, PlayerRole> pair in _roles)
+            {
+                if (pair.Value == PlayerRole.Villain && !_neutralizedVillains.Contains(pair.Key))
+                    villains.Add(pair.Key);
+            }
+
+            foreach (NetworkConnection villain in villains)
+                NeutralizeVillain(villain);
+        }
+
+        [Server]
+        public void DebugEndMatch(Winner winner)
+        {
+            if (Debug.isDebugBuild)
+                EndMatch(winner);
+        }
+
+        /// <summary>Rôles de la partie, pour le panel F5 de l'hôte (jamais envoyé aux clients).</summary>
+        [Server]
+        public IEnumerable<KeyValuePair<NetworkConnection, PlayerRole>> DebugRolesServer() => _roles;
+
+        [Server]
+        public bool DebugIsNeutralizedServer(NetworkConnection connection) => _neutralizedVillains.Contains(connection);
+
         // ================= Méchants neutralisés =================
 
         /// <summary>Capture (T06) ou déconnexion. Les gentils gagnent quand tous les méchants sont neutralisés.</summary>

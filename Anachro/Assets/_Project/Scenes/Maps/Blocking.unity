@@ -2562,6 +2562,7 @@ MonoBehaviour:
   - {fileID: 1967848389}
   - {fileID: 660329806}
   - {fileID: 415154711}
+  _officeSpawns: []
 --- !u!4 &1204517707
 Transform:
   m_ObjectHideFlags: 0
@@ -2951,6 +2952,7 @@ GameObject:
   - component: {fileID: 1600597746}
   - component: {fileID: 1600597745}
   - component: {fileID: 1600597748}
+  - component: {fileID: 1600597749}
   m_Layer: 0
   m_Name: MatchManager
   m_TagString: Untagged
@@ -3064,6 +3066,22 @@ MonoBehaviour:
   _playerPrefab: {fileID: 765951197041507023, guid: d405f0a9b0d3f0c43845426e7a50d774, type: 3}
   _npcs: {fileID: 1793267842}
   _spawnPoints: {fileID: 1204517706}
+--- !u!114 &1600597749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1600597744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c2350e386f4f4243baeff840439310c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.Network.LiveTuning
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 1600597746}
+  _networkObjectCache: {fileID: 0}
+  _tuning: {fileID: 11400000, guid: 80bacfa69a08d184bae0fa889eb4368f, type: 2}
 --- !u!1001 &1666327967
 PrefabInstance:
   m_ObjectHideFlags: 0

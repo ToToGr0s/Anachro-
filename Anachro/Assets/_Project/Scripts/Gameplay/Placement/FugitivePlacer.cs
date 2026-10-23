@@ -42,6 +42,9 @@ namespace Anachronism.Gameplay
         // L'intention avec l'objet tenu : NetworkPlacement l'envoie a l'hote, qui verifie qu'il est posable dans cette epoque.
         public event Action<PlacementRequest, AnachronismDefinition> ItemPlaced;
         public event Action<AnachronismSize> SizeSelected;
+        // Objet en main (null pendant la recharge) : HeldItem le montre aux autres joueurs, comme celui d'un PNJ (T04-5).
+        public event Action<AnachronismDefinition> HeldItemChanged;
+        public AnachronismDefinition CurrentItem => _heldItems[(int)_selectedSize];
         // Le HUD (persistant, hors scene) ne peut pas porter de reference vers le joueur : il suit le placer qui s'active.
         // Seul l'owner l'active (PlayerNetworkSetup), donc c'est toujours le placer du joueur local.
         public static event Action<FugitivePlacer> Enabled;
@@ -155,6 +158,7 @@ namespace Anachronism.Gameplay
         {
             for (int i = 0; i < SizeCount; i++)
                 DrawItem((AnachronismSize)i);
+            HeldItemChanged?.Invoke(CurrentItem);
         }
 
         private void UpdateGhost()
@@ -199,6 +203,7 @@ namespace Anachronism.Gameplay
 
             _selectedSize = size;
             SizeSelected?.Invoke(size);
+            HeldItemChanged?.Invoke(CurrentItem);
         }
 
         // size = taille de l'objet qui vient d'etre pose : c'est elle qui fixe la duree (15 / 30 / 45 s).
@@ -211,6 +216,7 @@ namespace Anachronism.Gameplay
             _isCoolingDown = true;
             Array.Clear(_heldItems, 0, _heldItems.Length);
             CooldownChanged?.Invoke(size, duration);
+            HeldItemChanged?.Invoke(null);
         }
 
         // Tirage local (choix de Theo) : l'hote verifie seulement que l'objet envoye est posable dans l'epoque (NetworkPlacement).

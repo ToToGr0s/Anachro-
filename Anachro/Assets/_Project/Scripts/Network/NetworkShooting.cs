@@ -81,8 +81,11 @@ namespace Anachronism.Network
             ShotTargetKind kind = hasHit ? ShotTargetResolver.KindOf(hit.collider, _era.Era, match) : ShotTargetKind.Nothing;
             Vector3 point = hasHit ? hit.point : request.Origin + request.Direction * _tuning.ShootDistance;
 
+            ShotResult result = ShotRules.ResultFor(kind);
+            ShotDebugLog.Record(Owner.ClientId, request.Origin, point, hasHit, result);
+
             // Avant les conséquences : une capture peut finir la partie, le tireur doit quand même voir son résultat.
-            TargetShotResult(Owner, ShotRules.ResultFor(kind));
+            TargetShotResult(Owner, result);
             ObserversShotFired(hasHit, point);
             ApplyConsequences(match, kind, hasHit ? hit.collider : null);
         }

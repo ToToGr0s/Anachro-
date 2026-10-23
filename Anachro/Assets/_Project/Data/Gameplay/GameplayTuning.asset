@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: GameplayTuning
   m_EditorClassIdentifier: Anachronism.Runtime::Anachronism.GameplayTuning
   _carrierRatio: 0.25
+  _heldItemMaxSize: 0.4
   _placementDuration: 0.5
   _wrongShotPenalty: 0.04
   _teammateShotPenalty: 0.02

@@ -14,8 +14,11 @@ namespace Anachronism.Core
         /// <summary>Fin de partie : les joueurs attendent au bureau, la souris sert au menu du lobby (Rejouer, Quitter).</summary>
         public static bool IsEndScreen { get; private set; }
 
-        /// <summary>Entrées du joueur coupées et souris libre : menu Échap ou écran de fin.</summary>
-        public static bool IsInputBlocked => IsOpen || IsEndScreen;
+        /// <summary>Panel de debug F5 ouvert (builds de dev) : la souris sert à ses curseurs.</summary>
+        public static bool IsDevPanelOpen { get; private set; }
+
+        /// <summary>Entrées du joueur coupées et souris libre : menu Échap, écran de fin ou panel F5.</summary>
+        public static bool IsInputBlocked => IsOpen || IsEndScreen || IsDevPanelOpen;
 
         /// <summary>Un menu Échap existe (Boot chargé). Sinon, dans une scène de test, le joueur libère la souris lui-même.</summary>
         public static bool IsAvailable { get; private set; }
@@ -44,11 +47,20 @@ namespace Anachronism.Core
 
         public static void SetEndScreen(bool isEndScreen)
         {
-            if (IsEndScreen == isEndScreen)
-                return;
-
             bool wasBlocked = IsInputBlocked;
             IsEndScreen = isEndScreen;
+            NotifyIfBlockedChanged(wasBlocked);
+        }
+
+        public static void SetDevPanelOpen(bool isOpen)
+        {
+            bool wasBlocked = IsInputBlocked;
+            IsDevPanelOpen = isOpen;
+            NotifyIfBlockedChanged(wasBlocked);
+        }
+
+        private static void NotifyIfBlockedChanged(bool wasBlocked)
+        {
             if (IsInputBlocked != wasBlocked)
                 InputBlockedChanged?.Invoke(IsInputBlocked);
         }
@@ -60,6 +72,7 @@ namespace Anachronism.Core
         {
             IsOpen = false;
             IsEndScreen = false;
+            IsDevPanelOpen = false;
             IsAvailable = false;
             OpenChanged = null;
             InputBlockedChanged = null;
