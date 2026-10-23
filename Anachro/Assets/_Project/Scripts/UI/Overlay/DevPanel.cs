@@ -4,6 +4,7 @@ using System.Text;
 using Anachronism.Core;
 using Anachronism.Gameplay;
 using Anachronism.Network;
+using Anachronism.World;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing;
@@ -16,6 +17,8 @@ namespace Anachronism.UI
 {
     /// <summary>
     /// Panel de test F5, builds de dev seulement (éditeur et « Development Build ») : il se retire tout seul ailleurs.
+    /// Hôte seulement : chez un client, les capsules vues à travers les murs diraient où est chaque personnage (triche).
+    /// Les affichages cochés (tirs, capsules) restent à l'écran une fois le panel fermé : on joue avec.
     /// - Réglages : l'hôte modifie GameplayTuning en direct, envoyé à tous jusqu'à la fin de la partie (LiveTuning) ;
     /// - Triches : hôte seulement (phase suivante, barre, capture, victoire, PNJ) ;
     /// - Debug : état de la partie, rôles et observers (hôte), demandes refusées, derniers tirs, rayons et capsules.
@@ -44,7 +47,10 @@ namespace Anachronism.UI
         private readonly List<FieldInfo> _tuningFields = new List<FieldInfo>();
         private readonly StringBuilder _text = new StringBuilder(1024);
         private readonly List<CapsuleCollider> _capsules = new List<CapsuleCollider>();
-        private readonly Collider[] _overlaps = new Collider[128];
+        private readonly List<BoxCollider> _objectBoxes = new List<BoxCollider>();
+        private readonly Dictionary<BoxCollider, bool> _isObjectBox = new Dictionary<BoxCollider, bool>();
+        // Tous les calques (murs compris) : assez grand pour ne pas perdre de personnage ou d'objet dans le lot.
+        private readonly Collider[] _overlaps = new Collider[512];
 
         private NetworkManager _networkManager;
         private bool _isOpen;
@@ -52,8 +58,9 @@ namespace Anachronism.UI
         private Vector2 _scroll;
         private bool _isTuningDirty;
         private float _nextBroadcastTime;
-        private bool _showShots = true;
+        private bool _showShots;
         private bool _showCapsules;
+        private bool _showObjectBoxes;
         private float _nextCollidersRefresh;
         private Material _lineMaterial;
         private GUIStyle _wrapStyle;
@@ -101,11 +108,18 @@ namespace Anachronism.UI
 
         private void Update()
         {
+            bool isHost = HostTools.IsHost;
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.f5Key.wasPressedThisFrame)
+            if (isHost && keyboard != null && keyboard.f5Key.wasPressedThisFrame)
             {
                 _isOpen = !_isOpen;
                 GameMenuState.SetDevPanelOpen(_isOpen);
+            }
+            // Partie quittée ou rejointe en client : plus de panel.
+            else if (!isHost && _isOpen)
+            {
+                _isOpen = false;
+                GameMenuState.SetDevPanelOpen(false);
             }
 
             if (_isTuningDirty && Time.unscaledTime >= _nextBroadcastTime)
@@ -117,7 +131,7 @@ namespace Anachronism.UI
                     live.BroadcastServer();
             }
 
-            if (_showCapsules && Time.unscaledTime >= _nextCollidersRefresh)
+            if ((_showCapsules || _showObjectBoxes) && isHost && Time.unscaledTime >= _nextCollidersRefresh)
                 RefreshCapsules();
 
             if (_isOpen && _tab == Tab.Debug && Time.unscaledTime >= _nextDebugRefresh)
@@ -236,6 +250,8 @@ namespace Anachronism.UI
         {
             _showShots = GUILayout.Toggle(_showShots, " Afficher les rayons de tir de l'hôte");
             _showCapsules = GUILayout.Toggle(_showCapsules, " Afficher les capsules (joueurs, PNJ)");
+            _showObjectBoxes = GUILayout.Toggle(_showObjectBoxes, " Afficher les boîtes des objets (anachronismes, objets de l'époque)");
+            GUILayout.Label("Les affichages cochés restent à l'écran panel fermé (F5).", _wrapStyle);
             GUILayout.Label(_debugText, _wrapStyle);
         }
 
@@ -392,9 +408,11 @@ namespace Anachronism.UI
 
         private void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
         {
-            bool drawShots = _isOpen && _showShots && HostTools.IsHost;
-            bool drawCapsules = _isOpen && _showCapsules;
-            if (!drawShots && !drawCapsules)
+            bool isHost = HostTools.IsHost;
+            bool drawShots = _showShots && isHost;
+            bool drawCapsules = _showCapsules && isHost;
+            bool drawBoxes = _showObjectBoxes && isHost;
+            if (!drawShots && !drawCapsules && !drawBoxes)
                 return;
 
             if (_lineMaterial == null)
@@ -410,6 +428,8 @@ namespace Anachronism.UI
                 DrawShots();
             if (drawCapsules)
                 DrawCapsules();
+            if (drawBoxes)
+                DrawObjectBoxes();
 
             GL.End();
             GL.PopMatrix();
@@ -458,6 +478,34 @@ namespace Anachronism.UI
             }
         }
 
+        private void DrawObjectBoxes()
+        {
+            GL.Color(Color.yellow);
+            foreach (BoxCollider box in _objectBoxes)
+            {
+                if (box == null || !box.enabled)
+                    continue;
+
+                Matrix4x4 matrix = box.transform.localToWorldMatrix;
+                Vector3 half = box.size * 0.5f;
+                for (int i = 0; i < 4; i++)
+                {
+                    // Les 12 arêtes : pour chaque axe, les 4 arêtes qui lui sont parallèles.
+                    float a = (i & 1) == 0 ? -1f : 1f;
+                    float b = (i & 2) == 0 ? -1f : 1f;
+                    DrawBoxEdge(matrix, box.center, new Vector3(-half.x, a * half.y, b * half.z), new Vector3(half.x, a * half.y, b * half.z));
+                    DrawBoxEdge(matrix, box.center, new Vector3(a * half.x, -half.y, b * half.z), new Vector3(a * half.x, half.y, b * half.z));
+                    DrawBoxEdge(matrix, box.center, new Vector3(a * half.x, b * half.y, -half.z), new Vector3(a * half.x, b * half.y, half.z));
+                }
+            }
+        }
+
+        private static void DrawBoxEdge(Matrix4x4 matrix, Vector3 center, Vector3 from, Vector3 to)
+        {
+            GL.Vertex(matrix.MultiplyPoint3x4(center + from));
+            GL.Vertex(matrix.MultiplyPoint3x4(center + to));
+        }
+
         private static void DrawCircle(Vector3 center, float radius)
         {
             const int segments = 16;
@@ -475,17 +523,33 @@ namespace Anachronism.UI
         {
             _nextCollidersRefresh = Time.unscaledTime + CollidersRefreshInterval;
             _capsules.Clear();
+            _objectBoxes.Clear();
             Camera camera = Camera.main;
             if (camera == null)
                 return;
 
-            int mask = 1 << LayerMask.NameToLayer("Character");
-            int count = Physics.OverlapSphereNonAlloc(camera.transform.position, CollidersRadius, _overlaps, mask, QueryTriggerInteraction.Collide);
+            int count = Physics.OverlapSphereNonAlloc(camera.transform.position, CollidersRadius, _overlaps, ~0, QueryTriggerInteraction.Collide);
+            int characterLayer = LayerMask.NameToLayer("Character");
             for (int i = 0; i < count; i++)
             {
-                if (_overlaps[i] is CapsuleCollider capsule)
+                Collider overlap = _overlaps[i];
+                if (overlap is CapsuleCollider capsule && overlap.gameObject.layer == characterLayer)
                     _capsules.Add(capsule);
+                else if (overlap is BoxCollider box && IsObjectBox(box))
+                    _objectBoxes.Add(box);
             }
+        }
+
+        // Mémorisé par collider : sinon un GetComponentInParent par boîte du décor à chaque rafraîchissement (règle de code 1).
+        private bool IsObjectBox(BoxCollider box)
+        {
+            if (!_isObjectBox.TryGetValue(box, out bool isObject))
+            {
+                isObject = box.GetComponentInParent<WorldObject>() != null;
+                _isObjectBox[box] = isObject;
+            }
+
+            return isObject;
         }
 
         private void CreateLineMaterial()

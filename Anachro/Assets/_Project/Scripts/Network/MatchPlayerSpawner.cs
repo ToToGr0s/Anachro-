@@ -46,6 +46,7 @@ namespace Anachronism.Network
             base.OnStartServer();
             _match.PhaseChanged += OnPhaseChanged;
             _match.PlayerRejoined += OnPlayerRejoined;
+            _match.VillainCaptured += OnVillainCaptured;
             ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
         }
 
@@ -54,6 +55,7 @@ namespace Anachronism.Network
             base.OnStopServer();
             _match.PhaseChanged -= OnPhaseChanged;
             _match.PlayerRejoined -= OnPlayerRejoined;
+            _match.VillainCaptured -= OnVillainCaptured;
             ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
             _players.Clear();
         }
@@ -71,13 +73,17 @@ namespace Anachronism.Network
                     break;
                 case GamePhase.End:
                     if (HasOffice)
+                    {
+                        ReleaseCapturedPlayers();
                         MoveExistingPlayers();
+                    }
                     else
                         DespawnPlayers();
                     break;
                 case GamePhase.Scouting:
                     // « Rejouer » depuis le bureau : les avatars restent, chacun repart selon son nouveau rôle.
                     _spawnCount = 0;
+                    ReleaseCapturedPlayers();
                     MoveExistingPlayers();
                     SpawnMissingPlayers();
                     break;
@@ -121,6 +127,31 @@ namespace Anachronism.Network
                 || (phase == GamePhase.Scouting && _match.GetRoleServer(connection) == PlayerRole.Guardian);
         }
 
+        // C06 : l'avatar reste sur place, figé et visible de tous ; son joueur passe sur la caméra de la scène.
+        private void OnVillainCaptured(NetworkConnection connection)
+        {
+            if (_players.TryGetValue(connection, out NetworkObject player) && player != null && player.IsSpawned)
+                SetCaptured(player, true);
+        }
+
+        // Fin de partie au bureau ou « Rejouer » : les fugitifs capturés reprennent la main.
+        [Server]
+        private void ReleaseCapturedPlayers()
+        {
+            foreach (NetworkObject player in _players.Values)
+            {
+                if (player != null && player.IsSpawned)
+                    SetCaptured(player, false);
+            }
+        }
+
+        private static void SetCaptured(NetworkObject player, bool isCaptured)
+        {
+            PlayerNetworkSetup setup = player.GetComponentInChildren<PlayerNetworkSetup>(true);
+            if (setup != null)
+                setup.SetCapturedServer(isCaptured);
+        }
+
         private void OnPlayerRejoined(NetworkConnection connection)
         {
             if (connection.IsActive && !HasAvatar(connection) && ShouldHaveAvatar(connection))
@@ -128,8 +159,10 @@ namespace Anachronism.Network
         }
 
         // Sans bureau, un chasseur n'a nulle part où attendre le repérage : pas d'avatar avant la première pose.
+        // Un fugitif capturé qui revient n'en a pas non plus : sans avatar, il garde la caméra de la scène (C06).
         private bool ShouldHaveAvatar(NetworkConnection connection) =>
-            HasOffice || _match.Phase != GamePhase.Scouting || _match.GetRoleServer(connection) != PlayerRole.Guardian;
+            (HasOffice || _match.Phase != GamePhase.Scouting || _match.GetRoleServer(connection) != PlayerRole.Guardian)
+            && !_match.IsCapturedVillainServer(connection);
 
         // FishNet despawn déjà l'avatar d'un joueur qui part (il en est l'owner) : on oublie juste l'entrée.
         private void OnRemoteConnectionState(NetworkConnection connection, RemoteConnectionStateArgs args)

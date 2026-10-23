@@ -102,6 +102,8 @@ namespace Anachronism.Network
         public event Action<PlayerRole> LocalRoleAssigned;
         /// <summary>Côté serveur : un joueur parti en pleine partie est revenu et a retrouvé son rôle.</summary>
         public event Action<NetworkConnection> PlayerRejoined;
+        /// <summary>Côté serveur : un fugitif vient d'être capturé (C06). Levé avant la fin de partie que sa capture peut déclencher.</summary>
+        public event Action<NetworkConnection> VillainCaptured;
 
         private void Awake()
         {
@@ -188,7 +190,6 @@ namespace Anachronism.Network
         }
 
         /// <summary>Fugitif touché par un chasseur (T06). Ignoré s'il est déjà capturé ou parti.</summary>
-        // TODO (Célian) : C06, fantôme visible des seuls fugitifs, micro actif. Le tir le traverse déjà (ShotTargetResolver).
         [Server]
         public void CaptureVillain(NetworkConnection villain)
         {
@@ -196,8 +197,13 @@ namespace Anachronism.Network
                 return;
 
             if (IsActiveVillainServer(villain))
-                NeutralizeVillain(villain);
+                Capture(villain);
         }
+
+        /// <summary>Fugitif capturé pendant cette partie (C06), qu'il soit encore là ou revenu : il ne rejoue plus.</summary>
+        [Server]
+        public bool IsCapturedVillainServer(NetworkConnection connection) =>
+            GetRoleServer(connection) == PlayerRole.Villain && _neutralizedVillains.Contains(connection);
 
         /// <summary>Partie de test : un joueur seul, sans minimum de joueurs, qui choisit son rôle. Même règle pour l'UI et le lancement.</summary>
         public static bool IsSoloTest(int activePlayerCount) => activePlayerCount == 1;
@@ -511,7 +517,7 @@ namespace Anachronism.Network
             }
 
             foreach (NetworkConnection villain in villains)
-                NeutralizeVillain(villain);
+                Capture(villain);
         }
 
         [Server]
@@ -529,6 +535,14 @@ namespace Anachronism.Network
         public bool DebugIsNeutralizedServer(NetworkConnection connection) => _neutralizedVillains.Contains(connection);
 
         // ================= Méchants neutralisés =================
+
+        // Statue figée avant la neutralisation : capturer le dernier fugitif termine la partie, et la fin libère tout le monde.
+        [Server]
+        private void Capture(NetworkConnection villain)
+        {
+            VillainCaptured?.Invoke(villain);
+            NeutralizeVillain(villain);
+        }
 
         /// <summary>Capture (T06) ou déconnexion. Les gentils gagnent quand tous les méchants sont neutralisés.</summary>
         [Server]

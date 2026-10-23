@@ -1,6 +1,7 @@
 using System.Linq;
 using Anachronism.Gameplay;
 using Anachronism.Network;
+using Anachronism.Npc;
 using Anachronism.UI;
 using FishNet.Managing;
 using FishNet.Object;
@@ -16,6 +17,7 @@ namespace Anachronism.Editor
     /// Branche sur les prefabs et les scènes ce qui ne se règle pas dans le code. Rejouable : ne rajoute que ce qui manque.
     /// - T05 : NetworkObserver + HiddenWhileHidingCondition sur le joueur et le WorldObject ;
     /// - T04-5 : HeldItem (et sa main) sur le joueur et le PNJ ;
+    /// - HitFlash (clignotement d'un personnage touché) sur le joueur et le PNJ ;
     /// - T09 : MapSelection sur le NetworkManager de Boot (cartes des Build Settings) ;
     /// - panel F5 : DevPanel sur l'overlay de Boot, LiveTuning sur le MatchManager de chaque map.
     /// Le bureau (T19) reste à poser à la main : MapSpawnPoints > Office Spawns, sur chaque map.
@@ -32,9 +34,9 @@ namespace Anachronism.Editor
         private const string HandName = "HeldItem";
         private const string OverlayName = "Overlay";
 
-        // Main tenue devant le corps, à 0,8 m du sol. Le pivot du joueur est au centre de sa capsule (1,35 m),
+        // Main tenue devant le corps, à 0,8 m du sol. Le pivot du joueur est au centre de sa capsule (1,8 m),
         // celui du PNJ à ses pieds : même hauteur dans le monde, donc même silhouette (règle réseau 5).
-        private static readonly Vector3 PlayerHandPosition = new Vector3(0.3f, 0.125f, 0.3f);
+        private static readonly Vector3 PlayerHandPosition = new Vector3(0.3f, -0.1f, 0.3f);
         private static readonly Vector3 NpcHandPosition = new Vector3(0.3f, 0.8f, 0.3f);
 
         [MenuItem("Anachro/Setup/Brancher visibilité, objet tenu, cartes et panel F5")]
@@ -95,6 +97,8 @@ namespace Anachronism.Editor
                 heldSettings.FindProperty("_placer").objectReferenceValue = placer;
                 heldSettings.ApplyModifiedPropertiesWithoutUndo();
 
+                EnsureHitFlash(root, placement.gameObject, placementSettings.FindProperty("_tuning").objectReferenceValue);
+
                 PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             }
             finally
@@ -122,6 +126,8 @@ namespace Anachronism.Editor
                 var npcSettings = new SerializedObject(npc);
                 npcSettings.FindProperty("_heldItem").objectReferenceValue = held;
                 npcSettings.ApplyModifiedPropertiesWithoutUndo();
+
+                EnsureHitFlash(root, npc.gameObject, source.FindProperty("_tuning").objectReferenceValue);
 
                 PrefabUtility.SaveAsPrefabAsset(root, NpcPrefabPath);
             }
@@ -195,6 +201,18 @@ namespace Anachronism.Editor
             settings.FindProperty("_meshRenderer").objectReferenceValue = meshTransform.GetComponent<MeshRenderer>();
             settings.ApplyModifiedPropertiesWithoutUndo();
             return held;
+        }
+
+        // Même composant sur le joueur et le PNJ, à côté de leur script réseau : il fait clignoter le modèle du NpcSkin.
+        private static void EnsureHitFlash(GameObject root, GameObject componentHost, Object tuning)
+        {
+            if (!componentHost.TryGetComponent(out HitFlash flash))
+                flash = componentHost.AddComponent<HitFlash>();
+
+            var settings = new SerializedObject(flash);
+            settings.FindProperty("_tuning").objectReferenceValue = tuning;
+            settings.FindProperty("_skin").objectReferenceValue = root.GetComponentInChildren<NpcSkin>(true);
+            settings.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void SetupBoot()

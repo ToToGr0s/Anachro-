@@ -6,6 +6,7 @@
         "FishNet.Runtime",
         "FishySteamworks",
         "Unity.AI.Navigation",
+        "Unity.AI.Navigation.Editor",
         "Unity.InputSystem"
     ],
     "includePlatforms": [

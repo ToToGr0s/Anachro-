@@ -52,7 +52,7 @@ namespace Anachronism.Gameplay
             }
         }
 
-        // Fugitif capture : un fantome que les chasseurs ne voient pas, le tir doit passer a travers (ShotRules.Raycast).
+        // Fugitif capture : une statue figee (C06), le tir doit passer a travers (ShotRules.Raycast).
         // Appele pour chaque collider touche par un tir : GetComponentInParent reste ponctuel.
         public static bool IsCapturedVillain(Collider collider, MatchManager match)
         {
