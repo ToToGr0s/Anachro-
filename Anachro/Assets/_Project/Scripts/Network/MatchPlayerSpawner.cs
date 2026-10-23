@@ -11,7 +11,8 @@ namespace Anachronism.Network
     /// Pas de joueur au lobby : les avatars apparaissent au lancement de la partie.
     /// Avec un bureau sur la map (MapSpawnPoints, T19) : les chasseurs y attendent pendant le repérage, sont envoyés sur
     /// la carte à la première pose, et tout le monde y revient à la fin (souris libre pour le menu du lobby).
-    /// Sans bureau : tout le monde sur la carte, et plus d'avatar à la fin (vue d'ensemble de la map).
+    /// Sans bureau : les chasseurs n'ont pas d'avatar pendant le repérage et apparaissent sur la carte à la première pose ;
+    /// plus d'avatar à la fin (vue d'ensemble de la map).
     /// Un joueur qui revient en pleine partie avec son rôle (MatchManager.PlayerRejoined) réapparaît aussitôt.
     /// </summary>
     // TODO (Théo) : un client modifié distingue encore un avatar de joueur d'un PNJ (owner dans le message de spawn,
@@ -122,9 +123,13 @@ namespace Anachronism.Network
 
         private void OnPlayerRejoined(NetworkConnection connection)
         {
-            if (connection.IsActive && !HasAvatar(connection))
+            if (connection.IsActive && !HasAvatar(connection) && ShouldHaveAvatar(connection))
                 SpawnPlayer(connection);
         }
+
+        // Sans bureau, un chasseur n'a nulle part où attendre le repérage : pas d'avatar avant la première pose.
+        private bool ShouldHaveAvatar(NetworkConnection connection) =>
+            HasOffice || _match.Phase != GamePhase.Scouting || _match.GetRoleServer(connection) != PlayerRole.Guardian;
 
         // FishNet despawn déjà l'avatar d'un joueur qui part (il en est l'owner) : on oublie juste l'entrée.
         private void OnRemoteConnectionState(NetworkConnection connection, RemoteConnectionStateArgs args)
@@ -140,7 +145,8 @@ namespace Anachronism.Network
             _toSpawn.Clear();
             foreach (NetworkConnection connection in ServerManager.Clients.Values)
             {
-                if (connection.IsActive && _match.GetRoleServer(connection) != PlayerRole.None && !HasAvatar(connection))
+                if (connection.IsActive && _match.GetRoleServer(connection) != PlayerRole.None && !HasAvatar(connection)
+                    && ShouldHaveAvatar(connection))
                     _toSpawn.Add(connection);
             }
 
