@@ -15,14 +15,15 @@ namespace Anachronism.Editor
 {
     /// <summary>
     /// Publie les builds en pré-release GitHub (zip par plateforme) ; le workflow build-discord.yml l'annonce dans #releases.
-    /// - « Anachro > Build > Windows + Linux + macOS → #releases » : build des trois plateformes, une seule release, un seul message ;
+    /// - « Anachro > Build > Windows + Linux + macOS → Discord » : build des trois plateformes, une seule release, un seul message ;
     /// - tout autre build non Development (bouton Build d'un Build Profile) : publié seul.
     /// Les builds Development (DevBuild) sont ignorés : ils servent aux tests multi en local et partiraient à chaque essai.
     /// L'envoi tourne dans une fenêtre PowerShell à part pour ne pas bloquer l'éditeur pendant l'upload.
     /// </summary>
     public sealed class BuildPublisher : IPostprocessBuildWithReport
     {
-        private const string MenuPath = "Anachro/Build/Publier les builds sur #releases";
+        // Pas de « # » dans les noms de menu : Unity le lit comme un raccourci (Shift).
+        private const string MenuPath = "Anachro/Build/Publier les builds sur Discord";
         private const string EnabledPrefKey = "Anachro.BuildPublisher.Enabled";
         private const string ScriptRelativePath = "../Tools/publish-build.ps1";
 
@@ -59,7 +60,7 @@ namespace Anachronism.Editor
             return true;
         }
 
-        [MenuItem("Anachro/Build/Windows + Linux + macOS → #releases")]
+        [MenuItem("Anachro/Build/Windows + Linux + macOS → Discord")]
         public static void BuildAllAndPublish()
         {
             string projectPath = Path.GetDirectoryName(Application.dataPath);
