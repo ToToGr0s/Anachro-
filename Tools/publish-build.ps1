@@ -19,6 +19,7 @@ try {
     $platforms = ($builds | ForEach-Object Platform) -join ' + '
     $Host.UI.RawUI.WindowTitle = "Publication du build $platforms"
     if (-not $DryRun -and -not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh (GitHub CLI) introuvable." }
+    if (-not (Get-Command python -ErrorAction SilentlyContinue)) { throw "python introuvable (sert à zipper avec les droits d'exécution)." }
 
     # Secondes comprises : deux builds de la même plateforme dans la même minute auraient le même tag.
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -43,10 +44,10 @@ try {
     foreach ($build in $builds) {
         Write-Host "Compression du build $($build.Platform)…"
         $zip = Join-Path $env:TEMP "Anachro-$($build.Platform)-$stamp.zip"
-        # Le tar de Windows (bsdtar) sait écrire un zip ; celui de Git for Windows non, d'où le chemin complet.
-        # steam_appid.txt est ajouté depuis le projet : hors Steam, Steamworks en a besoin à côté de l'exécutable.
-        & "$env:SystemRoot\System32\tar.exe" -a -c -f $zip -C $build.Folder @($build.Entries) -C $ProjectFolder steam_appid.txt
-        if ($LASTEXITCODE -ne 0) { throw "Échec de la compression $($build.Platform) (tar, code $LASTEXITCODE)." }
+        # make_zip.py garde le bit d'exécution (Linux, macOS) qu'un zip fait sous Windows n'a pas. steam_appid.txt est
+        # ajouté depuis le projet : hors Steam, Steamworks en a besoin à côté de l'exécutable.
+        python "$PSScriptRoot\make_zip.py" $zip $build.Folder $ProjectFolder @($build.Entries)
+        if ($LASTEXITCODE -ne 0) { throw "Échec de la compression $($build.Platform) (make_zip.py, code $LASTEXITCODE)." }
         $zips += $zip
     }
     $sizeMb = [math]::Round(($zips | ForEach-Object { (Get-Item $_).Length } | Measure-Object -Sum).Sum / 1MB)
@@ -54,7 +55,8 @@ try {
     $notes = @("Branche ``$branch`` · commit ``$short`` : $subject")
     if ($target -ne $commit) { $notes += "⚠️ Commit local non poussé : la release pointe sur ``$($target.Substring(0, 7))``." }
     if (git status --porcelain --untracked-files=no) { $notes += "⚠️ Build fait avec des modifications non commitées." }
-    if ($builds.Platform -contains 'Linux') { $notes += "Linux : ``chmod +x Anachro.x86_64`` après extraction." }
+    # App non notariée (build fait sous Windows) : macOS la bloque tant que la quarantaine n'est pas retirée et l'app re-signée.
+    if ($builds.Platform -contains 'macOS') { $notes += "macOS : après extraction, dans le Terminal, dans le dossier du jeu : ``xattr -cr Anachro.app && codesign --force --deep -s - Anachro.app``" }
     $notes += "Hors Steam : lancer Steam avant le jeu (AppID de test 480)."
     $notesFile = Join-Path $env:TEMP "$tag.md"
     [IO.File]::WriteAllText($notesFile, ($notes -join "`n"), (New-Object Text.UTF8Encoding $false))
@@ -63,7 +65,7 @@ try {
     if ($DryRun) {
         Write-Host "[DryRun] $title`n[DryRun] tag $tag → $target`n[DryRun] $($zips -join ', ') ($sizeMb Mo)`n"
         Get-Content $notesFile
-        foreach ($zip in $zips) { & "$env:SystemRoot\System32\tar.exe" -t -f $zip | Where-Object { $_ -notmatch '/.' } }
+        foreach ($zip in $zips) { python -c "import sys, zipfile; [print(oct(i.external_attr >> 16), i.filename) for i in zipfile.ZipFile(sys.argv[1]).infolist() if i.filename.rstrip('/').count('/') == 0]" $zip }
         exit 0
     }
 

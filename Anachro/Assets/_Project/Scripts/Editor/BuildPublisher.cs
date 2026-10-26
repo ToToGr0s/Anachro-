@@ -15,7 +15,7 @@ namespace Anachronism.Editor
 {
     /// <summary>
     /// Publie les builds en pré-release GitHub (zip par plateforme) ; le workflow build-discord.yml l'annonce dans #releases.
-    /// - « Anachro > Build > Windows + Linux → #releases » : build des deux Build Profiles, une seule release, un seul message ;
+    /// - « Anachro > Build > Windows + Linux + macOS → #releases » : build des trois plateformes, une seule release, un seul message ;
     /// - tout autre build non Development (bouton Build d'un Build Profile) : publié seul.
     /// Les builds Development (DevBuild) sont ignorés : ils servent aux tests multi en local et partiraient à chaque essai.
     /// L'envoi tourne dans une fenêtre PowerShell à part pour ne pas bloquer l'éditeur pendant l'upload.
@@ -26,11 +26,13 @@ namespace Anachronism.Editor
         private const string EnabledPrefKey = "Anachro.BuildPublisher.Enabled";
         private const string ScriptRelativePath = "../Tools/publish-build.ps1";
 
-        // Dossiers séparés : les deux builds écrivent un dossier Anachro_Data qui s'écraserait.
-        private static readonly (string Platform, string ProfilePath, string OutputPath)[] AllPlatforms =
+        // Dossiers séparés : les builds écrivent chacun un dossier Anachro_Data qui s'écraserait.
+        // macOS sans Build Profile (aucun dans le projet) : réglages du projet, architecture par défaut (Apple Silicon).
+        private static readonly (string Platform, string ProfilePath, BuildTarget Target, string OutputPath)[] AllPlatforms =
         {
-            ("Windows", "Assets/Settings/Build Profiles/Windows.asset", "Builds/Windows/Anachro.exe"),
-            ("Linux", "Assets/Settings/Build Profiles/Linux.asset", "Builds/Linux/Anachro.x86_64")
+            ("Windows", "Assets/Settings/Build Profiles/Windows.asset", BuildTarget.StandaloneWindows64, "Builds/Windows/Anachro.exe"),
+            ("Linux", "Assets/Settings/Build Profiles/Linux.asset", BuildTarget.StandaloneLinux64, "Builds/Linux/Anachro.x86_64"),
+            ("macOS", null, BuildTarget.StandaloneOSX, "Builds/macOS/Anachro.app")
         };
 
         // Pendant le build des deux plateformes, le post-process ne publie pas : la release commune part à la fin.
@@ -57,7 +59,7 @@ namespace Anachronism.Editor
             return true;
         }
 
-        [MenuItem("Anachro/Build/Windows + Linux → #releases")]
+        [MenuItem("Anachro/Build/Windows + Linux + macOS → #releases")]
         public static void BuildAllAndPublish()
         {
             string projectPath = Path.GetDirectoryName(Application.dataPath);
@@ -66,22 +68,12 @@ namespace Anachronism.Editor
             _isBuildingAll = true;
             try
             {
-                foreach ((string platform, string profilePath, string outputPath) in AllPlatforms)
+                foreach ((string platform, string profilePath, BuildTarget target, string outputPath) in AllPlatforms)
                 {
-                    BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
-                    if (profile == null)
-                    {
-                        Debug.LogError($"[BuildPublisher] Build Profile {profilePath} introuvable : rien n'est publié.");
-                        return;
-                    }
-
                     string executablePath = Path.Combine(projectPath, outputPath);
-                    BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerWithProfileOptions
-                    {
-                        buildProfile = profile,
-                        locationPathName = executablePath,
-                        options = BuildOptions.None
-                    });
+                    BuildReport report = Build(platform, profilePath, target, executablePath);
+                    if (report == null)
+                        return;
 
                     if (report.summary.result != BuildResult.Succeeded)
                     {
@@ -103,7 +95,36 @@ namespace Anachronism.Editor
                 _isBuildingAll = false;
             }
 
-            Publish(projectPath, manifest, "windows-linux");
+            Publish(projectPath, manifest, "all");
+        }
+
+        // Null si le Build Profile attendu manque (erreur déjà affichée).
+        private static BuildReport Build(string platform, string profilePath, BuildTarget target, string executablePath)
+        {
+            if (profilePath == null)
+            {
+                return BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = EditorBuildSettings.scenes.Where(scene => scene.enabled).Select(scene => scene.path).ToArray(),
+                    locationPathName = executablePath,
+                    target = target,
+                    options = BuildOptions.None
+                });
+            }
+
+            BuildProfile profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
+            if (profile == null)
+            {
+                Debug.LogError($"[BuildPublisher] Build Profile {platform} ({profilePath}) introuvable : rien n'est publié.");
+                return null;
+            }
+
+            return BuildPipeline.BuildPlayer(new BuildPlayerWithProfileOptions
+            {
+                buildProfile = profile,
+                locationPathName = executablePath,
+                options = BuildOptions.None
+            });
         }
 
         public void OnPostprocessBuild(BuildReport report)
@@ -116,6 +137,7 @@ namespace Anachronism.Editor
             {
                 BuildTarget.StandaloneWindows64 => "Windows",
                 BuildTarget.StandaloneLinux64 => "Linux",
+                BuildTarget.StandaloneOSX => "macOS",
                 _ => null
             };
             if (platform == null)
@@ -167,7 +189,8 @@ namespace Anachronism.Editor
         // n'est pas fiable ici, le build n'étant pas encore terminé au post-process.
         private static IEnumerable<string> GetPlayerEntries(string buildFolder, string productName)
         {
-            string[] playerFolders = { productName + "_Data", "MonoBleedingEdge", "D3D12" };
+            // macOS : tout le jeu est dans le bundle Anachro.app.
+            string[] playerFolders = { productName + "_Data", productName + ".app", "MonoBleedingEdge", "D3D12" };
             string[] playerExtensions = { ".exe", ".dll", ".so", ".x86_64" };
 
             IEnumerable<string> folders = playerFolders.Where(folder => Directory.Exists(Path.Combine(buildFolder, folder)));
