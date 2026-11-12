@@ -7,7 +7,7 @@ namespace Anachronism.UI
     /// <summary>
     /// Branche l'écran de fin d'Hanaé (VictoryMenu + GameEndMenu.uxml) sur la partie en ligne : affiché à la fin de la
     /// partie, avec l'équipe gagnante et la victoire ou défaite du joueur local. « Rejouer » (hôte seul) relance une partie
-    /// avec les mêmes joueurs, comme le bouton du lobby. Écoute MatchManager sans jamais modifier son état.
+    /// avec les mêmes joueurs, via HostTools. Écoute MatchManager sans jamais modifier son état.
     /// </summary>
     // Reprend la logique de l'ancien EndScreen (UI provisoire retirée).
     [RequireComponent(typeof(UIDocument), typeof(VictoryMenu))]
@@ -90,13 +90,13 @@ namespace Anachronism.UI
 
         private void OnReplayClicked()
         {
-            // StartMatch est réservé au serveur : le bouton n'est montré qu'à l'hôte, on revérifie quand même.
-            if (_match == null || !_match.IsServerInitialized)
+            if (_match == null)
                 return;
 
             // En test solo, l'hôte rejoue le rôle qu'il avait choisi au lobby (celui de la partie qui se termine).
+            // HostTools revérifie que ce poste est l'hôte : l'UI ne touche pas elle-même à la partie (règle 5).
             PlayerRole soloRole = _match.LocalRole == PlayerRole.Villain ? PlayerRole.Villain : PlayerRole.Guardian;
-            _replayStatus.text = _match.StartMatch(soloRole) switch
+            _replayStatus.text = HostTools.TryRestartMatch(soloRole) switch
             {
                 MatchStartResult.NotEnoughPlayers => "Pas assez de joueurs pour relancer la partie.",
                 MatchStartResult.PlayersLoading => "Un joueur charge encore la map, réessaie dans un instant.",

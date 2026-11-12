@@ -83,7 +83,9 @@ namespace Anachronism.UI
             _rerollSkinsButton = root.Q<Button>("rerollSkinsButton");
             _hostStatus = root.Q<Label>("hostStatus");
 
-            if (_inGameGroup == null || _roleLabel == null || _reticle == null || _hostSection == null)
+            if (_inGameGroup == null || _timer == null || _roleLabel == null || _phaseLabel == null || _endCountdown == null
+                || _reticle == null || _hostSection == null || _reloadNpcsButton == null || _rerollSkinsButton == null
+                || _hostStatus == null)
             {
                 Debug.LogError("[InGameUIBridge] Éléments manquants dans l'UXML (PlayMenu.uxml attendu).", this);
                 enabled = false;
@@ -346,6 +348,7 @@ namespace Anachronism.UI
         }
 
         // Réponse du serveur seulement : jamais pendant la visée, sinon le réticule trahirait le méchant.
+        // Time.time ne sert qu'à la durée d'affichage locale (aucune règle de jeu), comme les FX.
         private void OnShotResolved(ShotResult result)
         {
             ShowShotResult(result);

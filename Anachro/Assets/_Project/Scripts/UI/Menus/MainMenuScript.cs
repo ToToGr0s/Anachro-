@@ -125,6 +125,7 @@ namespace Anachronism
         {
             float volume = volumeSlider.value;
             //complete function below
+            // TODO (Hanaé) : brancher le volume général (le curseur ne fait encore rien).
             
         }
     }

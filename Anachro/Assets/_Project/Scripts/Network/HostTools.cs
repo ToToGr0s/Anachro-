@@ -20,6 +20,19 @@ namespace Anachronism.Network
             }
         }
 
+        /// <summary>
+        /// Relance une partie avec les mêmes joueurs (« Rejouer » de l'écran de fin). En test solo, l'hôte rejoue soloRole.
+        /// WrongPhase si ce poste n'est pas l'hôte ou sans partie chargée.
+        /// </summary>
+        public static MatchStartResult TryRestartMatch(PlayerRole soloRole)
+        {
+            MatchManager match = MatchManager.Instance;
+            if (!IsHost || match == null)
+                return MatchStartResult.WrongPhase;
+
+            return match.StartMatch(soloRole);
+        }
+
         /// <summary>Retire tous les PNJ et en refait apparaître de nouveaux. Faux si ce poste n'est pas l'hôte ou sans PNJ.</summary>
         public static bool TryRespawnNpcs()
         {
