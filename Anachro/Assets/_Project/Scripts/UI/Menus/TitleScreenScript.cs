@@ -10,7 +10,8 @@ namespace Anachronism
         public string scene;
         private Button _button;    
         
-        void Start()
+        // Awake et pas Start : OnEnable passe avant Start, _button y serait encore null.
+        void Awake()
         {
             initialize();
             _button = root.Q<Button>("playButton");

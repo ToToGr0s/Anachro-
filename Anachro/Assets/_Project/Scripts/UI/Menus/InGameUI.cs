@@ -1,9 +1,11 @@
 using System;
+using Anachronism.Core;
+using Anachronism.Network;
+using FishNet;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
 using UnityEngine.InputSystem.HID;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using UnityEngine.UIElements;
 using Button = UnityEngine.UIElements.Button;
 using Slider = UnityEngine.UIElements.Slider;
@@ -23,6 +25,11 @@ namespace Anachronism
         public string mainMenuScene;
 
         private bool isPopUpOpen;
+
+        // Menu pause, pop-up ou options ouverts (Échap, géré par InGameUIBridge).
+        public bool IsPaused => pauseGroup.style.display == DisplayStyle.Flex
+                                || popUpGroup.style.display == DisplayStyle.Flex
+                                || Settings.style.display == DisplayStyle.Flex;
         
         //in game
         private VisualElement inGameUIGroup;
@@ -65,16 +72,14 @@ namespace Anachronism
             timer = root.Q<Label>("timer");
 
             //deregulation tools
-            if (isFugitive)
-            {
-                deregulationToolsGroup = root.Q<VisualElement>("anachronismToolsGroup");
-                bigTool = root.Q<Button>("bigDisruptionButton");
-                mediumTool = root.Q<Button>("mediumDisruptionButton");
-                smallTool = root.Q<Button>("smallDisruptionButton");
-                bigToolProgressBar = root.Q<ProgressBar>("bigDisruptionBar");
-                mediumToolProgressBar = root.Q<ProgressBar>("mediumDisruptionBar");
-                smallToolProgressBar = root.Q<ProgressBar>("smallDisruptionBar");
-            }
+            // Toujours lus, même pour le chasseur : sinon deregulationToolsGroup reste null et CloseMenu plante plus bas.
+            deregulationToolsGroup = root.Q<VisualElement>("anachronismToolsGroup");
+            bigTool = root.Q<Button>("bigDisruptionButton");
+            mediumTool = root.Q<Button>("mediumDisruptionButton");
+            smallTool = root.Q<Button>("smallDisruptionButton");
+            bigToolProgressBar = root.Q<ProgressBar>("bigDisruptionBar");
+            mediumToolProgressBar = root.Q<ProgressBar>("mediumDisruptionBar");
+            smallToolProgressBar = root.Q<ProgressBar>("smallDisruptionBar");
 
             //pause
             pauseGroup = root.Q<VisualElement>("pauseMenuGroup");
@@ -94,14 +99,7 @@ namespace Anachronism
             closeButton = root.Q<Button>("closeButton");
             
             OpenMenu(inGameUIGroup);
-            if(isFugitive)
-            {
-                OpenMenu(deregulationToolsGroup);
-            }
-            else
-            {
-                CloseMenu(deregulationToolsGroup);
-            }
+            SetFugitive(isFugitive);
             CloseMenu(pauseGroup);
             CloseMenu(popUpGroup);
             CloseMenu(Settings);
@@ -110,12 +108,10 @@ namespace Anachronism
         private void OnEnable()
         {
             //deregulation tools
-            if (isFugitive)
-            {
-                bigTool.RegisterCallback<ClickEvent>(OnBigToolClicked);
-                mediumTool.RegisterCallback<ClickEvent>(OnMediumToolClicked);
-                smallTool.RegisterCallback<ClickEvent>(OnSmallToolClicked);
-            }
+            // Abonnés dans tous les cas : en ligne, le rôle arrive après OnEnable (SetFugitive).
+            bigTool.RegisterCallback<ClickEvent>(OnBigToolClicked);
+            mediumTool.RegisterCallback<ClickEvent>(OnMediumToolClicked);
+            smallTool.RegisterCallback<ClickEvent>(OnSmallToolClicked);
             
             //pause
             resumeButton.RegisterCallback<ClickEvent>(OnResume);
@@ -135,12 +131,9 @@ namespace Anachronism
         private void OnDisable()
         {
             //deregulation tools
-            if (isFugitive)
-            {
-                bigTool.UnregisterCallback<ClickEvent>(OnBigToolClicked);
-                mediumTool.UnregisterCallback<ClickEvent>(OnMediumToolClicked);
-                smallTool.UnregisterCallback<ClickEvent>(OnSmallToolClicked);
-            }
+            bigTool.UnregisterCallback<ClickEvent>(OnBigToolClicked);
+            mediumTool.UnregisterCallback<ClickEvent>(OnMediumToolClicked);
+            smallTool.UnregisterCallback<ClickEvent>(OnSmallToolClicked);
             
             //pause
             resumeButton.UnregisterCallback<ClickEvent>(OnResume);
@@ -178,8 +171,7 @@ namespace Anachronism
         {
             if (isPopUpOpen == false)
             {
-                OpenMenu(inGameUIGroup);
-                CloseMenu(pauseGroup);
+                ClosePause();
             }
         }
         private void OnSettings(ClickEvent clicked)
@@ -202,6 +194,7 @@ namespace Anachronism
         //pop up
         private void OnMainMenu(ClickEvent clicked)
         {
+            ClosePause();
             LoadScene();
         }
         private void OnQuitQuit(ClickEvent clicked)
@@ -231,7 +224,8 @@ namespace Anachronism
         //in game
         public void UpdateDeregulationBar(float factor)
         {
-            deregulationProgressBar.value = factor;
+            // La barre va de 0 à 100 par défaut : factor (0 à 1) seul la laissait presque vide.
+            deregulationProgressBar.value = factor * deregulationProgressBar.highValue;
             deregulationProgressBar.title = deregulationStaticText + (int)(factor*100) + "%";
         }
 
@@ -243,7 +237,7 @@ namespace Anachronism
         //deregulation tools
         public void UpdateDeregulationBar(ProgressBar bar, float factor)
         {
-            bar.value = factor;
+            bar.value = factor * bar.highValue;
             if (factor < 1)
             {
                 bar.title = (int)(factor * 100) + "%";
@@ -254,9 +248,55 @@ namespace Anachronism
             }
         }
         
+        //online : rôle et menu pause, appelés par InGameUIBridge
+        public void SetFugitive(bool fugitive)
+        {
+            isFugitive = fugitive;
+            if (isFugitive)
+            {
+                OpenMenu(deregulationToolsGroup);
+            }
+            else
+            {
+                CloseMenu(deregulationToolsGroup);
+            }
+        }
+
+        public void OpenPause()
+        {
+            OpenMenu(pauseGroup);
+            CloseMenu(inGameUIGroup);
+            // La souris sert au menu ; le joueur local coupe ses entrées en écoutant GameMenuState.
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
+            GameMenuState.SetOpen(true);
+        }
+
+        // Échap ferme aussi la pop-up et les options : la pop-up n'avait pas de bouton annuler.
+        public void ClosePause()
+        {
+            CloseMenu(pauseGroup);
+            CloseMenu(popUpGroup);
+            CloseMenu(Settings);
+            isPopUpOpen = false;
+            OpenMenu(inGameUIGroup);
+            GameMenuState.SetOpen(false);
+        }
+
         //pop up
         protected void LoadScene()
         {
+            // En ligne : on quitte la partie par SteamLobby, qui ferme la connexion (et la session si c'est l'hôte) ;
+            // FishNet ramène ensuite ce joueur à l'écran titre. Un LoadScene seul laisserait la connexion ouverte.
+            SteamLobby steamLobby = InstanceFinder.NetworkManager != null
+                ? InstanceFinder.NetworkManager.GetComponent<SteamLobby>()
+                : null;
+            if (steamLobby != null && InstanceFinder.NetworkManager.IsClientStarted)
+            {
+                steamLobby.LeaveGame();
+                return;
+            }
+
             SceneManager.LoadScene(mainMenuScene);
         }
 

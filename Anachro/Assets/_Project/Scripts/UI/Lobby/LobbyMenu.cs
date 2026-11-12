@@ -5,11 +5,13 @@ using System.Collections.Generic;
 using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 
 namespace Anachronism.UI
 {
     /// <summary>
-    /// Menu principal et lobby : créer une partie, rejoindre avec un code, lancer, quitter.
+    /// Lobby : créer une partie, rejoindre avec un code, lancer, revenir au menu principal d'Hanaé.
+    /// Caché sur l'écran titre et le menu principal d'Hanaé, pendant la partie (son écran de jeu) et à la fin (son écran de fin).
     /// Passe par SteamLobby et MatchManager, ne modifie jamais l'état réseau lui-même (règle de code 5).
     /// </summary>
     // TODO (Olivier) : version provisoire posée par Théo pour tester le code de partie, à reprendre (UXML/USS).
@@ -18,11 +20,16 @@ namespace Anachronism.UI
     {
         private enum MenuScreen
         {
+            Hidden,
             Home,
             Connecting,
-            Lobby,
-            Match
+            Lobby
         }
+
+        // « commencer » du menu principal d'Hanaé charge cette scène : l'accueil du lobby n'apparaît que là.
+        [SerializeField] private string _homeSceneName = "Lobby";
+        // « Retour » ramène au menu principal d'Hanaé.
+        [SerializeField] private string _backSceneName = "MainMenu";
 
         private UIDocument _document;
         private NetworkManager _networkManager;
@@ -33,7 +40,6 @@ namespace Anachronism.UI
         private VisualElement _homePanel;
         private VisualElement _connectingPanel;
         private VisualElement _lobbyPanel;
-        private VisualElement _matchBar;
         private TextField _codeField;
         private Button _createButton;
         private Button _joinButton;
@@ -50,7 +56,6 @@ namespace Anachronism.UI
         private Label _playerCount;
         private Label _resultLabel;
         private Label _waitingLabel;
-        private Label _matchPhase;
         private Label _statusLabel;
         private DropdownField _mapField;
         private VisualElement _settingsPanel;
@@ -65,8 +70,6 @@ namespace Anachronism.UI
         private MenuScreen _currentScreen = (MenuScreen)(-1);
         // Dernières valeurs affichées : on ne reconstruit les textes que quand elles changent (pas d'allocation par frame).
         private int _shownPlayers = -1;
-        private int _shownSeconds = -1;
-        private GamePhase _shownPhase;
         // Réglages affichés aux joueurs (non-hôte) : texte reconstruit seulement quand ils changent.
         private (byte, byte, float, float) _shownSettings;
         // Rôle d'une partie de test en solo, choisi par l'hôte seul dans le lobby.
@@ -86,7 +89,6 @@ namespace Anachronism.UI
             _homePanel = root.Q<VisualElement>("home-panel");
             _connectingPanel = root.Q<VisualElement>("connecting-panel");
             _lobbyPanel = root.Q<VisualElement>("lobby-panel");
-            _matchBar = root.Q<VisualElement>("match-bar");
             _codeField = root.Q<TextField>("code-field");
             _createButton = root.Q<Button>("create-button");
             _joinButton = root.Q<Button>("join-button");
@@ -96,7 +98,6 @@ namespace Anachronism.UI
             _playerCount = root.Q<Label>("player-count");
             _resultLabel = root.Q<Label>("result-label");
             _waitingLabel = root.Q<Label>("waiting-label");
-            _matchPhase = root.Q<Label>("match-phase");
             _statusLabel = root.Q<Label>("status-label");
             _mapField = root.Q<DropdownField>("map-field");
             _settingsPanel = root.Q<VisualElement>("settings-panel");
@@ -212,32 +213,34 @@ namespace Anachronism.UI
                 RefreshHome();
             else if (screen == MenuScreen.Lobby)
                 RefreshLobby();
-            else if (screen == MenuScreen.Match)
-                RefreshMatchBar();
         }
 
         private MenuScreen GetScreen()
         {
             if (_networkManager.IsClientStarted)
             {
+                // En partie, l'écran de jeu d'Hanaé ; à la fin, son écran de fin (avec « Rejouer ») pour qui a joué.
                 MatchManager match = MatchManager.Instance;
                 bool isPlaying = match != null && match.Phase != GamePhase.Lobby && match.Phase != GamePhase.End;
-                return isPlaying ? MenuScreen.Match : MenuScreen.Lobby;
+                bool isEndScreen = match != null && match.Phase == GamePhase.End && match.LocalRole != PlayerRole.None;
+                return isPlaying || isEndScreen ? MenuScreen.Hidden : MenuScreen.Lobby;
             }
 
             bool isConnecting = _steamLobby.IsBusy || _networkManager.ClientManager.Started;
-            return isConnecting ? MenuScreen.Connecting : MenuScreen.Home;
+            if (isConnecting)
+                return MenuScreen.Connecting;
+            return UnitySceneManager.GetActiveScene().name == _homeSceneName ? MenuScreen.Home : MenuScreen.Hidden;
         }
 
         private void ShowScreen(MenuScreen screen)
         {
             _currentScreen = screen;
             _shownPlayers = -1;
-            _shownSeconds = -1;
             SetVisible(_homePanel, screen == MenuScreen.Home);
             SetVisible(_connectingPanel, screen == MenuScreen.Connecting);
             SetVisible(_lobbyPanel, screen == MenuScreen.Lobby);
-            SetVisible(_matchBar, screen == MenuScreen.Match);
+            // Le message (ex. « Déconnecté de la partie. ») attend le retour au lobby, pas par-dessus les écrans d'Hanaé.
+            SetVisible(_statusLabel, screen != MenuScreen.Hidden);
 
             if (screen == MenuScreen.Lobby)
             {
@@ -291,18 +294,6 @@ namespace Anachronism.UI
             SetVisible(_soloRoleButton, isSolo);
             if (isSolo)
                 _soloRoleButton.text = _soloRole == PlayerRole.Villain ? "Test solo : fugitif" : "Test solo : chasseur";
-        }
-
-        private void RefreshMatchBar()
-        {
-            MatchManager match = MatchManager.Instance;
-            int seconds = Mathf.CeilToInt(match.RemainingTime);
-            if (seconds != _shownSeconds || match.Phase != _shownPhase)
-            {
-                _shownSeconds = seconds;
-                _shownPhase = match.Phase;
-                _matchPhase.text = $"{DescribePhase(match.Phase)}  {FormatTime(seconds)}";
-            }
         }
 
         private void OnCreateClicked()
@@ -420,7 +411,7 @@ namespace Anachronism.UI
             _steamLobby.LeaveGame();
         }
 
-        private void OnQuitClicked() => Application.Quit();
+        private void OnQuitClicked() => UnitySceneManager.LoadScene(_backSceneName);
 
         private void OnLobbyFailed(string message) => SetStatus(message);
 
@@ -442,16 +433,8 @@ namespace Anachronism.UI
         private static void SetVisible(VisualElement element, bool isVisible) =>
             element.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
 
-        // Rien à 0 : pendant la chasse le chrono est caché (RemainingTime vaut 0), seule la phase s'affiche.
         private static string FormatTime(int seconds) =>
             seconds <= 0 ? string.Empty : $"{seconds / 60}:{seconds % 60:00}";
 
-        private static string DescribePhase(GamePhase phase) => phase switch
-        {
-            GamePhase.Scouting => "Les fugitifs repèrent la map",
-            GamePhase.Searching => "Recherche",
-            GamePhase.LastChance => "Les fugitifs sont repérés, dernière chance",
-            _ => string.Empty
-        };
     }
 }

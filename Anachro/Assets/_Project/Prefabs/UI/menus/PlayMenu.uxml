@@ -1,5 +1,6 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <ui:Template name="SettingsMenu" src="project://database/Assets/_Project/Prefabs/UI/menus/SettingsMenu.uxml?fileID=9197481963319205126&amp;guid=4a29e62c0f2175f46ba53e25ac010e93&amp;type=3#SettingsMenu"/>
+    <Style src="PlayMenu.uss"/>
     <ui:VisualElement name="inGameGroup" style="flex-grow: 1; display: flex;">
         <ui:VisualElement name="anachronismToolsGroup" style="flex-grow: 1; position: absolute; height: 273px; width: 989px; top: 805px; left: 490px; flex-direction: row; justify-content: space-around;">
             <ui:Button text="grand" name="bigDisruptionButton" style="flex-direction: column-reverse;">
@@ -14,6 +15,14 @@
         </ui:VisualElement>
         <ui:ProgressBar value="22" title="" name="deregulationBar" style="align-self: stretch;"/>
         <ui:Label text="" name="timer" style="align-self: stretch;"/>
+        <!-- Ajouts online (Théo) : rôle, phase, compte à rebours de la dernière chance, réticule et son retour de tir. -->
+        <ui:Label text="" name="roleLabel" class="play-role" picking-mode="Ignore"/>
+        <ui:Label text="" name="phaseLabel" class="play-phase" picking-mode="Ignore"/>
+        <ui:Label text="" name="endCountdown" class="play-countdown" picking-mode="Ignore"/>
+        <ui:VisualElement name="reticle" class="play-reticle" picking-mode="Ignore">
+            <ui:VisualElement class="play-reticle__line play-reticle__line--horizontal" picking-mode="Ignore"/>
+            <ui:VisualElement class="play-reticle__line play-reticle__line--vertical" picking-mode="Ignore"/>
+        </ui:VisualElement>
     </ui:VisualElement>
     <ui:VisualElement name="pauseMenuGroup" style="flex-grow: 1; position: absolute; height: 1091px; width: 1921px; align-self: center; flex-direction: row; display: flex;">
         <ui:GroupBox name="commands" style="width: 1244px;">
@@ -21,6 +30,12 @@
             <ui:Button text="reprendre" name="resumeButton"/>
             <ui:Button text="options" name="settingsButton"/>
             <ui:Button text="quitter" name="quitButton"/>
+            <!-- Ajout online (Théo) : réglages de l'hôte, visibles par l'hôte seul. -->
+            <ui:VisualElement name="hostSection">
+                <ui:Button text="recharger les PNJ" name="reloadNpcsButton"/>
+                <ui:Button text="nouveaux skins pour les PNJ" name="rerollSkinsButton"/>
+                <ui:Label text="" name="hostStatus"/>
+            </ui:VisualElement>
         </ui:GroupBox>
         <ui:GroupBox name="controls">
             <ui:Image name="keyboard"/>

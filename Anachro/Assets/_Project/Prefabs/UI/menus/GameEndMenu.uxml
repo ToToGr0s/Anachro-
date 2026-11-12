@@ -5,5 +5,8 @@
         <ui:Label text="" name="timelineText"/>
     </ui:GroupBox>
     <ui:Label text="" name="winLossText" style="align-self: center;"/>
+    <!-- Ajout online (Théo) : relancer une partie avec les mêmes joueurs, hôte seul. -->
+    <ui:Button text="rejouer" name="replayButton" style="position: absolute; top: 940px; left: 812px; width: 252px;"/>
+    <ui:Label text="" name="replayStatus" style="position: absolute; top: 900px; left: 0; right: 0; -unity-text-align: middle-center;"/>
     <ui:Button text="menu principal" name="mainMenuButton" style="position: absolute; top: 994px; left: 812px; width: 252px;"/>
 </ui:UXML>

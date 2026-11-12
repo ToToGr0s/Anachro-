@@ -18,7 +18,7 @@
                 <ui:Button name="local-join-button" text="Rejoindre en local" class="button" />
             </ui:VisualElement>
             <ui:Label name="steam-warning" text="Steam n'est pas lancé : ferme le jeu, ouvre Steam, puis relance." class="warning" />
-            <ui:Button name="quit-button" text="Quitter le jeu" class="button button--ghost" />
+            <ui:Button name="quit-button" text="Retour" class="button button--ghost" />
         </ui:VisualElement>
 
         <ui:VisualElement name="connecting-panel" class="panel">
@@ -47,10 +47,6 @@
             <ui:Button name="start-button" text="Lancer la partie" class="button button--primary" />
             <ui:Label name="waiting-label" text="En attente de l'hôte…" class="info" />
             <ui:Button name="leave-button" text="Quitter la partie" class="button button--ghost" />
-        </ui:VisualElement>
-
-        <ui:VisualElement name="match-bar" class="match-bar" picking-mode="Ignore">
-            <ui:Label name="match-phase" class="match-text" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <ui:Label name="status-label" class="status" picking-mode="Ignore" />

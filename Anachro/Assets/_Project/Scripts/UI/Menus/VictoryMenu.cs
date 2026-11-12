@@ -1,4 +1,6 @@
 using System;
+using Anachronism.Network;
+using FishNet;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
@@ -11,7 +13,7 @@ namespace Anachronism
         public bool fugitiveWon;
         public bool playerWon;
 
-        private string winText = "Vicoire!";
+        private string winText = "Victoire !";
         private string loseText = "Défaite...";
         private string fugitiveWonText = "Fugitifs";
         private string detectiveWonText = "Détectives";
@@ -31,6 +33,13 @@ namespace Anachronism
             timelineLabel = root.Q<Label>("timelineText");
             mainMenuButton = root.Q<Button>("mainMenuButton");
 
+            Refresh();
+        }
+
+        // En ligne, le vainqueur n'est connu qu'à la fin de la partie : VictoryMenuBridge remplit
+        // fugitiveWon / playerWon puis rappelle Refresh (avant, les textes n'étaient posés qu'une fois dans Awake).
+        public void Refresh()
+        {
             if (fugitiveWon)
             {
                 teamLabel.text = fugitiveWonText;
@@ -71,6 +80,17 @@ namespace Anachronism
         //functions-----------------------------------------------------------------------------------------------------
         private void LoadScene()
         {
+            // En ligne : on quitte la partie par SteamLobby, qui ferme la connexion (et la session si c'est l'hôte) ;
+            // FishNet ramène ensuite ce joueur à l'écran titre. Un LoadScene seul laisserait la connexion ouverte.
+            SteamLobby steamLobby = InstanceFinder.NetworkManager != null
+                ? InstanceFinder.NetworkManager.GetComponent<SteamLobby>()
+                : null;
+            if (steamLobby != null && InstanceFinder.NetworkManager.IsClientStarted)
+            {
+                steamLobby.LeaveGame();
+                return;
+            }
+
             SceneManager.LoadScene(mainMenuScene);
         }
     }

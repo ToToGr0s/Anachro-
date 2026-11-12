@@ -1,0 +1,88 @@
+/* Éléments ajoutés à PlayMenu.uxml pour l'online (repris du HUD provisoire) : rôle, phase, réticule, compte à rebours,
+   outil sélectionné et outils de l'hôte. Le reste de la maquette garde ses styles inline. */
+
+.play-role {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.play-role--hunter {
+    color: rgb(92, 201, 148);
+}
+
+.play-role--fugitive {
+    color: rgb(233, 188, 69);
+}
+
+.play-phase {
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    -unity-text-align: middle-center;
+    font-size: 20px;
+}
+
+.play-countdown {
+    position: absolute;
+    top: 116px;
+    left: 50%;
+    translate: -50% 0;
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(240, 120, 120);
+}
+
+/* Réticule en + au centre de l'écran, pour les deux rôles. Fixe : il ne réagit jamais à ce qu'on vise. */
+.play-reticle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    translate: -50% -50%;
+}
+
+.play-reticle__line {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.6);
+    border-width: 1px;
+}
+
+.play-reticle__line--horizontal {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 4px;
+    translate: 0 -50%;
+}
+
+.play-reticle__line--vertical {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 4px;
+    translate: -50% 0;
+}
+
+/* Retour du serveur après un tir : couleur du réticule une demi-seconde.
+   Méchant touché = même vert qu'un bon objet : une bonne trouvaille, quelle qu'elle soit. */
+.reticle--found .play-reticle__line,
+.reticle--villain .play-reticle__line {
+    background-color: rgb(92, 201, 148);
+}
+
+.reticle--period .play-reticle__line,
+.reticle--innocent .play-reticle__line {
+    background-color: rgb(229, 84, 84);
+}
+
+/* Taille d'objet choisie par le fugitif (touches 1/2/3 ou molette). */
+.tool--selected {
+    border-color: rgb(233, 188, 69);
+    border-width: 3px;
+}
