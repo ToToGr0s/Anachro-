@@ -83,6 +83,9 @@ namespace Anachronism.Network
         {
             if (args.ConnectionState == LocalConnectionState.Starting)
                 RouteToLobby();
+            // La map part avec la connexion : on oublie son MatchManager, la prochaine partie aura le sien.
+            else if (args.ConnectionState == LocalConnectionState.Stopped)
+                UnbindMatch();
         }
 
         private void OnServerConnectionState(ServerConnectionStateArgs args)

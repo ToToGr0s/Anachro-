@@ -33,6 +33,12 @@ namespace Anachronism
 
         private void PickTip()
         {
+            // Fichier d'astuces vide : Random.Range(0, 0) donnerait un index hors du tableau.
+            if (tips.Length == 0)
+            {
+                return;
+            }
+
             string txt = tips[Random.Range(0, tips.Length)];
             tipsLabel.text = txt;
         }
