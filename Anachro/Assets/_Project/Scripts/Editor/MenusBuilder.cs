@@ -60,6 +60,9 @@ namespace Anachronism.Editor
         public static void AddBootMenus(Scene boot)
         {
             DestroyRoot(boot, OldHudName);
+            // Prefab supprimé : l'instance s'appelle alors « UI_Hud (Missing Prefab…) » et échappe à DestroyRoot.
+            foreach (GameObject rootObject in boot.GetRootGameObjects().Where(PrefabUtility.IsPrefabAssetMissing))
+                Object.DestroyImmediate(rootObject);
 
             // L'ancien menu pause vivait sur l'Overlay : son script supprimé y laisse un composant manquant.
             GameObject overlay = boot.GetRootGameObjects().FirstOrDefault(rootObject => rootObject.name == OverlayName);
