@@ -54,6 +54,8 @@ namespace Anachronism.Core
                 return false;
             }
 
+            UseAppIdNextToMacApp();
+
             try
             {
                 ESteamAPIInitResult result = SteamAPI.InitEx(out string errorMessage);
@@ -70,6 +72,23 @@ namespace Anachronism.Core
             }
 
             return true;
+        }
+
+        // Steamworks cherche steam_appid.txt dans le dossier courant, qui vaut « / » pour une app lancée depuis le Finder.
+        // Le zip publié le met à côté d'Anachro.app : on passe l'AppID par la variable d'environnement que Steamworks lit aussi.
+        // Sans fichier (jeu lancé par Steam avec le vrai AppID), rien ne change.
+        private static void UseAppIdNextToMacApp()
+        {
+#if UNITY_STANDALONE_OSX && !UNITY_EDITOR
+            // dataPath = Anachro.app/Contents : le fichier est deux dossiers plus haut.
+            string path = System.IO.Path.Combine(Application.dataPath, "..", "..", "steam_appid.txt");
+            if (!System.IO.File.Exists(path))
+                return;
+
+            string appId = System.IO.File.ReadAllText(path).Trim();
+            System.Environment.SetEnvironmentVariable("SteamAppId", appId);
+            System.Environment.SetEnvironmentVariable("SteamGameId", appId);
+#endif
         }
     }
 }

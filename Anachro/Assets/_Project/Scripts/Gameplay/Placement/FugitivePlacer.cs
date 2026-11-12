@@ -5,7 +5,6 @@ namespace Anachronism.Gameplay
 {
     // Cote client du fugitif : vise une surface, pilote l'apercu et prepare l'intention de pose.
     // Le serveur (NetworkPlacement, Theo) revalide tout : ici on ne decide rien de definitif.
-    // TODO (Theo) : a l'integration, activer ce composant seulement pour le proprietaire fugitif (PlayerNetworkSetup, regle reseau 7).
     public class FugitivePlacer : MonoBehaviour
     {
         private const int SizeCount = 3;
@@ -32,14 +31,35 @@ namespace Anachronism.Gameplay
         public event Action<bool> PlacingChanged;
 
         public AnachronismSize SelectedSize => _selectedSize;
+        // Le HUD s'en sert pour se recaler apres avoir ete cache ou reinitialise.
+        public float CooldownDuration { get; private set; }
+        public float CooldownRemaining => _isCoolingDown ? Mathf.Max(0f, _readyTime - Time.time) : 0f;
 
         // size = taille de l'objet pose (elle fixe la duree), duration = duree totale de la recharge ; le HUD (Olivier) decompte lui-meme.
         public event Action<AnachronismSize, float> CooldownChanged;
-        // L'intention de pose : NetworkPlacement (Theo) l'enverra au serveur. Taille + point + normale, jamais l'objet.
+        // L'intention de pose, sans l'objet tenu.
         public event Action<PlacementRequest> PlacementRequested;
-        // Local seulement : l'objet tenu au moment de la pose (spawner de test, HUD). Ne pas l'envoyer au serveur.
+        // L'intention avec l'objet tenu : NetworkPlacement l'envoie a l'hote, qui verifie qu'il est posable dans cette epoque.
         public event Action<PlacementRequest, AnachronismDefinition> ItemPlaced;
         public event Action<AnachronismSize> SizeSelected;
+        // Objet en main (null pendant la recharge) : HeldItem le montre aux autres joueurs, comme celui d'un PNJ (T04-5).
+        public event Action<AnachronismDefinition> HeldItemChanged;
+        public AnachronismDefinition CurrentItem => _heldItems[(int)_selectedSize];
+        // Le HUD (persistant, hors scene) ne peut pas porter de reference vers le joueur : il suit le placer qui s'active.
+        // Seul l'owner l'active (PlayerNetworkSetup), donc c'est toujours le placer du joueur local.
+        public static event Action<FugitivePlacer> Enabled;
+        public static event Action<FugitivePlacer> Disabled;
+        // Pour un abonne arrive apres l'activation (HUD reactive) : il rattrape le placer deja actif.
+        public static FugitivePlacer Current { get; private set; }
+
+        // Domain reload desactive dans ce projet : sans ce reset, un abonne reste branche d'un Play a l'autre.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay()
+        {
+            Enabled = null;
+            Disabled = null;
+            Current = null;
+        }
 
         private void Awake()
         {
@@ -51,6 +71,12 @@ namespace Anachronism.Gameplay
 
             if (_era == null)
                 Debug.LogError("FugitivePlacer : epoque non assignee, aucun objet ne sera tire.", this);
+        }
+
+        private void OnEnable()
+        {
+            Current = this;
+            Enabled?.Invoke(this);
         }
 
         private void Start()
@@ -105,6 +131,10 @@ namespace Anachronism.Gameplay
         // Domain reload desactive : une pose interrompue ne doit pas rester coincee au Play suivant.
         private void OnDisable()
         {
+            if (Current == this)
+                Current = null;
+            Disabled?.Invoke(this);
+
             if (!_isPlacing)
                 return;
 
@@ -128,6 +158,7 @@ namespace Anachronism.Gameplay
         {
             for (int i = 0; i < SizeCount; i++)
                 DrawItem((AnachronismSize)i);
+            HeldItemChanged?.Invoke(CurrentItem);
         }
 
         private void UpdateGhost()
@@ -172,6 +203,7 @@ namespace Anachronism.Gameplay
 
             _selectedSize = size;
             SizeSelected?.Invoke(size);
+            HeldItemChanged?.Invoke(CurrentItem);
         }
 
         // size = taille de l'objet qui vient d'etre pose : c'est elle qui fixe la duree (15 / 30 / 45 s).
@@ -180,12 +212,14 @@ namespace Anachronism.Gameplay
             // TODO (Celian) : la duree viendra de MatchSettings.CooldownFor (reglage de l'hote) ; temps de jeu en ticks (regle reseau 6).
             float duration = _tuning.GetReloadSeconds(size);
             _readyTime = Time.time + duration;
+            CooldownDuration = duration;
             _isCoolingDown = true;
             Array.Clear(_heldItems, 0, _heldItems.Length);
             CooldownChanged?.Invoke(size, duration);
+            HeldItemChanged?.Invoke(null);
         }
 
-        // TODO (Theo) : le serveur tire les 3 objets et les envoie en TargetRpc ; le client n'envoie que la taille choisie (regle reseau 1).
+        // Tirage local (choix de Theo) : l'hote verifie seulement que l'objet envoye est posable dans l'epoque (NetworkPlacement).
         private void DrawItem(AnachronismSize size)
         {
             // Les objets posables de l'epoque sont deja d'une autre epoque (EraDefinition le verifie a la saisie).

@@ -130,6 +130,16 @@ namespace Anachronism.Network
             return true;
         }
 
+        /// <summary>
+        /// Réglage public de la partie dans les métadonnées du lobby (T09-1), lisible par tout Steam : rien de secret
+        /// (pas la durée de la chasse). Seul le propriétaire du lobby peut écrire ; ignoré en partie locale.
+        /// </summary>
+        public void SetLobbyData(string key, string value)
+        {
+            if (IsInLobby && IsSteamReady && SteamMatchmaking.GetLobbyOwner(_lobbyId) == SteamUser.GetSteamID())
+                SteamMatchmaking.SetLobbyData(_lobbyId, key, value);
+        }
+
         public void InviteFriends()
         {
             if (IsInLobby)

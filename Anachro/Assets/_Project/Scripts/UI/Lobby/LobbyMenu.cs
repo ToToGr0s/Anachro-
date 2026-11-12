@@ -1,6 +1,7 @@
 using Anachronism.Network;
 using FishNet;
 using FishNet.Managing;
+using System.Collections.Generic;
 using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -27,6 +28,7 @@ namespace Anachronism.UI
         private NetworkManager _networkManager;
         private SteamLobby _steamLobby;
         private LocalSession _localSession;
+        private MapSelection _maps;
 
         private VisualElement _homePanel;
         private VisualElement _connectingPanel;
@@ -50,6 +52,14 @@ namespace Anachronism.UI
         private Label _waitingLabel;
         private Label _matchPhase;
         private Label _statusLabel;
+        private DropdownField _mapField;
+        private VisualElement _settingsPanel;
+        private IntegerField _villainsField;
+        private IntegerField _objectsField;
+        private IntegerField _scoutingField;
+        private IntegerField _searchingField;
+        private IntegerField _lastChanceField;
+        private Label _settingsSummary;
 
         private bool _isLeaving;
         private MenuScreen _currentScreen = (MenuScreen)(-1);
@@ -57,6 +67,8 @@ namespace Anachronism.UI
         private int _shownPlayers = -1;
         private int _shownSeconds = -1;
         private GamePhase _shownPhase;
+        // Réglages affichés aux joueurs (non-hôte) : texte reconstruit seulement quand ils changent.
+        private (byte, byte, float, float) _shownSettings;
         // Rôle d'une partie de test en solo, choisi par l'hôte seul dans le lobby.
         private PlayerRole _soloRole = PlayerRole.Guardian;
 
@@ -86,6 +98,17 @@ namespace Anachronism.UI
             _waitingLabel = root.Q<Label>("waiting-label");
             _matchPhase = root.Q<Label>("match-phase");
             _statusLabel = root.Q<Label>("status-label");
+            _mapField = root.Q<DropdownField>("map-field");
+            _settingsPanel = root.Q<VisualElement>("settings-panel");
+            _villainsField = root.Q<IntegerField>("villains-field");
+            _objectsField = root.Q<IntegerField>("objects-field");
+            _scoutingField = root.Q<IntegerField>("scouting-field");
+            _searchingField = root.Q<IntegerField>("searching-field");
+            _lastChanceField = root.Q<IntegerField>("last-chance-field");
+            _settingsSummary = root.Q<Label>("settings-summary");
+            _mapField.RegisterValueChangedCallback(OnMapChanged);
+            foreach (IntegerField field in SettingFields())
+                field.RegisterCallback<FocusOutEvent>(OnSettingEdited);
 
             _createButton.clicked += OnCreateClicked;
             _joinButton.clicked += OnJoinClicked;
@@ -124,6 +147,18 @@ namespace Anachronism.UI
             _localJoinButton.clicked -= OnLocalJoinClicked;
             _soloRoleButton.clicked -= OnSoloRoleClicked;
             _codeField.UnregisterCallback<KeyDownEvent>(OnCodeFieldKeyDown);
+            _mapField.UnregisterValueChangedCallback(OnMapChanged);
+            foreach (IntegerField field in SettingFields())
+                field.UnregisterCallback<FocusOutEvent>(OnSettingEdited);
+        }
+
+        private IEnumerable<IntegerField> SettingFields()
+        {
+            yield return _villainsField;
+            yield return _objectsField;
+            yield return _scoutingField;
+            yield return _searchingField;
+            yield return _lastChanceField;
         }
 
         private void Start()
@@ -138,6 +173,14 @@ namespace Anachronism.UI
 
             _steamLobby = _networkManager.GetComponent<SteamLobby>();
             _localSession = _networkManager.GetComponent<LocalSession>();
+            _maps = _networkManager.GetComponent<MapSelection>();
+            SetVisible(_mapField, _maps != null && _maps.Names.Count > 1);
+            if (_maps != null)
+            {
+                _mapField.choices = new List<string>(_maps.Names);
+                if (_maps.SelectedIndex >= 0)
+                    _mapField.SetValueWithoutNotify(_maps.Names[_maps.SelectedIndex]);
+            }
             // Boot sans transport local (base réseau pas reconstruite) : on cache les boutons au lieu de planter.
             SetVisible(_localHostButton, _localSession != null);
             SetVisible(_localJoinButton, _localSession != null);
@@ -205,6 +248,14 @@ namespace Anachronism.UI
                 SetVisible(_copyButton, !isLocal);
                 _lobbyCode.text = isLocal ? "LOCAL" : LobbyCode.Format(_steamLobby.Code);
                 SetStatus(string.Empty);
+
+                // L'hôte règle la partie ; les autres voient un résumé (sans la durée de la chasse, cachée).
+                foreach (IntegerField field in SettingFields())
+                    SetVisible(field, isHost);
+                SetVisible(_settingsSummary, !isHost);
+                _shownSettings = default;
+                if (isHost)
+                    ShowHostSettings();
             }
         }
 
@@ -233,6 +284,7 @@ namespace Anachronism.UI
 
             _startButton.text = hasEnded ? "Rejouer" : "Lancer la partie";
             _startButton.SetEnabled(match != null);
+            RefreshSettingsSummary(match);
 
             // Hôte seul : partie de test, il choisit son rôle. Même règle que celle appliquée au lancement par MatchManager.
             bool isSolo = match != null && match.IsServerInitialized && MatchManager.IsSoloTest(match.CountActivePlayers());
@@ -286,6 +338,60 @@ namespace Anachronism.UI
         {
             if ((keyEvent.keyCode == KeyCode.Return || keyEvent.keyCode == KeyCode.KeypadEnter) && _joinButton.enabledSelf)
                 OnJoinClicked();
+        }
+
+        private void OnMapChanged(ChangeEvent<string> changeEvent)
+        {
+            if (_maps == null || !_maps.Select(_mapField.index))
+                SetStatus("La carte se choisit avant de créer la partie.");
+        }
+
+        // Champs de l'hôte remplis depuis les réglages actuels (préréglage ou derniers choix).
+        private void ShowHostSettings()
+        {
+            MatchManager match = MatchManager.Instance;
+            if (match == null || !match.IsServerInitialized)
+                return;
+
+            MatchSettings settings = match.GetNextSettingsServer();
+            _villainsField.SetValueWithoutNotify(settings.VillainCount);
+            _objectsField.SetValueWithoutNotify(settings.ObjectsPerVillain);
+            _scoutingField.SetValueWithoutNotify(Mathf.RoundToInt(settings.ScoutingDuration));
+            _searchingField.SetValueWithoutNotify(Mathf.RoundToInt(settings.SearchingDuration / 60f));
+            _lastChanceField.SetValueWithoutNotify(Mathf.RoundToInt(settings.LastChanceDuration));
+        }
+
+        // Validé en quittant le champ (pas à chaque chiffre tapé). MatchManager refuse pendant une manche ou si c'est invalide.
+        private void OnSettingEdited(FocusOutEvent focusEvent)
+        {
+            MatchManager match = MatchManager.Instance;
+            if (match == null || !_networkManager.IsServerStarted)
+                return;
+
+            MatchSettings current = match.GetNextSettingsServer();
+            var edited = new MatchSettings(
+                (byte)Mathf.Clamp(_villainsField.value, 0, byte.MaxValue),
+                (byte)Mathf.Clamp(_objectsField.value, 0, byte.MaxValue),
+                _scoutingField.value,
+                _searchingField.value * 60f,
+                _lastChanceField.value,
+                current.WrongShotPenalty);
+            SetStatus(match.TrySetNextSettings(edited, out string error) ? string.Empty : $"Réglage refusé : {error}.");
+            ShowHostSettings();
+        }
+
+        private void RefreshSettingsSummary(MatchManager match)
+        {
+            if (match == null || _networkManager.IsServerStarted)
+                return;
+
+            var settings = (match.NextVillainCount, match.NextObjectsPerVillain, match.NextScoutingDuration, match.NextLastChanceDuration);
+            if (settings == _shownSettings)
+                return;
+
+            _shownSettings = settings;
+            _settingsSummary.text = $"{settings.Item1} fugitif(s), {settings.Item2} objets chacun · repérage {FormatTime(Mathf.RoundToInt(settings.Item3))}"
+                + $" · dernière chance {FormatTime(Mathf.RoundToInt(settings.Item4))}";
         }
 
         private void OnStartClicked()

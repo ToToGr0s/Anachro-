@@ -36,6 +36,16 @@ namespace Anachronism.Gameplay
         [Tooltip("Vitesse a laquelle le FOV rejoint sa cible (plus grand = plus brusque).")]
         [SerializeField, Min(1f)] private float _fovSmoothing = 8f;
 
+        [Header("Anti-triche (verifie par l hote)")]
+        [Tooltip("Marge sur la vitesse de course avant de recaler un joueur (lag, arrondis).")]
+        [SerializeField, Range(1f, 2f)] private float _serverSpeedTolerance = 1.3f;
+        [Tooltip("Deplacement accepte d un coup apres un trou de paquets, en secondes de course.")]
+        [SerializeField, Range(0.2f, 3f)] private float _serverMoveBurst = 1f;
+        [Tooltip("Marge sur la hauteur de saut (m).")]
+        [SerializeField, Range(0f, 2f)] private float _serverHeightTolerance = 0.3f;
+        [Tooltip("Marge sur la duree d un saut avant de considerer qu il vole (s).")]
+        [SerializeField, Range(0f, 3f)] private float _serverAirTimeTolerance = 0.5f;
+
         public float Height => _height;
         public float Radius => _radius;
         public float WalkSpeed => _walkSpeed;
@@ -53,5 +63,9 @@ namespace Anachronism.Gameplay
         public float NearClipPlane => _nearClipPlane;
         public float SprintFovBoost => _sprintFovBoost;
         public float FovSmoothing => _fovSmoothing;
+        public float ServerSpeedTolerance => _serverSpeedTolerance;
+        public float ServerMoveBurst => _serverMoveBurst;
+        public float ServerHeightTolerance => _serverHeightTolerance;
+        public float ServerAirTimeTolerance => _serverAirTimeTolerance;
     }
 }

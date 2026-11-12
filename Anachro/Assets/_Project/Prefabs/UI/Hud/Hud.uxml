@@ -21,6 +21,12 @@
             <ui:Label name="end-countdown" class="match-text hud-countdown__text" picking-mode="Ignore" />
         </ui:VisualElement>
 
+        <!-- Reticule des deux roles : fixe, il ne reagit jamais a ce qu'on vise (sinon il trahirait le mechant). -->
+        <ui:VisualElement name="reticle" class="hud-reticle" picking-mode="Ignore">
+            <ui:VisualElement class="hud-reticle__line hud-reticle__line--horizontal" picking-mode="Ignore" />
+            <ui:VisualElement class="hud-reticle__line hud-reticle__line--vertical" picking-mode="Ignore" />
+        </ui:VisualElement>
+
         <ui:VisualElement name="item-bar" class="hud-items" picking-mode="Ignore">
             <ui:VisualElement name="item-slot-small" class="hud-slot" picking-mode="Ignore">
                 <ui:VisualElement class="hud-slot__gauge" picking-mode="Ignore">

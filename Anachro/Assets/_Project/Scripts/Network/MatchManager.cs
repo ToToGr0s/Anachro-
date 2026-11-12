@@ -12,7 +12,7 @@ namespace Anachronism.Network
     /// <summary>
     /// Objet réseau de scène (dans la map). Seul l'hôte décide : phases, rôles, chrono, victoire.
     /// Les SyncVar ne contiennent rien de secret : chaque rôle n'est envoyé qu'à son joueur (TargetRpc).
-    /// Tir et anachronismes arrivent avec T06 / T07.
+    /// Le tir (T06, NetworkShooting) et la pose (T07, NetworkPlacement) passent par ici pour la barre et la capture.
     /// </summary>
     public sealed class MatchManager : NetworkBehaviour
     {
@@ -30,6 +30,11 @@ namespace Anachronism.Network
         private readonly SyncVar<uint> _degradationBaseTick = new SyncVar<uint>();
         private readonly SyncVar<float> _degradationPerSecond = new SyncVar<float>(); // 0 = ne monte pas
         private readonly SyncVar<Winner> _winner = new SyncVar<Winner>();
+        // Réglages de la prochaine partie, affichés au lobby (T09). La durée de la chasse n'y est pas : elle reste cachée.
+        private readonly SyncVar<byte> _nextVillainCount = new SyncVar<byte>();
+        private readonly SyncVar<byte> _nextObjectsPerVillain = new SyncVar<byte>();
+        private readonly SyncVar<float> _nextScoutingDuration = new SyncVar<float>();
+        private readonly SyncVar<float> _nextLastChanceDuration = new SyncVar<float>();
 
         // ---------- État serveur uniquement ----------
         private readonly Dictionary<NetworkConnection, PlayerRole> _roles = new Dictionary<NetworkConnection, PlayerRole>();
@@ -40,6 +45,9 @@ namespace Anachronism.Network
         // Joueurs partis en pleine partie, par adresse : ils retrouvent leur rôle s'ils reviennent avant la fin.
         private readonly Dictionary<string, AwayPlayer> _awayPlayers = new Dictionary<string, AwayPlayer>();
         private MatchSettings _settings;
+        // Réglages de la prochaine partie (T09) : préréglage selon le nombre de joueurs tant que l'hôte n'y a pas touché.
+        private MatchSettings _nextSettings;
+        private bool _isNextSettingsCustomized;
         // Fin de la chasse, gardée côté serveur : en SyncVar, les clients connaîtraient le timer caché (T18-7).
         private uint _searchingEndTick;
 
@@ -59,8 +67,18 @@ namespace Anachronism.Network
         }
 
         public GamePhase Phase => _phase.Value;
+        /// <summary>Manche en cours (repérage, chasse, dernière chance) : hors lobby et écran de fin.</summary>
+        public bool IsPlayingPhase => _phase.Value == GamePhase.Scouting || _phase.Value == GamePhase.Searching || _phase.Value == GamePhase.LastChance;
         public float Degradation => IsSpawned ? ComputeDegradation(TimeManager.Tick) : 0f;
         public Winner Winner => _winner.Value;
+
+        /// <summary>Réglages publics de la prochaine partie (lobby, T09). Chez l'hôte, GetNextSettingsServer donne tout.</summary>
+        public byte NextVillainCount => _nextVillainCount.Value;
+        public byte NextObjectsPerVillain => _nextObjectsPerVillain.Value;
+        public float NextScoutingDuration => _nextScoutingDuration.Value;
+        public float NextLastChanceDuration => _nextLastChanceDuration.Value;
+        /// <summary>Réglages modifiables : au lobby et sur l'écran de fin, jamais pendant une manche (T09-4).</summary>
+        public bool CanChangeSettings => _phase.Value == GamePhase.Lobby || _phase.Value == GamePhase.End;
 
         /// <summary>Rôle du joueur local, reçu par TargetRpc et jamais diffusé aux autres.</summary>
         public PlayerRole LocalRole { get; private set; }
@@ -84,6 +102,8 @@ namespace Anachronism.Network
         public event Action<PlayerRole> LocalRoleAssigned;
         /// <summary>Côté serveur : un joueur parti en pleine partie est revenu et a retrouvé son rôle.</summary>
         public event Action<NetworkConnection> PlayerRejoined;
+        /// <summary>Côté serveur : un fugitif vient d'être capturé (C06). Levé avant la fin de partie que sa capture peut déclencher.</summary>
+        public event Action<NetworkConnection> VillainCaptured;
 
         private void Awake()
         {
@@ -102,6 +122,8 @@ namespace Anachronism.Network
         public override void OnStartServer()
         {
             base.OnStartServer();
+            _isNextSettingsCustomized = false;
+            ApplyPresetForPlayers();
             TimeManager.OnTick += OnServerTick;
             ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
             SceneManager.OnClientLoadedStartScenes += OnClientLoadedStartScenes;
@@ -124,6 +146,64 @@ namespace Anachronism.Network
         [Server]
         public PlayerRole GetRoleServer(NetworkConnection connection) =>
             connection != null && _roles.TryGetValue(connection, out PlayerRole role) ? role : PlayerRole.None;
+
+        /// <summary>Fugitif de la partie encore en jeu (ni capturé, ni parti) : seul lui peut poser (T07).</summary>
+        [Server]
+        public bool IsActiveVillainServer(NetworkConnection connection) =>
+            GetRoleServer(connection) == PlayerRole.Villain && !_neutralizedVillains.Contains(connection);
+
+        /// <summary>Fugitifs de la partie, capturés compris : la part de barre d'une pose en dépend (GameplayTuning.GetDisruption).</summary>
+        [Server]
+        public int CountVillainsServer()
+        {
+            int count = 0;
+            foreach (PlayerRole role in _roles.Values)
+            {
+                if (role == PlayerRole.Villain)
+                    count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>Pose validée et spawnée (T07) : la barre monte, et la première pose du repérage lance la chasse.</summary>
+        [Server]
+        public void RegisterPlacement(float degradation)
+        {
+            if (!IsPlayingPhase)
+                return;
+
+            AddDegradation(degradation);
+            // La pose a pu remplir la barre : la partie est alors finie, pas de chasse à lancer.
+            if (_phase.Value == GamePhase.Scouting)
+                EnterSearching();
+        }
+
+        /// <summary>Tir validé (T06) : positif pour une erreur du chasseur, négatif pour un anachronisme détruit.</summary>
+        [Server]
+        public void RegisterShot(float degradation)
+        {
+            if (_phase.Value != GamePhase.Searching && _phase.Value != GamePhase.LastChance)
+                return;
+
+            AddDegradation(degradation);
+        }
+
+        /// <summary>Fugitif touché par un chasseur (T06). Ignoré s'il est déjà capturé ou parti.</summary>
+        [Server]
+        public void CaptureVillain(NetworkConnection villain)
+        {
+            if (_phase.Value != GamePhase.Searching && _phase.Value != GamePhase.LastChance)
+                return;
+
+            if (IsActiveVillainServer(villain))
+                Capture(villain);
+        }
+
+        /// <summary>Fugitif capturé pendant cette partie (C06), qu'il soit encore là ou revenu : il ne rejoue plus.</summary>
+        [Server]
+        public bool IsCapturedVillainServer(NetworkConnection connection) =>
+            GetRoleServer(connection) == PlayerRole.Villain && _neutralizedVillains.Contains(connection);
 
         /// <summary>Partie de test : un joueur seul, sans minimum de joueurs, qui choisit son rôle. Même règle pour l'UI et le lancement.</summary>
         public static bool IsSoloTest(int activePlayerCount) => activePlayerCount == 1;
@@ -156,7 +236,61 @@ namespace Anachronism.Network
                 return MatchStartResult.InvalidSettings;
             }
 
-            return StartMatch(_presets.GetFor(GetActivePlayers().Count), soloRole);
+            return StartMatch(_nextSettings, soloRole);
+        }
+
+        [Server]
+        public MatchSettings GetNextSettingsServer() => _nextSettings;
+
+        /// <summary>
+        /// Réglages choisis par l'hôte au lobby (T09-3). Refusés pendant une manche (T09-4) ou s'ils sont invalides.
+        /// Les valeurs publiques partent aux joueurs (SyncVar) et dans les métadonnées du lobby Steam (T09-1).
+        /// </summary>
+        [Server]
+        public bool TrySetNextSettings(MatchSettings settings, out string error)
+        {
+            if (!CanChangeSettings)
+            {
+                error = "partie en cours";
+                return false;
+            }
+
+            if (!settings.IsValid(out error))
+                return false;
+
+            _isNextSettingsCustomized = true;
+            SetNextSettings(settings);
+            return true;
+        }
+
+        // Tant que l'hôte n'a rien changé, le préréglage suit le nombre de joueurs (T09-2).
+        [Server]
+        private void ApplyPresetForPlayers()
+        {
+            if (_isNextSettingsCustomized || _presets == null || !CanChangeSettings)
+                return;
+
+            SetNextSettings(_presets.GetFor(GetActivePlayers().Count));
+        }
+
+        [Server]
+        private void SetNextSettings(MatchSettings settings)
+        {
+            _nextSettings = settings;
+            _nextVillainCount.Value = settings.VillainCount;
+            _nextObjectsPerVillain.Value = settings.ObjectsPerVillain;
+            _nextScoutingDuration.Value = settings.ScoutingDuration;
+            _nextLastChanceDuration.Value = settings.LastChanceDuration;
+
+            SteamLobby lobby = NetworkManager.GetComponent<SteamLobby>();
+            if (lobby == null)
+                return;
+
+            lobby.SetLobbyData("map", gameObject.scene.name);
+            lobby.SetLobbyData("villains", settings.VillainCount.ToString());
+            lobby.SetLobbyData("objects", settings.ObjectsPerVillain.ToString());
+            lobby.SetLobbyData("scouting", Mathf.RoundToInt(settings.ScoutingDuration).ToString());
+            lobby.SetLobbyData("lastChance", Mathf.RoundToInt(settings.LastChanceDuration).ToString());
         }
 
         [Server]
@@ -262,7 +396,8 @@ namespace Anachronism.Network
             if (_phaseEndTick.Value == 0 || TimeManager.Tick < _phaseEndTick.Value)
                 return;
 
-            // TODO (Théo) : avec T07, placer automatiquement les objets que les fugitifs n'ont pas posés à temps.
+            // Personne n'a posé avant la fin du chrono : la chasse commence quand même.
+            // TODO (Théo) : placer automatiquement les objets que les fugitifs n'ont pas posés à temps (C09).
             if (phase == GamePhase.Scouting)
                 EnterSearching();
             // Filet de sécurité : la barre est recalée sur le chrono, mais un arrondi de tick peut la laisser juste sous 100 %.
@@ -270,7 +405,7 @@ namespace Anachronism.Network
                 EndMatch(Winner.Villains);
         }
 
-        /// <summary>Seule entrée dans le repérage : T07 n'aura qu'un endroit à compléter.</summary>
+        /// <summary>Seule entrée dans le repérage. Il se termine à la première pose (RegisterPlacement) ou à la fin du chrono.</summary>
         [Server]
         private void EnterScouting()
         {
@@ -341,7 +476,73 @@ namespace Anachronism.Network
             SetPhase(GamePhase.End, 0f);
         }
 
+        // ================= Triches de test (panel F5) =================
+        // Refusées hors builds de dev (Debug.isDebugBuild : éditeur et « Development Build »), même appelées par un mod.
+
+        /// <summary>Passe à la phase suivante : repérage → chasse → dernière chance → victoire des fugitifs.</summary>
+        [Server]
+        public void DebugSkipPhase()
+        {
+            if (!Debug.isDebugBuild)
+                return;
+
+            switch (_phase.Value)
+            {
+                case GamePhase.Scouting: EnterSearching(); break;
+                case GamePhase.Searching: SetPhase(GamePhase.LastChance, _settings.LastChanceDuration); break;
+                case GamePhase.LastChance: EndMatch(Winner.Villains); break;
+            }
+        }
+
+        /// <summary>Ajoute (ou retire) une part de barre, comme une pose ou un tir.</summary>
+        [Server]
+        public void DebugAddDegradation(float amount)
+        {
+            if (Debug.isDebugBuild)
+                AddDegradation(amount);
+        }
+
+        /// <summary>Capture tous les fugitifs encore en jeu : victoire des chasseurs.</summary>
+        [Server]
+        public void DebugCaptureAllVillains()
+        {
+            if (!Debug.isDebugBuild)
+                return;
+
+            var villains = new List<NetworkConnection>();
+            foreach (KeyValuePair<NetworkConnection, PlayerRole> pair in _roles)
+            {
+                if (pair.Value == PlayerRole.Villain && !_neutralizedVillains.Contains(pair.Key))
+                    villains.Add(pair.Key);
+            }
+
+            foreach (NetworkConnection villain in villains)
+                Capture(villain);
+        }
+
+        [Server]
+        public void DebugEndMatch(Winner winner)
+        {
+            if (Debug.isDebugBuild)
+                EndMatch(winner);
+        }
+
+        /// <summary>Rôles de la partie, pour le panel F5 de l'hôte (jamais envoyé aux clients).</summary>
+        [Server]
+        public IEnumerable<KeyValuePair<NetworkConnection, PlayerRole>> DebugRolesServer() => _roles;
+
+        [Server]
+        public bool DebugIsNeutralizedServer(NetworkConnection connection) => _neutralizedVillains.Contains(connection);
+
         // ================= Méchants neutralisés =================
+
+        // Statue figée avant la neutralisation : capturer le dernier fugitif termine la partie, et la fin libère tout le monde.
+        [Server]
+        private void Capture(NetworkConnection villain)
+        {
+            VillainCaptured?.Invoke(villain);
+            NeutralizeVillain(villain);
+        }
 
         /// <summary>Capture (T06) ou déconnexion. Les gentils gagnent quand tous les méchants sont neutralisés.</summary>
         [Server]
@@ -363,6 +564,8 @@ namespace Anachronism.Network
 
         private void OnRemoteConnectionState(NetworkConnection connection, RemoteConnectionStateArgs args)
         {
+            ApplyPresetForPlayers();
+
             if (args.ConnectionState != RemoteConnectionState.Stopped || !_roles.TryGetValue(connection, out PlayerRole role))
                 return;
 

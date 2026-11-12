@@ -8,8 +8,11 @@ using UnityEngine;
 namespace Anachronism.Network
 {
     /// <summary>
-    /// Pas de joueur au lobby : les avatars apparaissent au lancement de la partie et disparaissent à la fin,
-    /// pour que le menu du lobby (et « Rejouer ») reste cliquable, souris libre, sur la vue d'ensemble de la map.
+    /// Pas de joueur au lobby : les avatars apparaissent au lancement de la partie.
+    /// Avec un bureau sur la map (MapSpawnPoints, T19) : les chasseurs y attendent pendant le repérage, sont envoyés sur
+    /// la carte à la première pose, et tout le monde y revient à la fin (souris libre pour le menu du lobby).
+    /// Sans bureau : les chasseurs n'ont pas d'avatar pendant le repérage et apparaissent sur la carte à la première pose ;
+    /// plus d'avatar à la fin (vue d'ensemble de la map).
     /// Un joueur qui revient en pleine partie avec son rôle (MatchManager.PlayerRejoined) réapparaît aussitôt.
     /// </summary>
     // TODO (Théo) : un client modifié distingue encore un avatar de joueur d'un PNJ (owner dans le message de spawn,
@@ -43,6 +46,7 @@ namespace Anachronism.Network
             base.OnStartServer();
             _match.PhaseChanged += OnPhaseChanged;
             _match.PlayerRejoined += OnPlayerRejoined;
+            _match.VillainCaptured += OnVillainCaptured;
             ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
         }
 
@@ -51,6 +55,7 @@ namespace Anachronism.Network
             base.OnStopServer();
             _match.PhaseChanged -= OnPhaseChanged;
             _match.PlayerRejoined -= OnPlayerRejoined;
+            _match.VillainCaptured -= OnVillainCaptured;
             ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
             _players.Clear();
         }
@@ -61,17 +66,103 @@ namespace Anachronism.Network
             if (!IsServerInitialized)
                 return;
 
-            if (phase == GamePhase.Lobby || phase == GamePhase.End)
-                DespawnPlayers();
-            else
-                SpawnMissingPlayers();
+            switch (phase)
+            {
+                case GamePhase.Lobby:
+                    DespawnPlayers();
+                    break;
+                case GamePhase.End:
+                    if (HasOffice)
+                    {
+                        ReleaseCapturedPlayers();
+                        MoveExistingPlayers();
+                    }
+                    else
+                        DespawnPlayers();
+                    break;
+                case GamePhase.Scouting:
+                    // « Rejouer » depuis le bureau : les avatars restent, chacun repart selon son nouveau rôle.
+                    _spawnCount = 0;
+                    ReleaseCapturedPlayers();
+                    MoveExistingPlayers();
+                    SpawnMissingPlayers();
+                    break;
+                default:
+                    // Chasse : les chasseurs quittent le bureau pour la carte.
+                    MoveExistingPlayers();
+                    SpawnMissingPlayers();
+                    break;
+            }
+        }
+
+        private bool HasOffice => _spawnPoints != null && _spawnPoints.HasOffice;
+
+        // Une fois par changement de phase : la recherche du composant reste ponctuelle.
+        [Server]
+        private void MoveExistingPlayers()
+        {
+            foreach (KeyValuePair<NetworkConnection, NetworkObject> pair in _players)
+            {
+                if (pair.Value == null || !pair.Value.IsSpawned)
+                    continue;
+
+                bool isInOffice = IsInOffice(pair.Key);
+                PlayerNetworkSetup setup = pair.Value.GetComponentInChildren<PlayerNetworkSetup>(true);
+                if (setup == null || setup.IsInOfficeServer == isInOffice)
+                    continue;
+
+                GetSpawn(pair.Key, _spawnCount++, out Vector3 position, out Quaternion rotation);
+                setup.TeleportServer(position, rotation, isInOffice);
+            }
+        }
+
+        // Bureau : les chasseurs pendant le repérage, tout le monde à la fin.
+        private bool IsInOffice(NetworkConnection connection)
+        {
+            if (!HasOffice)
+                return false;
+
+            GamePhase phase = _match.Phase;
+            return phase == GamePhase.End
+                || (phase == GamePhase.Scouting && _match.GetRoleServer(connection) == PlayerRole.Guardian);
+        }
+
+        // C06 : l'avatar reste sur place, figé et visible de tous ; son joueur passe sur la caméra de la scène.
+        private void OnVillainCaptured(NetworkConnection connection)
+        {
+            if (_players.TryGetValue(connection, out NetworkObject player) && player != null && player.IsSpawned)
+                SetCaptured(player, true);
+        }
+
+        // Fin de partie au bureau ou « Rejouer » : les fugitifs capturés reprennent la main.
+        [Server]
+        private void ReleaseCapturedPlayers()
+        {
+            foreach (NetworkObject player in _players.Values)
+            {
+                if (player != null && player.IsSpawned)
+                    SetCaptured(player, false);
+            }
+        }
+
+        private static void SetCaptured(NetworkObject player, bool isCaptured)
+        {
+            PlayerNetworkSetup setup = player.GetComponentInChildren<PlayerNetworkSetup>(true);
+            if (setup != null)
+                setup.SetCapturedServer(isCaptured);
         }
 
         private void OnPlayerRejoined(NetworkConnection connection)
         {
-            if (connection.IsActive && !HasAvatar(connection))
+            if (connection.IsActive && !HasAvatar(connection) && ShouldHaveAvatar(connection))
                 SpawnPlayer(connection);
         }
+
+        // Sans bureau, un chasseur n'a nulle part où attendre le repérage : pas d'avatar avant la première pose.
+        // Un fugitif capturé qui revient n'en a pas non plus : sans avatar, il garde la caméra de la scène (C06).
+        private bool ShouldHaveAvatar(NetworkConnection connection) =>
+            (HasOffice || _match.Phase != GamePhase.Scouting || _match.GetRoleServer(connection) != PlayerRole.Guardian)
+            && !_match.IsCapturedVillainServer(connection);
 
         // FishNet despawn déjà l'avatar d'un joueur qui part (il en est l'owner) : on oublie juste l'entrée.
         private void OnRemoteConnectionState(NetworkConnection connection, RemoteConnectionStateArgs args)
@@ -87,7 +178,8 @@ namespace Anachronism.Network
             _toSpawn.Clear();
             foreach (NetworkConnection connection in ServerManager.Clients.Values)
             {
-                if (connection.IsActive && _match.GetRoleServer(connection) != PlayerRole.None && !HasAvatar(connection))
+                if (connection.IsActive && _match.GetRoleServer(connection) != PlayerRole.None && !HasAvatar(connection)
+                    && ShouldHaveAvatar(connection))
                     _toSpawn.Add(connection);
             }
 
@@ -104,8 +196,11 @@ namespace Anachronism.Network
                 return;
             }
 
-            GetSpawn(_spawnCount++, out Vector3 position, out Quaternion rotation);
+            GetSpawn(connection, _spawnCount++, out Vector3 position, out Quaternion rotation);
             NetworkObject player = NetworkManager.GetPooledInstantiated(_playerPrefab, position, rotation, true);
+            PlayerNetworkSetup setup = player.GetComponentInChildren<PlayerNetworkSetup>(true);
+            if (setup != null)
+                setup.SetSpawnedInOffice(IsInOffice(connection));
             ServerManager.Spawn(player, connection, gameObject.scene);
             _players[connection] = player;
         }
@@ -113,8 +208,16 @@ namespace Anachronism.Network
         private bool HasAvatar(NetworkConnection connection) =>
             _players.TryGetValue(connection, out NetworkObject player) && player != null && player.IsSpawned;
 
-        private void GetSpawn(int index, out Vector3 position, out Quaternion rotation)
+        private void GetSpawn(NetworkConnection connection, int index, out Vector3 position, out Quaternion rotation)
         {
+            Transform office = IsInOffice(connection) ? _spawnPoints.GetOfficeSpawn(index) : null;
+            if (office != null)
+            {
+                position = office.position;
+                rotation = office.rotation;
+                return;
+            }
+
             if (_npcs != null && _npcs.TryGetRandomPoint(out Vector3 point))
             {
                 position = point + Vector3.up * SpawnHeightAboveGround;

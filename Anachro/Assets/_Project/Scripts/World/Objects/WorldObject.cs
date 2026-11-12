@@ -29,10 +29,15 @@ namespace Anachronism.World
         /// <summary>Objet affiché (null tant que l'objet n'est pas réseau ou si l'id est invalide).</summary>
         public AnachronismDefinition Definition { get; private set; }
 
+        /// <summary>Côté serveur : posé par un fugitif (pas généré avec la map). Caché aux chasseurs pendant le repérage (T05).</summary>
+        public bool IsPlacedServer { get; private set; }
+
         /// <summary>Appelé par le serveur juste avant ServerManager.Spawn (l'objet n'est pas encore réseau).</summary>
-        public void SetSpawnDefinition(AnachronismDefinition definition)
+        public void SetSpawnDefinition(AnachronismDefinition definition, bool isPlaced = false)
         {
             _pendingDefinition = definition;
+            // Posé tout de suite : les observateurs sont calculés pendant le spawn.
+            IsPlacedServer = isPlaced;
         }
 
         /// <summary>Vrai si les clients sauront afficher cet objet (présent dans le registre). À tester avant le spawn.</summary>
@@ -50,8 +55,7 @@ namespace Anachronism.World
         {
             base.OnStartServer();
 
-            // L'appelant teste CanDisplay avant le spawn (ObjectSpawner) : ce cas signale un oubli de ce test.
-            // TODO (Célian / Théo) : la pose des fugitifs (T07) doit aussi tester CanDisplay avant ServerManager.Spawn.
+            // L'appelant teste CanDisplay avant le spawn (ObjectSpawner, y compris pour les poses) : ce cas signale un oubli de ce test.
             if (!_registry.TryGetId(_pendingDefinition, out byte id))
             {
                 Debug.LogError($"[WorldObject] {(_pendingDefinition != null ? _pendingDefinition.name : "null")} absent du registre : les clients afficheront un mauvais objet.", this);
@@ -94,29 +98,40 @@ namespace Anachronism.World
             base.OnStopNetwork();
             // Un objet remis dans la réserve ne doit pas garder l'identité de sa vie précédente.
             Definition = null;
+            IsPlacedServer = false;
         }
 
         private void Apply(AnachronismDefinition definition)
         {
             Definition = definition;
-            _meshFilter.sharedMesh = definition.Mesh;
-            _meshRenderer.sharedMaterial = definition.Material;
+            ApplyDefinition(definition, _meshFilter, _meshRenderer, _collider, _obstacle, this);
+        }
+
+        /// <summary>
+        /// Règle unique « définition -> composants du prefab ». Public et statique pour que les tests locaux (scène Sandbox,
+        /// sans réseau) appliquent exactement la même règle que le jeu, sans la recopier.
+        /// </summary>
+        public static void ApplyDefinition(AnachronismDefinition definition, MeshFilter meshFilter, MeshRenderer meshRenderer,
+            BoxCollider collider, NavMeshObstacle obstacle, Object context)
+        {
+            meshFilter.sharedMesh = definition.Mesh;
+            meshRenderer.sharedMaterial = definition.Material;
 
             if (definition.Mesh == null)
             {
-                Debug.LogError($"[WorldObject] {definition.name} n'a pas de mesh : collider et obstacle gardent la taille du prefab.", this);
+                Debug.LogError($"[WorldObject] {definition.name} n'a pas de mesh : collider et obstacle gardent la taille du prefab.", context);
                 return;
             }
 
             // Boîte calée sur le mesh : suffit pour viser et poser. Réactivée ici pour un objet réutilisé (pooling).
             Bounds bounds = definition.Mesh.bounds;
-            _collider.enabled = true;
-            _collider.center = bounds.center;
-            _collider.size = bounds.size;
-            _obstacle.center = bounds.center;
-            _obstacle.size = bounds.size;
+            collider.enabled = true;
+            collider.center = bounds.center;
+            collider.size = bounds.size;
+            obstacle.center = bounds.center;
+            obstacle.size = bounds.size;
             // Un petit objet (bague, timbre) ne gêne pas les PNJ : le découper creuserait un trou inutile dans le NavMesh.
-            _obstacle.enabled = definition.Size != AnachronismSize.Small;
+            obstacle.enabled = definition.Size != AnachronismSize.Small;
         }
     }
 }

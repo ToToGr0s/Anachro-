@@ -18,3 +18,4 @@ MonoBehaviour:
   _icon: {fileID: 0}
   _mesh: {fileID: 4300000, guid: 5a6f5e8f77469cc4c97414c2ac7803c2, type: 2}
   _material: {fileID: 2100000, guid: 4778c344c1d84e043afa631758a1d1bd, type: 2}
+  _allowedSurfaces: -1

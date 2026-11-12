@@ -11,6 +11,8 @@ namespace Anachronism.World
     /// Ils restent visibles sur l'écran de fin et disparaissent au retour au lobby ou au lancement suivant.
     /// Nouvelle map : poser le prefab ObjectSpawner et des prefabs ObjectSpawnZone, choisir l'époque et les réglages,
     /// puis clic droit sur le composant > « Référencer toutes les zones de la scène ».
+    /// Les sols et tables qui reçoivent des objets doivent être sur le layer SpawnSurface, et ce layer doit être
+    /// coché dans le masque du NavMeshSurface : sinon aucun objet n'apparaît, ou ces surfaces sortent du NavMesh.
     /// </summary>
     public sealed class ObjectSpawner : NetworkBehaviour
     {
@@ -95,12 +97,13 @@ namespace Anachronism.World
             float totalArea = 0f;
             foreach (ObjectSpawnZone zone in _zones)
             {
-                if (zone != null && zone.Area > 0f)
+                if (IsUsable(zone))
                     totalArea += zone.Area;
             }
             if (totalArea <= 0f)
             {
-                Debug.LogError("[ObjectSpawner] Aucune zone de spawn : aucun objet généré.", this);
+                // Avertissement et pas erreur : désactiver les zones est la façon voulue de couper le spawn d'une map.
+                Debug.LogWarning("[ObjectSpawner] Aucune zone de spawn active : aucun objet généré.", this);
                 return;
             }
 
@@ -131,7 +134,7 @@ namespace Anachronism.World
             {
                 ObjectSpawnZone zone = PickZone(totalArea);
                 AnachronismDefinition definition = _valid[Random.Range(0, _valid.Count)];
-                if (!TryFindPlace(zone, definition.Mesh.bounds, out Vector3 position, out Quaternion rotation))
+                if (!TryFindPlace(zone, definition, out Vector3 position, out Quaternion rotation))
                     continue;
 
                 WorldObject worldObject = Instantiate(_prefab, position, rotation);
@@ -171,7 +174,7 @@ namespace Anachronism.World
             foreach (ObjectSpawnZone zone in _zones)
             {
                 // Une zone de surface nulle pourrait sortir quand le tirage vaut 0 : son point de départ serait dégénéré.
-                if (zone == null || zone.Area <= 0f)
+                if (!IsUsable(zone))
                     continue;
                 last = zone;
                 pick -= zone.Area;
@@ -181,8 +184,13 @@ namespace Anachronism.World
             return last;
         }
 
-        private bool TryFindPlace(ObjectSpawnZone zone, Bounds bounds, out Vector3 position, out Quaternion rotation)
+        // Les zones restent référencées même désactivées (le menu contextuel inclut les inactives) :
+        // une zone éteinte dans la hiérarchie ne doit plus recevoir d'objets.
+        private static bool IsUsable(ObjectSpawnZone zone) => zone != null && zone.isActiveAndEnabled && zone.Area > 0f;
+
+        private bool TryFindPlace(ObjectSpawnZone zone, AnachronismDefinition definition, out Vector3 position, out Quaternion rotation)
         {
+            Bounds bounds = definition.Mesh.bounds;
             position = default;
             rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
@@ -198,7 +206,18 @@ namespace Anachronism.World
 
             // Le bas du mesh sur la surface, quel que soit son pivot.
             position = hit.point - Vector3.up * bounds.min.y;
-            if (!zone.ContainsFootprint(position + rotation * new Vector3(bounds.center.x, 0f, bounds.center.z), rotation,
+            // Décalage du centre de l'empreinte : le pivot du mesh n'est pas forcément au milieu.
+            Vector3 footprintOffset = rotation * new Vector3(bounds.center.x, 0f, bounds.center.z);
+
+            // Même règle d'appui que la pose des fugitifs : pas d'objet à moitié dans le vide au bord d'une table.
+            // Seul SpawnSurface compte comme appui : un bout qui dépasse sur une surface Default est considéré dans le vide.
+            var request = new PlacementRequest(definition.Size, hit.point + footprintOffset, hit.normal);
+            float support = PlacementSpace.SupportRatio(request, definition.Dimensions, rotation, _tuning,
+                _settings.SurfaceLayers, _tuning.PlacedObjectsMask);
+            if (support < _tuning.MinSupportRatio)
+                return false;
+
+            if (!zone.ContainsFootprint(position + footprintOffset, rotation,
                     new Vector2(bounds.extents.x, bounds.extents.z)))
                 return false;
 
@@ -207,6 +226,38 @@ namespace Anachronism.World
             // Mesh très fin (bague, timbre) : la demi-hauteur ne doit pas devenir négative une fois la marge retirée.
             var halfExtents = new Vector3(bounds.extents.x + spacing, Mathf.Max(0.001f, bounds.extents.y - SurfaceClearance), bounds.extents.z + spacing);
             return !Physics.CheckBox(center, halfExtents, rotation, ~0, QueryTriggerInteraction.Ignore);
+        }
+
+        /// <summary>
+        /// Objet posé par un fugitif (T07), déjà validé par NetworkPlacement. Suivi comme les objets de la map :
+        /// il disparaît au retour au lobby ou au lancement suivant. Faux si les clients ne sauraient pas l'afficher.
+        /// </summary>
+        [Server]
+        public bool SpawnPlaced(AnachronismDefinition definition, Vector3 position, Quaternion rotation)
+        {
+            if (_prefab == null || !_prefab.CanDisplay(definition))
+                return false;
+
+            WorldObject worldObject = Instantiate(_prefab, position, rotation);
+            worldObject.SetSpawnDefinition(definition, true);
+            ServerManager.Spawn(worldObject.NetworkObject, null, gameObject.scene);
+            _spawned.Add(worldObject);
+            // La pose suivante, dans la même frame, doit voir son collider.
+            Physics.SyncTransforms();
+            return true;
+        }
+
+        /// <summary>Objet détruit par le tir d'un chasseur (T06, NetworkShooting), déjà validé par l'hôte.</summary>
+        [Server]
+        public void DespawnShot(WorldObject worldObject)
+        {
+            if (worldObject == null || !worldObject.IsSpawned)
+                return;
+
+            _spawned.Remove(worldObject);
+            // Le tir suivant, dans la même frame, ne doit plus le toucher.
+            worldObject.DisableCollision();
+            ServerManager.Despawn(worldObject.NetworkObject);
         }
 
         [Server]
