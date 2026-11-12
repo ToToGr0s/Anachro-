@@ -10,15 +10,12 @@ namespace Anachronism
         public string scene;
         private Button _button;    
         
-        // Awake et pas Start : OnEnable passe avant Start, _button y serait encore null.
-        void Awake()
-        {
-            initialize();
-            _button = root.Q<Button>("playButton");
-        }
-
+        // Lu dans OnEnable et pas dans Start : OnEnable passe avant Start, _button y serait encore null.
         private void OnEnable()
         {
+            // Relu à chaque activation : UIDocument reconstruit son arbre, les éléments d'avant seraient morts.
+            initialize();
+            _button = root.Q<Button>("playButton");
             _button.RegisterCallback<ClickEvent>(OnClicked);
         }
 

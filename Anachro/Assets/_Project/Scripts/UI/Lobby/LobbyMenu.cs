@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.SceneManagement;
 using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 
 namespace Anachronism.UI
@@ -67,6 +68,8 @@ namespace Anachronism.UI
         private Label _settingsSummary;
 
         private bool _isLeaving;
+        // Mis à jour au changement de scène : lire Scene.name dans Update allouerait une chaîne à chaque frame.
+        private bool _isHomeScene;
         private MenuScreen _currentScreen = (MenuScreen)(-1);
         // Dernières valeurs affichées : on ne reconstruit les textes que quand elles changent (pas d'allocation par frame).
         private int _shownPlayers = -1;
@@ -164,6 +167,16 @@ namespace Anachronism.UI
 
         private void Start()
         {
+            // Un nom de scène renommé casserait « commencer » ou « Retour » sans erreur visible.
+            foreach (string sceneName in new[] { _homeSceneName, _backSceneName })
+            {
+                if (!Application.CanStreamedLevelBeLoaded(sceneName))
+                    Debug.LogError($"[LobbyMenu] Scène « {sceneName} » absente des Build Settings.", this);
+            }
+
+            UnitySceneManager.activeSceneChanged += OnActiveSceneChanged;
+            OnActiveSceneChanged(default, UnitySceneManager.GetActiveScene());
+
             _networkManager = InstanceFinder.NetworkManager;
             if (_networkManager == null)
             {
@@ -192,6 +205,7 @@ namespace Anachronism.UI
 
         private void OnDestroy()
         {
+            UnitySceneManager.activeSceneChanged -= OnActiveSceneChanged;
             if (_steamLobby != null)
             {
                 _steamLobby.Failed -= OnLobbyFailed;
@@ -229,7 +243,7 @@ namespace Anachronism.UI
             bool isConnecting = _steamLobby.IsBusy || _networkManager.ClientManager.Started;
             if (isConnecting)
                 return MenuScreen.Connecting;
-            return UnitySceneManager.GetActiveScene().name == _homeSceneName ? MenuScreen.Home : MenuScreen.Hidden;
+            return _isHomeScene ? MenuScreen.Home : MenuScreen.Hidden;
         }
 
         private void ShowScreen(MenuScreen screen)
@@ -413,6 +427,8 @@ namespace Anachronism.UI
 
         private void OnQuitClicked() => UnitySceneManager.LoadScene(_backSceneName);
 
+        private void OnActiveSceneChanged(Scene previous, Scene next) => _isHomeScene = next.name == _homeSceneName;
+
         private void OnLobbyFailed(string message) => SetStatus(message);
 
         private void OnLobbyChanged() => _shownPlayers = -1;
@@ -435,6 +451,5 @@ namespace Anachronism.UI
 
         private static string FormatTime(int seconds) =>
             seconds <= 0 ? string.Empty : $"{seconds / 60}:{seconds % 60:00}";
-
     }
 }

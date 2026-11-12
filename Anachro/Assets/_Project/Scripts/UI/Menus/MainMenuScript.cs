@@ -21,8 +21,9 @@ namespace Anachronism
         private Toggle fullScreenToggle;
         private Button closeButton;
 
-        private void Awake()
+        private void OnEnable()
         {
+            // Relu à chaque activation : UIDocument reconstruit son arbre, les éléments d'avant seraient morts.
             initialize();
 
             //main
@@ -40,10 +41,6 @@ namespace Anachronism
             OpenMenu(Main);
             CloseMenu(Settings);
 
-        }
-
-        private void OnEnable()
-        {
             //main
             startButton.RegisterCallback<ClickEvent>(OnSartClicked);
             settingsButton.RegisterCallback<ClickEvent>(OnSettingsClicked);

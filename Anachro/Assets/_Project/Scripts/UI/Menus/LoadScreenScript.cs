@@ -17,9 +17,15 @@ namespace Anachronism
 
         private void Awake()
         {
-            initialize();
             tipsString = tipsFile.ToString();
-            tips = tipsString.Split('\n');
+            // \r aussi (fichier enregistré sous Windows) et sans lignes vides, sinon une astuce peut sortir vide.
+            tips = tipsString.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private void OnEnable()
+        {
+            // Relu à chaque activation : UIDocument reconstruit son arbre, les éléments d'avant seraient morts.
+            initialize();
             tipsLabel = root.Q<Label>("tip");
             _progressBar = root.Q<ProgressBar>("ProgressBar");
             PickTip();

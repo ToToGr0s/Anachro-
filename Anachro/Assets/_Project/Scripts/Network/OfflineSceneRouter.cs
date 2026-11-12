@@ -2,6 +2,8 @@ using FishNet.Component.Scenes;
 using FishNet.Managing;
 using FishNet.Transporting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 
 namespace Anachronism.Network
 {
@@ -18,22 +20,32 @@ namespace Anachronism.Network
 
         private NetworkManager _networkManager;
         private DefaultScene _defaultScene;
-        private bool _hasMatchStarted;
+        private MatchManager _match;
 
         private void Awake()
         {
             _networkManager = GetComponent<NetworkManager>();
             _defaultScene = GetComponent<DefaultScene>();
+
+            // Un chemin renommé casserait le retour sans erreur : FishNet chargerait une scène absente du build.
+            foreach (string path in new[] { _titleScenePath, _lobbyScenePath })
+            {
+                if (SceneUtility.GetBuildIndexByScenePath(path) < 0)
+                    Debug.LogError($"[OfflineSceneRouter] {path} absente des Build Settings.", this);
+            }
         }
 
         private void OnEnable()
         {
             _networkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             _networkManager.ServerManager.OnServerConnectionState += OnServerConnectionState;
+            UnitySceneManager.sceneLoaded += OnSceneLoaded;
         }
 
         private void OnDisable()
         {
+            UnitySceneManager.sceneLoaded -= OnSceneLoaded;
+            UnbindMatch();
             if (_networkManager == null)
                 return;
 
@@ -41,18 +53,30 @@ namespace Anachronism.Network
             _networkManager.ServerManager.OnServerConnectionState -= OnServerConnectionState;
         }
 
-        private void Update()
+        // MatchManager vit dans la map et se déclare dans son Awake : il est là quand la map a fini de charger.
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            // Une fois la partie lancée, une déconnexion ramène à l'écran titre (choix de Théo).
-            if (_hasMatchStarted)
+            if (MatchManager.Instance == null || MatchManager.Instance == _match)
                 return;
 
-            MatchManager match = MatchManager.Instance;
-            if (match == null || match.Phase == GamePhase.Lobby)
-                return;
+            UnbindMatch();
+            _match = MatchManager.Instance;
+            _match.PhaseChanged += OnPhaseChanged;
+            OnPhaseChanged(_match.Phase);
+        }
 
-            _hasMatchStarted = true;
-            _defaultScene.SetOfflineScene(_titleScenePath);
+        private void UnbindMatch()
+        {
+            if (_match != null)
+                _match.PhaseChanged -= OnPhaseChanged;
+            _match = null;
+        }
+
+        // Une fois la partie lancée, une déconnexion ramène à l'écran titre (choix de Théo).
+        private void OnPhaseChanged(GamePhase phase)
+        {
+            if (phase != GamePhase.Lobby)
+                _defaultScene.SetOfflineScene(_titleScenePath);
         }
 
         private void OnClientConnectionState(ClientConnectionStateArgs args)
@@ -68,10 +92,6 @@ namespace Anachronism.Network
         }
 
         // Nouvelle connexion : tant qu'aucune partie n'est lancée, un échec ramène à l'accueil du lobby.
-        private void RouteToLobby()
-        {
-            _hasMatchStarted = false;
-            _defaultScene.SetOfflineScene(_lobbyScenePath);
-        }
+        private void RouteToLobby() => _defaultScene.SetOfflineScene(_lobbyScenePath);
     }
 }
