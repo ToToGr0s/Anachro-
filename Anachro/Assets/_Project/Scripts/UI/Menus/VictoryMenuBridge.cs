@@ -94,7 +94,9 @@ namespace Anachronism.UI
             if (_match == null || !_match.IsServerInitialized)
                 return;
 
-            _replayStatus.text = _match.StartMatch() switch
+            // En test solo, l'hôte rejoue le rôle qu'il avait choisi au lobby (celui de la partie qui se termine).
+            PlayerRole soloRole = _match.LocalRole == PlayerRole.Villain ? PlayerRole.Villain : PlayerRole.Guardian;
+            _replayStatus.text = _match.StartMatch(soloRole) switch
             {
                 MatchStartResult.NotEnoughPlayers => "Pas assez de joueurs pour relancer la partie.",
                 MatchStartResult.PlayersLoading => "Un joueur charge encore la map, réessaie dans un instant.",

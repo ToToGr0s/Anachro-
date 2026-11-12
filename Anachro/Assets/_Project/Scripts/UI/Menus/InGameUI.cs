@@ -1,7 +1,5 @@
 using System;
 using Anachronism.Core;
-using Anachronism.Network;
-using FishNet;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
 using UnityEngine.InputSystem.HID;
@@ -286,18 +284,7 @@ namespace Anachronism
         //pop up
         protected void LoadScene()
         {
-            // En ligne : on quitte la partie par SteamLobby, qui ferme la connexion (et la session si c'est l'hôte) ;
-            // FishNet ramène ensuite ce joueur à l'écran titre. Un LoadScene seul laisserait la connexion ouverte.
-            SteamLobby steamLobby = InstanceFinder.NetworkManager != null
-                ? InstanceFinder.NetworkManager.GetComponent<SteamLobby>()
-                : null;
-            if (steamLobby != null && InstanceFinder.NetworkManager.IsClientStarted)
-            {
-                steamLobby.LeaveGame();
-                return;
-            }
-
-            SceneManager.LoadScene(mainMenuScene);
+            LeaveOnlineGame(mainMenuScene);
         }
 
         protected void ExitGame()

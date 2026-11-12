@@ -1,5 +1,7 @@
 using FishNet;
+using FishNet.Managing.Client;
 using FishNet.Managing.Scened;
+using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -15,6 +17,7 @@ namespace Anachronism.UI
         private UIDocument _document;
         private LoadScreenScript _loadScreen;
         private SceneManager _sceneManager;
+        private ClientManager _clientManager;
 
         private void Awake()
         {
@@ -37,6 +40,9 @@ namespace Anachronism.UI
             _sceneManager.OnLoadStart += OnLoadStart;
             _sceneManager.OnLoadPercentChange += OnLoadPercentChange;
             _sceneManager.OnLoadEnd += OnLoadEnd;
+            // Connexion perdue en plein chargement : OnLoadEnd n'arrive jamais, l'écran resterait sur le titre.
+            _clientManager = InstanceFinder.ClientManager;
+            _clientManager.OnClientConnectionState += OnClientConnectionState;
         }
 
         private void OnDestroy()
@@ -47,6 +53,8 @@ namespace Anachronism.UI
             _sceneManager.OnLoadStart -= OnLoadStart;
             _sceneManager.OnLoadPercentChange -= OnLoadPercentChange;
             _sceneManager.OnLoadEnd -= OnLoadEnd;
+            if (_clientManager != null)
+                _clientManager.OnClientConnectionState -= OnClientConnectionState;
         }
 
         private void OnLoadStart(SceneLoadStartEventArgs args)
@@ -59,6 +67,12 @@ namespace Anachronism.UI
         private void OnLoadPercentChange(SceneLoadPercentEventArgs args) => _loadScreen.UpdateBar(args.Percent * 100f);
 
         private void OnLoadEnd(SceneLoadEndEventArgs args) => SetShown(false);
+
+        private void OnClientConnectionState(ClientConnectionStateArgs args)
+        {
+            if (args.ConnectionState == LocalConnectionState.Stopped)
+                SetShown(false);
+        }
 
         private void SetShown(bool isShown) =>
             _document.rootVisualElement.style.display = isShown ? DisplayStyle.Flex : DisplayStyle.None;

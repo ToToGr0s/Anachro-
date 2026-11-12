@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Anachronism.Network;
 using Anachronism.UI;
 using FishNet.Component.Scenes;
 using UnityEditor;
@@ -80,11 +81,13 @@ namespace Anachronism.Editor
             loadSettings.ApplyModifiedPropertiesWithoutUndo();
             loading.AddComponent<LoadingScreenBridge>();
 
-            // À la déconnexion, FishNet ramène à l'écran titre (choix de Théo).
+            // Écran titre au lancement ; à la déconnexion, OfflineSceneRouter choisit titre (après une partie) ou lobby.
             foreach (DefaultScene defaultScene in boot.GetRootGameObjects().SelectMany(rootObject => rootObject.GetComponentsInChildren<DefaultScene>(true)))
             {
                 defaultScene.SetOfflineScene(TitleScenePath);
                 EditorUtility.SetDirty(defaultScene);
+                if (!defaultScene.TryGetComponent(out OfflineSceneRouter _))
+                    defaultScene.gameObject.AddComponent<OfflineSceneRouter>();
             }
         }
 
@@ -150,6 +153,11 @@ namespace Anachronism.Editor
                 .Where(scene => scene.path != TitleScenePath && scene.path != LobbyScenePath)
                 .ToList();
             int bootIndex = scenes.FindIndex(scene => scene.path == BootScenePath);
+            if (bootIndex < 0)
+            {
+                Debug.LogError($"[MenusBuilder] {BootScenePath} absent des Build Settings : lancer d'abord Anachro > Setup > Construire la base réseau.");
+                return;
+            }
             scenes.InsertRange(bootIndex + 1, new[]
             {
                 new EditorBuildSettingsScene(TitleScenePath, true),
