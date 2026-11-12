@@ -115,7 +115,7 @@ namespace Anachronism.Editor
             EditorSceneManager.SaveScene(scene);
         }
 
-        // Debug F1 et menu Échap : un UIDocument à part, par-dessus le menu du lobby.
+        // Debug F1 : un UIDocument à part, par-dessus le menu du lobby. Le menu Échap est celui d'Hanaé (MenusBuilder).
         private static void EnsureOverlay(Scene scene)
         {
             GameObject overlay = FindRoot(scene, OverlayName) ?? new GameObject(OverlayName);
@@ -127,8 +127,6 @@ namespace Anachronism.Editor
 
             if (!overlay.TryGetComponent(out DebugOverlay _))
                 overlay.AddComponent<DebugOverlay>();
-            if (!overlay.TryGetComponent(out PauseMenu _))
-                overlay.AddComponent<PauseMenu>();
             if (!overlay.TryGetComponent(out DisplayController _))
                 overlay.AddComponent<DisplayController>();
         }
