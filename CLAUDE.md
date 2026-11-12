@@ -1,11 +1,18 @@
 # Anachro — règles du projet (lues par Claude pendant les reviews)
 
+## ⛔ Règle n° 1 : interdit de modifier le code d'un autre
+**Personne — ni un dev, ni son Claude — n'édite, ne réécrit, ne déplace, ne renomme ou ne supprime un fichier créé par un autre dev** (script, prefab, UXML/USS, scène, ScriptableObject…), même pour corriger un bug ou « juste une ligne ».
+- À qui est le fichier : son auteur dans `git log --format=%an -- <fichier>` (le premier commit), sinon le responsable du dossier (voir Arborescence).
+- Besoin d'un changement dans le fichier d'un autre (API, event, champ, bug) : **s'arrêter et demander à Théo**, qui voit avec le dev concerné. Ne pas contourner en copiant ou en dupliquant son code.
+- Claude : si une tâche oblige à toucher le fichier d'un autre, ne pas le faire ; dire lequel, pourquoi et quoi changer, puis attendre.
+- En review : signaler le problème dans le fichier d'un autre, ne jamais le corriger à sa place.
+
 Jeu Unity 3D, multijoueur en ligne (4 à 8 joueurs), FishNet v4 + Steam (FishySteamworks), l'hôte fait serveur.
 Équipe : Théo (online + level design, valide toutes les PR), Célian (joueur & gameplay), Olivier (PNJ, monde, UI, audio), Hugo et JB (art).
 
 ## Arborescence
 - `Assets/_Project/Scripts/{Core,Network,Gameplay,Npc,World,UI,Editor}` — namespace = dossier (`Anachronism.Network`, …).
-- Responsables : Network → Théo · Gameplay → Célian · Npc / World / UI → Olivier. Toucher le dossier d'un autre = le signaler dans la PR.
+- Responsables : Network → Théo · Gameplay → Célian · Npc / World / UI → Olivier. Modifier le fichier d'un autre : interdit (voir Règle n° 1).
 - `Assets/ThirdParty/` (FishNet, etc.) : ne jamais modifier.
 - 2 asmdefs seulement : `Anachronism.Runtime` et `Anachronism.Editor`.
 
@@ -44,8 +51,9 @@ Jeu Unity 3D, multijoueur en ligne (4 à 8 joueurs), FishNet v4 + Steam (FishySt
 - Toujours committer les `.meta`. Binaires (fbx, png, wav…) en Git LFS. Scènes partagées : prévenir + `git lfs lock`.
 
 ## Ce que la review doit vérifier en priorité
-1. Violations des règles réseau (triche possible, secret qui fuit, RPC non validée, code serveur exécuté côté client).
-2. Bugs probables (null, ordre d'initialisation réseau, spawn avant que l'objet soit réseau, ownership).
-3. Performance dans `Update` / boucles par frame.
-4. Nommage et organisation.
-5. Ce qui manque : validation, gestion d'erreur, cas limites (déconnexion, hôte qui quitte), `.meta`, description de PR.
+1. Fichier d'un autre dev modifié, renommé, déplacé ou supprimé (Règle n° 1) : 🔴 bloquant, nommer le fichier et son auteur.
+2. Violations des règles réseau (triche possible, secret qui fuit, RPC non validée, code serveur exécuté côté client).
+3. Bugs probables (null, ordre d'initialisation réseau, spawn avant que l'objet soit réseau, ownership).
+4. Performance dans `Update` / boucles par frame.
+5. Nommage et organisation.
+6. Ce qui manque : validation, gestion d'erreur, cas limites (déconnexion, hôte qui quitte), `.meta`, description de PR.
