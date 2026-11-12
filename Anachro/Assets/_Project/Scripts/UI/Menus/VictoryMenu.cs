@@ -1,6 +1,4 @@
-using System;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
 namespace Anachronism
@@ -23,8 +21,9 @@ namespace Anachronism
         private Label timelineLabel;
         private Button mainMenuButton;
 
-        private void Awake()
+        private void OnEnable()
         {
+            // Relu à chaque activation : UIDocument reconstruit son arbre, les éléments d'avant seraient morts.
             initialize();
             winLabel = root.Q<Label>("winLossText");
             teamLabel = root.Q<Label>("winningTeamText");
@@ -32,6 +31,7 @@ namespace Anachronism
             mainMenuButton = root.Q<Button>("mainMenuButton");
 
             Refresh();
+            mainMenuButton.RegisterCallback<ClickEvent>(OnMainMenu);
         }
 
         // En ligne, le vainqueur n'est connu qu'à la fin de la partie : VictoryMenuBridge remplit
@@ -57,11 +57,6 @@ namespace Anachronism
             {
                 winLabel.text = loseText;
             }
-        }
-
-        private void OnEnable()
-        {
-            mainMenuButton.RegisterCallback<ClickEvent>(OnMainMenu);
         }
 
         private void OnDisable()

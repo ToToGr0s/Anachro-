@@ -1,9 +1,5 @@
-using System;
 using Anachronism.Core;
-using FishNet.Object.Synchronizing;
 using UnityEngine;
-using UnityEngine.InputSystem.HID;
-using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 using Button = UnityEngine.UIElements.Button;
 using Slider = UnityEngine.UIElements.Slider;
@@ -60,8 +56,9 @@ namespace Anachronism
         private Toggle fullScreenToggle;
         private Button closeButton;
         
-        private void Awake()
+        private void OnEnable()
         {
+            // Relu à chaque activation : UIDocument reconstruit son arbre, les éléments d'avant seraient morts.
             initialize();
             
             //in game
@@ -101,10 +98,7 @@ namespace Anachronism
             CloseMenu(pauseGroup);
             CloseMenu(popUpGroup);
             CloseMenu(Settings);
-        }
 
-        private void OnEnable()
-        {
             //deregulation tools
             // Abonnés dans tous les cas : en ligne, le rôle arrive après OnEnable (SetFugitive).
             bigTool.RegisterCallback<ClickEvent>(OnBigToolClicked);
@@ -151,6 +145,8 @@ namespace Anachronism
         
         //events--------------------------------------------------------------------------------------------------------
         //deregulation tools
+        // TODO (Hanaé) : les tailles se choisissent au clavier (1/2/3, molette) ; ces boutons ne servent qu'à l'affichage
+        // tant que la souris est capturée en jeu. À brancher ou à changer en simples éléments.
         private void OnBigToolClicked(ClickEvent clicked)
         {
             //throw event
