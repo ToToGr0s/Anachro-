@@ -21,7 +21,7 @@ namespace Anachronism.Editor
 {
     /// <summary>
     /// Construit la base réseau : prefab joueur, NetworkManager de Boot (transport Steam, spawn, lobby Steam,
-    /// enchaînement Boot → MainMenu → map) et Build Settings. Rejouable : Boot est reconstruit, le GUID du prefab est gardé,
+    /// enchaînement Boot → écran titre → MainMenu → map, écrans d'Hanaé via MenusBuilder) et Build Settings. Rejouable : Boot est reconstruit, le GUID du prefab est gardé,
     /// MainMenu et la map ne sont créés que s'ils n'existent pas (on n'écrase jamais le travail de LD ou d'UI).
     /// </summary>
     public static class NetworkBaseBuilder
@@ -35,8 +35,8 @@ namespace Anachronism.Editor
         private const string MatchManagerName = "MatchManager";
         private const string UiName = "UI";
         private const string LobbyMenuPath = "Assets/_Project/Prefabs/UI/Lobby/LobbyMenu.uxml";
+        // Ancien HUD provisoire, remplacé par l'écran de jeu d'Hanaé : retiré de Boot s'il traîne encore.
         private const string HudName = "UI_Hud";
-        private const string HudPrefabPath = "Assets/_Project/Prefabs/UI/Hud/UI_Hud.prefab";
         private const string PanelSettingsPath = "Assets/_Project/Prefabs/UI/AnachroPanelSettings.asset";
         private const string RuntimeThemePath = "Assets/_Project/Prefabs/UI/AnachroRuntimeTheme.tss";
         private const string NetworkManagerName = "NetworkManager";
@@ -78,6 +78,8 @@ namespace Anachronism.Editor
             EnsureMatchManager();
             BuildBootScene();
             SetBuildScenes();
+            // Écrans d'Hanaé dans Boot, scène titre (hors-ligne de FishNet) et Lobby.
+            MenusBuilder.Build();
             AssetDatabase.SaveAssets();
             Debug.Log("[NetworkBaseBuilder] Base réseau construite.");
         }
@@ -157,7 +159,6 @@ namespace Anachronism.Editor
 
             new GameObject(ServicesName).AddComponent<SteamService>();
             CreateLobbyMenu();
-            CreateHud();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -275,18 +276,6 @@ namespace Anachronism.Editor
             document.panelSettings = LoadOrCreatePanelSettings();
             document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(LobbyMenuPath);
             uiObject.AddComponent<LobbyMenu>();
-        }
-
-        private static void CreateHud()
-        {
-            GameObject hudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(HudPrefabPath);
-            if (hudPrefab == null)
-            {
-                Debug.LogError($"[NetworkBaseBuilder] {HudPrefabPath} introuvable : le HUD n'est pas ajouté à Boot.");
-                return;
-            }
-
-            PrefabUtility.InstantiatePrefab(hudPrefab);
         }
 
         private static PanelSettings LoadOrCreatePanelSettings()
